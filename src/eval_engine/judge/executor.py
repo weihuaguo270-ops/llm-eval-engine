@@ -358,10 +358,10 @@ class JudgeExecutor:
     def _fallback_result(self, prompt: str) -> dict[str, Any]:
         """Judge 调用失败时的兜底评分"""
         # 尝试从 prompt 中提取一些信息
-        step_type = "unknown"
+        _step_type = "unknown"
         for st in ["thought", "action", "observation", "final"]:
             if f"类型: {st}" in prompt:
-                step_type = st
+                _step_type = st
                 break
 
         return {

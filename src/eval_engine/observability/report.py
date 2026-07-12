@@ -7,6 +7,7 @@
 """
 
 from __future__ import annotations
+from eval_engine.loop.eval_loop import EvalLoopResult
 import json
 import time
 from typing import Any

@@ -161,8 +161,8 @@ pytest tests/
 
 ## 相关项目
 
-- [attention-from-scratch](https://github.com/weihuaguo270-ops/attention-from-scratch) — NumPy/PyTorch Transformer Attention 实现
-- [handwritten-react-agent](https://github.com/weihuaguo270-ops/handwritten-react-agent) — 生产级 ReAct Agent 框架
+- [attention-from-scratch](https://github.com/weihuaguo270-ops/transformer-attention) — NumPy/PyTorch Transformer Attention 实现
+- [handwritten-react-agent](https://github.com/weihuaguo270-ops/react-agent) — 生产级 ReAct Agent 框架
 - [trace-debugger](https://github.com/weihuaguo270-ops/trace-debugger) — Agent 执行轨迹分析工具
 
 ## License

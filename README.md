@@ -1,5 +1,7 @@
 # LLM Eval Engine
 
+[![CI](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml/badge.svg)](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 **生产级 LLM 评估框架**，支持 Process Reward 步骤级评分、动态评分标准生成、自适应 Eval Loop 和人工审批介入。
 
 ## 为什么需要这个框架

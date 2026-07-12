@@ -1,48 +1,49 @@
-"""template_loader — 加载 YAML 评分模板为 VerifierContract
-
-将 judge/templates/ 目录下的 YAML 模板加载为可用的评分契约。
-支持有 PyYAML（完整解析）和无 PyYAML（简易解析）两种模式。
-"""
-
+"""template_loader — 加载 YAML 评分模板为 VerifierContract"""
 from __future__ import annotations
 import os
 import re
 from typing import Optional
-
 from eval_engine.core.contract import VerifierContract
 
-_TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
+def _find_templates_dir() -> str:
+    """查找 templates 目录，支持多种安装方式"""
+    # 方式1：相对于当前文件（pip install -e .）
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+    if os.path.isdir(path):
+        return path
+    # 方式2：相对于项目根（直接运行测试时）
+    for candidate in [
+        "src/eval_engine/judge/templates",
+        "eval_engine/judge/templates",
+    ]:
+        for root in [os.getcwd(), os.path.dirname(os.path.abspath(__file__))]:
+            p = os.path.join(root, candidate)
+            if os.path.isdir(p):
+                return p
+    return path  # 返回默认路径
 
+_TEMPLATES_DIR = _find_templates_dir()
 
 def _parse_simple_yaml(text: str) -> dict:
-    """简易 YAML 解析（不依赖 PyYAML）
-
-    仅支持模板文件的键值对格式，不支持嵌套结构。
-    """
     result = {}
+    current_key = None
     for line in text.split("\n"):
-        line = line.strip()
-        if not line or line.startswith("#"):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
             continue
-        match = re.match(r"^(\w+):\s*(.*)", line)
+        match = re.match(r"^(\w+):\s*(.*)", stripped)
         if match:
-            key, value = match.group(1), match.group(2).strip()
-            # 去掉引号
-            if value.startswith('"') and value.endswith('"'):
-                value = value[1:-1]
-            elif value.startswith("'") and value.endswith("'"):
-                value = value[1:-1]
-            # 收集 rubric（多行则追加）
-            if key == "rubric":
-                existing = result.get("rubric", "")
-                result["rubric"] = (existing + "\n" + value).strip()
+            current_key = match.group(1)
+            value = match.group(2).strip()
+            if value.startswith("|"):
+                result[current_key] = ""
             else:
-                result[key] = value
+                result[current_key] = value
+        elif current_key and current_key in result:
+            result[current_key] += "\n" + stripped
     return result
 
-
 def _try_load_yaml(filepath: str) -> Optional[dict]:
-    """尝试加载 YAML 文件，优先用 PyYAML"""
     try:
         import yaml
         with open(filepath, "r", encoding="utf-8") as f:
@@ -53,24 +54,13 @@ def _try_load_yaml(filepath: str) -> Optional[dict]:
     except Exception:
         return None
 
-
 def load_template(name: str) -> Optional[VerifierContract]:
-    """按名称加载单个评分模板
-
-    参数:
-        name: 模板名（不含 .yaml 后缀）
-
-    返回:
-        VerifierContract 或 None（模板不存在时）
-    """
     filepath = os.path.join(_TEMPLATES_DIR, f"{name}.yaml")
     if not os.path.exists(filepath):
         return None
-
     data = _try_load_yaml(filepath)
     if not data:
         return None
-
     return VerifierContract(
         name=data.get("name", name),
         rubric=data.get("rubric", ""),
@@ -79,28 +69,18 @@ def load_template(name: str) -> Optional[VerifierContract]:
         weight=float(data.get("weight", 1.0)),
     )
 
-
 def load_all_templates() -> list[VerifierContract]:
-    """加载所有可用的评分模板"""
     contracts = []
     if not os.path.isdir(_TEMPLATES_DIR):
         return contracts
-
     for fname in sorted(os.listdir(_TEMPLATES_DIR)):
         if fname.endswith(".yaml"):
-            name = fname.replace(".yaml", "")
-            contract = load_template(name)
+            contract = load_template(fname.replace(".yaml", ""))
             if contract:
                 contracts.append(contract)
     return contracts
 
-
 def list_available_templates() -> list[str]:
-    """列出所有可用的模板名称"""
     if not os.path.isdir(_TEMPLATES_DIR):
         return []
-    return sorted(
-        fname.replace(".yaml", "")
-        for fname in os.listdir(_TEMPLATES_DIR)
-        if fname.endswith(".yaml")
-    )
+    return sorted(fname.replace(".yaml", "") for fname in os.listdir(_TEMPLATES_DIR) if fname.endswith(".yaml"))

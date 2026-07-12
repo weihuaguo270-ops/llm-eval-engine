@@ -140,6 +140,7 @@ class JudgeExecutor:
         max_tokens: int = 1024,
         max_retries: int = 2,
         llm_config_path: Optional[str] = None,
+        template_name: Optional[str] = None,
     ):
         """初始化 Judge 执行器
 

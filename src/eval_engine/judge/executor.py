@@ -167,6 +167,17 @@ class JudgeExecutor:
         self._base_url: str = ""
         self._api_key: str = ""
         self._model: str = ""
+        # 加载评分模板
+        self._template_rubric: str = ""
+        if template_name:
+            try:
+                from eval_engine.judge.template_loader import load_template
+                tpl = load_template(template_name)
+                if tpl:
+                    self._template_rubric = tpl.rubric
+            except Exception:
+                pass
+
         self._stats = {"calls": 0, "errors": 0, "total_latency": 0.0}
         self._resolved = False
 

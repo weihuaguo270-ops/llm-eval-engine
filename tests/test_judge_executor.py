@@ -158,6 +158,6 @@ def test_executor_with_template():
     # 无 API key 时应该走 fallback，而不是崩溃
     result = judge("请评分")
     assert result is not None
-    assert "score" in result
+    assert "step_score" in result
     assert judge._template_rubric != ""
     print(f"✅ 模板加载成功: rubric 长度={len(judge._template_rubric)}")

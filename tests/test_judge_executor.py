@@ -148,3 +148,16 @@ if __name__ == "__main__":
     print("\n" + "=" * 50)
     print("✅ 全部 10 个测试通过")
     print("=" * 50)
+
+
+def test_executor_with_template():
+    """JudgeExecutor 加载模板"""
+    from eval_engine.judge.executor import JudgeExecutor
+
+    judge = JudgeExecutor(template_name="faithfulness")
+    # 无 API key 时应该走 fallback，而不是崩溃
+    result = judge("请评分")
+    assert result is not None
+    assert "score" in result
+    assert judge._template_rubric != ""
+    print(f"✅ 模板加载成功: rubric 长度={len(judge._template_rubric)}")

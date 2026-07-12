@@ -167,6 +167,27 @@ pytest tests/
 - [react-agent](https://github.com/weihuaguo270-ops/react-agent) — 生产级 ReAct Agent 框架
 - [trace-debugger](https://github.com/weihuaguo270-ops/trace-debugger) — Agent 执行轨迹分析工具
 
+
+## CLI 工具
+
+```bash
+# 查看版本
+python -m eval_engine version
+
+# 评估轨迹文件
+python -m eval_engine eval --query "问题" --trajectory trajectory.json
+
+# 查看报告
+python -m eval_engine report --file result.json
+```
+
+## 示例
+
+```bash
+python examples/quickstart.py
+```
+
+
 ## License
 
 MIT

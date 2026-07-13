@@ -196,6 +196,16 @@ python examples/quickstart.py
 python examples/calibration_demo.py   # 校准流程演示（示例数据）
 ```
 
+## 当前局限（诚实说明）
+
+- 黄金集与人工标注规模仍小；`calibration_demo` 多为示例数据，**不能替代**完整人机一致性实验
+- 默认 CI 以离线单测为主；真实 Judge 需本地或配置 API Key 后运行
+- 与 react-agent 内置 `eval/` 有能力重叠：本仓侧重 **Process Reward / Eval Loop**，react-agent 侧重 **任务 capability 规则打分**
+
 ## License
 
 MIT
+
+## 贡献与安全
+
+见 [CONTRIBUTING.md](CONTRIBUTING.md) / [SECURITY.md](SECURITY.md)。

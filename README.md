@@ -13,7 +13,7 @@
 | 所有任务用固定模板评分 | **动态评分标准** — 每步基于实际上下文生成针对性评分标准 |
 | 只对最终答案二分法判对错 | **Process Reward** — 逐步骤评分，追踪错误传播路径 |
 | 一次性评估，没有改进机制 | **自适应 Eval Loop** — 低分触发修正指令 → Agent 重试 → 重新评分 |
-| 没有人参与决策 | **四级权限系统**（SAFE/NOTIFY/CONFIRM/DENY）+ HITL 人工审批 |
+| 没有人参与决策 | **HITL 人工审批钩子** — 修正注入 / 重执行前可回调人工确认 |
 | 手动判断是否需要重试 | **震荡检测** — 分数停滞时自动停止，避免无效循环 |
 
 ## 架构
@@ -28,16 +28,17 @@ src/eval_engine/
 │   └── process_reward.py        ★ 步骤级 Process Reward 评分 + 错误传播
 │
 ├── judge/                       Judge LLM 调用
-│   ├── executor.py              Judge LLM 封装（JSON 解析、重试）
-│   ├── calibration.py           评分校准与偏差调整
-│   └── templates/               评分 Prompt 模板
+│   ├── executor.py              Judge LLM 封装（JSON 解析、重试、模板）
+│   ├── template_loader.py       YAML 评分模板加载
+│   ├── calibration.py           评分校准与偏差调整（含 κ 示例）
+│   └── templates/               faithfulness / tool_selection / safety 等
 │
 ├── loop/                        自适应评估循环
 │   ├── eval_loop.py             ★ 核心循环：评分 → 修正 → 重执行
 │   └── fix_packer.py            修正指令打包
 │
 ├── gates/                       评分门控
-│   ├── baseline.py              Baseline 对比评分
+│   ├── baseline.py              BaselineManager 保存/对比
 │   └── regression_gate.py       回归检测
 │
 ├── intent/                      任务分类路由
@@ -154,21 +155,26 @@ engine = EvalLoopEngine(agent_fn=..., judge_fn=..., hitl=hitl)
 
 ```bash
 pip install -e ".[test]"
-pytest tests/
+pytest tests/ -q
+# 真实 Judge 集成测试（无 API Key 时自动 skip）
+pytest tests/test_real_judge.py -v
 ```
 
 ## 环境要求
 
 - Python 3.10+
-- 核心模块纯 Python，无外部依赖
-- Judge executor 需要 `requests`（可选，使用内置 executor 时需要）
+- 核心模块纯 Python；Judge executor / YAML 模板为可选增强（`requests` 等）
+
+## 与 react-agent 联动
+
+轨迹可由 [react-agent](https://github.com/weihuaguo270-ops/react-agent) Harness 产出，再交给本仓库的 Process Reward / Eval Loop。  
+对接示例：`react-agent/examples/agent_to_eval.py`。
 
 ## 相关项目
 
-- [transformer-attention](https://github.com/weihuaguo270-ops/transformer-attention) — NumPy/PyTorch Transformer Attention 实现
-- [react-agent](https://github.com/weihuaguo270-ops/react-agent) — ReAct Agent 框架
-- [trace-debugger](https://github.com/weihuaguo270-ops/trace-debugger) — Agent 执行轨迹分析工具
-
+- [react-agent](https://github.com/weihuaguo270-ops/react-agent) — ReAct Agent 学习实现
+- [transformer-attention](https://github.com/weihuaguo270-ops/transformer-attention) — Attention 教学实现
+- [trace-debugger](https://github.com/weihuaguo270-ops/trace-debugger) — 轨迹分析小工具
 
 ## CLI 工具
 
@@ -187,8 +193,8 @@ python -m eval_engine report --file result.json
 
 ```bash
 python examples/quickstart.py
+python examples/calibration_demo.py   # 校准流程演示（示例数据）
 ```
-
 
 ## License
 

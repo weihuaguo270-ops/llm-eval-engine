@@ -31,7 +31,8 @@ src/eval_engine/
 │   ├── executor.py              Judge LLM 封装（JSON 解析、重试、模板）
 │   ├── template_loader.py       YAML 评分模板加载
 │   ├── calibration.py           评分校准与偏差调整（含 κ 示例）
-│   └── templates/               faithfulness / tool_selection / safety 等
+│   └── templates/               faithfulness.yaml / tool_selection.yaml /
+│                                trajectory_safety.yaml
 │
 ├── loop/                        自适应评估循环
 │   ├── eval_loop.py             ★ 核心循环：评分 → 修正 → 重执行
@@ -39,7 +40,8 @@ src/eval_engine/
 │
 ├── gates/                       评分门控
 │   ├── baseline.py              BaselineManager 保存/对比
-│   └── regression_gate.py       回归检测
+│   ├── regression_gate.py       回归检测
+│   └── baselines/               已保存的 baseline 快照（JSON）
 │
 ├── intent/                      任务分类路由
 │   └── classifier.py            意图识别 → functional_test / generative_task
@@ -48,7 +50,8 @@ src/eval_engine/
 │   └── human_in_the_loop.py     HITL 回调接口
 │
 ├── dataset/                     数据集管理
-│   └── manager.py               数据加载与拆分
+│   ├── manager.py               数据加载与拆分
+│   └── data/                    内置样例集（如 golden.json）
 │
 └── observability/               可观测性
     └── report.py                审计报告生成

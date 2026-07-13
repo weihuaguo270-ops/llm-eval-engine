@@ -1,63 +1,45 @@
 """
-评分一致性校准演示 — 计算多位 Judge 之间的 Cohen's κ
+人机 / Judge 一致性演示
 
-模拟场景：3 个 Judge 对 10 个步骤评分，计算一致性。
-真实场景中应替换为人工标注数据。
+- demo_inter_judge(): 合成多 Judge 两两 κ（教学用）
+- demo_human_judge(): 加载内置校准集，跑 offline 人机表（可复现）
 """
 
-from eval_engine.judge.calibration import cohens_kappa, JudgeCalibrator
+from eval_engine.judge.calibration import (
+    JudgeCalibrator,
+    cohens_kappa,
+    format_agreement_markdown,
+)
 
 
-def demo_agreement():
+def demo_inter_judge():
     print("=" * 60)
-    print("Judge 评分一致性校准演示")
+    print("多 Judge 合成一致性（教学示例，非人标）")
     print("=" * 60)
 
-    # 模拟 3 位 Judge 对 10 个步骤的评分（1-5 分）
     judges = {
         "Judge_A": [5, 4, 5, 3, 4, 5, 4, 4, 3, 5],
         "Judge_B": [5, 4, 4, 3, 4, 5, 4, 5, 3, 4],
         "Judge_C": [5, 3, 4, 2, 3, 4, 3, 3, 2, 4],
     }
 
-    print(f"\n{'Judge':12s} {'评分序列':35s} {'均值':8s}")
-    print("-" * 55)
-    for name, scores in judges.items():
-        avg = sum(scores) / len(scores)
-        scores_str = " ".join(str(s) for s in scores)
-        print(f"{name:12s} {scores_str:35s} {avg:.2f}")
-
-    # 计算两两一致性
-    print(f"\n{'Judge 对':20s} {'Cohen\'s κ':12s} {'一致性':10s}")
-    print("-" * 45)
-    pairs = [("Judge_A", "Judge_B"), ("Judge_B", "Judge_C"), ("Judge_A", "Judge_C")]
-    for j1, j2 in pairs:
+    print(f"\n{'Judge 对':20s} {'Cohen\\'s κ':12s}")
+    print("-" * 40)
+    for j1, j2 in [("Judge_A", "Judge_B"), ("Judge_B", "Judge_C"), ("Judge_A", "Judge_C")]:
         k = cohens_kappa(judges[j1], judges[j2])
-        level = "高" if k > 0.7 else ("中" if k > 0.4 else "低")
-        print(f"{j1} vs {j2:<10s} {k:>8.3f}      {level}")
+        print(f"{j1} vs {j2:<10s} {k:>8.3f}")
 
-    # JudgeCalibrator 演示
-    print(f"\n--- JudgeCalibrator 校准演示 ---")
-    calibrator = JudgeCalibrator(threshold=0.7)
 
-    data = []
-    for i in range(10):
-        data.append({
-            "step_index": i,
-            "judge_a": judges["Judge_A"][i],
-            "judge_b": judges["Judge_B"][i],
-        })
-    calibrator.load_golden(data)
-    result = calibrator.run()
-
-    print(f"  Cohen's κ: {result['kappa']:.3f}")
-    print(f"  样本量: {result['sample_size']}")
-    print(f"  需要校准: {'是' if result.get('needs_calibration') else '否'}")
-
-    print(f"\n结论: "
-          f"{'Judge A 和 B 一致性较高，可互替' if result['kappa'] > 0.7 "
-          f"else 'Judge A 和 B 一致性不足，需统一评分标准'}")
+def demo_human_judge():
+    print("\n" + "=" * 60)
+    print("人机校准（内置 15 条，offline 冻结 Judge 分）")
+    print("=" * 60)
+    cal = JudgeCalibrator(threshold=0.6)
+    cal.load_golden_file()
+    report = cal.run(mode="offline")
+    print(format_agreement_markdown(report, title="Offline 人机一致性"))
 
 
 if __name__ == "__main__":
-    demo_agreement()
+    demo_inter_judge()
+    demo_human_judge()

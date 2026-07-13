@@ -34,5 +34,12 @@ judge = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+eval_engine = [
+    "dataset/data/*.json",
+    "judge/templates/*.yaml",
+    "gates/baselines/*.json",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -30,7 +30,7 @@ src/eval_engine/
 ├── judge/                       Judge LLM 调用
 │   ├── executor.py              Judge LLM 封装（JSON 解析、重试、模板）
 │   ├── template_loader.py       YAML 评分模板加载
-│   ├── calibration.py           评分校准与偏差调整（含 κ 示例）
+│   ├── calibration.py           人机校准（κ / 一致率 / MAE / bias）
 │   └── templates/               faithfulness.yaml / tool_selection.yaml /
 │                                trajectory_safety.yaml
 │
@@ -51,7 +51,7 @@ src/eval_engine/
 │
 ├── dataset/                     数据集管理
 │   ├── manager.py               数据加载与拆分
-│   └── data/                    内置样例集（如 golden.json）
+│   └── data/                    golden.json + calibration_human_judge.json
 │
 └── observability/               可观测性
     └── report.py                审计报告生成
@@ -196,14 +196,33 @@ python -m eval_engine report --file result.json
 
 ```bash
 python examples/quickstart.py
-python examples/calibration_demo.py   # 校准流程演示（示例数据）
+python examples/calibration_demo.py      # 合成多 Judge + 内置人机表
+python examples/run_calibration.py       # 写出 docs/calibration_snapshot_*.md
+python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 ```
+
+## Judge 人机校准
+
+目标：用小样本量化「人类标注 vs Judge」是否同刻度，而不是只打印合成 κ。
+
+| 项 | 说明 |
+|----|------|
+| 数据 | [`src/eval_engine/dataset/data/calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（15 条） |
+| 离线复现 | 使用条目内冻结的 `judge_score`（CI / 无 Key 可跑） |
+| 在线 | `--live` 调用 `JudgeExecutor` 对 `prompt` 重打分 |
+| 指标 | Cohen's κ、精确一致率、±1 一致率、MAE、Bias、混淆矩阵 |
+| 快照 | [`docs/calibration_snapshot_20260713.md`](docs/calibration_snapshot_20260713.md) |
+
+**最新 offline 快照（n=15）：** κ≈0.47，精确一致 60%，±1 一致 100%，MAE=0.4，Bias≈+0.13（Judge 略偏高）。κ < 0.6 → 标记建议校准——这是刻意保留的诚实结果，不是刷高分。
+
+标注协议写在数据文件的 `meta.labeling_protocol`。HITL 人工审批（执行前确认）与本校准不是同一能力。
 
 ## 当前局限（诚实说明）
 
-- 黄金集与人工标注规模仍小；`calibration_demo` 多为示例数据，**不能替代**完整人机一致性实验
-- 默认 CI 以离线单测为主；真实 Judge 需本地或配置 API Key 后运行
-- 与 react-agent 内置 `eval/` 有能力重叠：本仓侧重 **Process Reward / Eval Loop**，react-agent 侧重 **任务 capability 规则打分**
+- 人机校准仍是 **15 条小样本**；κ 方差大，只能作趋势证据，不能当生产 SLA
+- `judge_score` 离线冻结分用于可复现；换模型 / 换 prompt 后需 `--live` 或重标
+- 默认 CI 以离线单测为主；真实 Judge 需配置 API Key
+- 与 react-agent 内置 `eval/` 有能力重叠：本仓侧重 **Process Reward / Eval Loop / 人机校准**，react-agent 侧重 **任务 capability 规则打分**
 
 ## License
 

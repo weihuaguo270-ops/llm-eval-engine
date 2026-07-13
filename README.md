@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml/badge.svg)](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-** LLM 评估框架**，支持 Process Reward 步骤级评分、动态评分标准生成、自适应 Eval Loop 和人工审批介入。
+**LLM 评估实验框架**，支持 Process Reward 步骤级评分、动态评分标准生成、自适应 Eval Loop 和人工审批介入。
 
 ## 为什么需要这个框架
 
@@ -103,7 +103,9 @@ Agent 执行 → 轨迹解析 → Process Reward 评分
 ## 快速开始
 
 ```bash
-pip install eval-engine
+# 从源码安装（本地开发）
+pip install -e .
+# 或带测试依赖：pip install -e ".[test]"
 ```
 
 ```python

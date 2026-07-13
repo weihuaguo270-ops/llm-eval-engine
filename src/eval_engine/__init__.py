@@ -1,4 +1,4 @@
-"""eval-engine —  LLM evaluation framework
+"""eval-engine — Experimental LLM evaluation framework
 
 Provides adaptive evaluation for LLM agent outputs via:
   - Process Reward step-level scoring

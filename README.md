@@ -172,6 +172,13 @@ pytest tests/test_real_judge.py -v
 
 轨迹可由 [react-agent](https://github.com/weihuaguo270-ops/react-agent) Harness 产出，再交给本仓库的 Process Reward / Eval Loop。
 
+### 职责边界（避免双仓重复叙事）
+
+| 仓 | 负责什么 | 不负责什么 |
+|----|----------|------------|
+| **react-agent `eval/`** | 任务 capability 规则打分、功能验证集、公开快照 | Process Reward / κ 校准 |
+| **本仓 llm-eval-engine** | Process Reward、动态 rubric、人机校准、Eval Loop | Agent 运行时 / capability 数据集主维护 |
+
 - **共享 Schema（Format B，1-based `step`）**：[react-agent/schemas/harness_trajectory.schema.json](https://github.com/weihuaguo270-ops/react-agent/blob/main/schemas/harness_trajectory.schema.json)
 - **一键闭环**：`react-agent/examples/harness_closed_loop.py`（Agent → Trace Debugger → 本仓评分）
 - **精简对接**：`react-agent/examples/agent_to_eval.py`

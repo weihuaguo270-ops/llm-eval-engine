@@ -170,8 +170,13 @@ pytest tests/test_real_judge.py -v
 
 ## 与 react-agent 联动
 
-轨迹可由 [react-agent](https://github.com/weihuaguo270-ops/react-agent) Harness 产出，再交给本仓库的 Process Reward / Eval Loop。  
-对接示例：`react-agent/examples/agent_to_eval.py`。
+轨迹可由 [react-agent](https://github.com/weihuaguo270-ops/react-agent) Harness 产出，再交给本仓库的 Process Reward / Eval Loop。
+
+- **共享 Schema（Format B，1-based `step`）**：[react-agent/schemas/harness_trajectory.schema.json](https://github.com/weihuaguo270-ops/react-agent/blob/main/schemas/harness_trajectory.schema.json)
+- **一键闭环**：`react-agent/examples/harness_closed_loop.py`（Agent → Trace Debugger → 本仓评分）
+- **精简对接**：`react-agent/examples/agent_to_eval.py`
+
+本仓库 `parse_trajectory` 会自动识别 1-based Format B；若轨迹仍用遗留 0-based `step`，也会兼容。
 
 ## 相关项目
 

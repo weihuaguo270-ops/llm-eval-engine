@@ -169,17 +169,11 @@ def parse_trajectory(trajectory: dict) -> StepsDAG:
     支持两种轨迹格式：
       Format A（新格式，由 build_step_judge_prompt 等生成）：
           {"step_index": 0, "type": "thought", "content": "...", "action": {...}}
-      Format B（现有 recorder 格式）：
+      Format B（现有 recorder 格式，Harness 约定 1-based ``step``）：
           {"step": 1, "thought": "", "action": {"name": "...", "arguments": "..."}, "observation": "..."}
 
-    参数:
-        trajectory: 轨迹字典
-
-    返回:
-        StepsDAG: 可用于逐步骤评分的有向图结构
-
-    异常:
-        ValueError: 轨迹格式无法解析
+    兼容：若 Format B 中 ``step`` 最小值为 0，视为遗留 0-based 编号，不再减 1。
+    多工具：``actions[]`` 取首个写入 node；完整列表保留在 metadata。
     """
     if not trajectory:
         raise ValueError("轨迹数据无效：空字典")
@@ -198,11 +192,23 @@ def parse_trajectory(trajectory: dict) -> StepsDAG:
         },
     )
 
+    format_b_nums = [
+        s.get("step")
+        for s in raw_steps
+        if isinstance(s, dict) and s.get("step_index") is None and isinstance(s.get("step"), int)
+    ]
+    # Harness Format B is 1-based; legacy fixtures used 0-based `step`.
+    one_based = bool(format_b_nums) and min(format_b_nums) >= 1
+
     for raw_step in raw_steps:
         # 兼容两种格式：Format B 用 step，Format A 用 step_index
         step_index = raw_step.get("step_index")
         if step_index is None:
-            step_index = raw_step.get("step", len(dag.nodes)) - 1  # 1-based → 0-based
+            raw_n = raw_step.get("step", len(dag.nodes) + (1 if one_based else 0))
+            if one_based:
+                step_index = raw_n - 1
+            else:
+                step_index = raw_n
 
         # 步骤类型推导
         if "type" in raw_step and raw_step["type"]:
@@ -210,8 +216,11 @@ def parse_trajectory(trajectory: dict) -> StepsDAG:
         else:
             step_type = _infer_step_type(raw_step)
 
-        # 动作/工具信息
+        # 动作/工具信息（singular action 或 actions[]）
         action_data = raw_step.get("action", {}) or {}
+        all_actions = raw_step.get("actions")
+        if (not action_data) and isinstance(all_actions, list) and all_actions:
+            action_data = all_actions[0] or {}
         if isinstance(action_data, dict):
             tool_name = action_data.get("name")
             # Format A 用 args，Format B 用 arguments
@@ -248,6 +257,7 @@ def parse_trajectory(trajectory: dict) -> StepsDAG:
                 "timestamp": raw_step.get("timestamp", 0),
                 "duration_seconds": raw_step.get("duration_seconds", 0),
                 "tokens_estimated": raw_step.get("tokens_estimated", 0),
+                "actions": all_actions if isinstance(all_actions, list) else None,
             },
         )
         dag.nodes.append(node)
@@ -265,13 +275,13 @@ def _infer_step_type(raw_step: dict) -> str:
     """从步骤数据中推导步骤类型（兼容 Format B）
 
     规则：
-      - 有 action 字段 → "action"
+      - 有 action / actions 字段 → "action"
       - thought 含 "FINAL ANSWER" → "final"
       - 有 observation → "observation"
       - 否则 → "thought"
     """
     thought = raw_step.get("thought", "")
-    if raw_step.get("action"):
+    if raw_step.get("action") or raw_step.get("actions"):
         return "action"
     if "FINAL ANSWER" in thought.upper():
         return "final"

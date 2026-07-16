@@ -34,13 +34,22 @@ import os
 import glob
 import time
 from typing import Any, Optional
+from pathlib import Path
 
 
-DEFAULT_BASELINE_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "gates",
-    "baselines",
-)
+def default_baseline_dir() -> str:
+    """Return a writable per-user state directory for generated baselines."""
+    override = os.environ.get("EVAL_ENGINE_BASELINE_DIR")
+    if override:
+        return override
+    if os.name == "nt":
+        state_root = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    else:
+        state_root = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state"))
+    return str(state_root / "eval-engine" / "baselines")
+
+
+DEFAULT_BASELINE_DIR = default_baseline_dir()
 
 
 class BaselineManager:

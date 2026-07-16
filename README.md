@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml/badge.svg)](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**LLM 评估实验框架**，支持 Process Reward 步骤级评分、动态评分标准生成、自适应 Eval Loop 和人工审批介入。
+**LLM 评估实验框架**，支持 process-level LLM-as-Judge 步骤评分、动态评分标准生成、自适应 Eval Loop 和人工审批介入。
+
+> 术语边界：本项目的 `Process Reward` 是基于 Judge LLM 的过程级评分流程，不是训练得到的 Process Reward Model（PRM），也不提供 PRM 训练数据或损失函数。
 
 ## 为什么需要这个框架
 
@@ -41,7 +43,7 @@ src/eval_engine/
 ├── gates/                       评分门控
 │   ├── baseline.py              BaselineManager 保存/对比
 │   ├── regression_gate.py       回归检测
-│   └── baselines/               已保存的 baseline 快照（JSON）
+│   └── （运行产物写入用户状态目录，可用 EVAL_ENGINE_BASELINE_DIR 覆盖）
 │
 ├── intent/                      任务分类路由
 │   └── classifier.py            意图识别 → functional_test / generative_task
@@ -236,6 +238,9 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 ## 当前局限（诚实说明）
 
 - 人机校准金标准 **28 条（v2）**；offline κ≈0.90 / live κ≈0.68 仍是小样本趋势证据
+- 当前金标准由仓库维护者单人标注，尚无第二标注者或标注者间一致性结果
+- v2 协议调整与 κ 报告使用同一组 28 条样本，尚无独立 held-out 集；offline/live κ 不能视为泛化结论
+- 下一阶段需冻结 rubric 后补充独立 test split，并报告 bootstrap 置信区间和跨 Judge 结果
 - HITL 审批 ≠ 人机校准；二者不要在简历里混为一谈
 - `judge_score` 离线冻结分用于可复现；换模型 / 换 prompt 后需 `--live` 或重标
 - 默认 CI 以离线单测为主；真实 Judge 需配置 API Key

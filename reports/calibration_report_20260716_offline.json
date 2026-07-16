@@ -1,0 +1,236 @@
+{
+  "sample_size": 28,
+  "kappa": 0.9005,
+  "exact_agree_rate": 0.9286,
+  "within_one_rate": 1.0,
+  "mae": 0.0714,
+  "bias": -0.0714,
+  "scale": [
+    1,
+    5
+  ],
+  "confusion_labels": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "confusion": [
+    [
+      5,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      5,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      2,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      2,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1,
+      12
+    ]
+  ],
+  "pairs": [
+    {
+      "id": "cal_01",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_02",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_03",
+      "human": 2,
+      "judge": 2,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_04",
+      "human": 1,
+      "judge": 1,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_05",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_06",
+      "human": 2,
+      "judge": 2,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_07",
+      "human": 1,
+      "judge": 1,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_08",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_09",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_10",
+      "human": 2,
+      "judge": 2,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_11",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_12",
+      "human": 1,
+      "judge": 1,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_13",
+      "human": 4,
+      "judge": 4,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_14",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_15",
+      "human": 4,
+      "judge": 4,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_16",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_17",
+      "human": 2,
+      "judge": 2,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_18",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_19",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_20",
+      "human": 2,
+      "judge": 2,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_21",
+      "human": 4,
+      "judge": 3,
+      "abs_err": 1
+    },
+    {
+      "id": "cal_22",
+      "human": 1,
+      "judge": 1,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_23",
+      "human": 3,
+      "judge": 3,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_24",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_25",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_26",
+      "human": 1,
+      "judge": 1,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_27",
+      "human": 3,
+      "judge": 3,
+      "abs_err": 0
+    },
+    {
+      "id": "cal_28",
+      "human": 5,
+      "judge": 4,
+      "abs_err": 1
+    }
+  ],
+  "needs_calibration": false,
+  "threshold": 0.6,
+  "avg_human": 3.5,
+  "avg_judge": 3.429,
+  "drift": -0.071,
+  "worst_dimensions": [],
+  "skipped": 0,
+  "mode": "offline",
+  "source_path": "D:\\agent_learning\\llm-eval-engine\\src\\eval_engine\\dataset\\data\\calibration_human_judge.json",
+  "notes": "offline 使用数据集内冻结的 judge_score，便于 CI/复现；live 需配置 Judge API Key 后重打分。"
+}

@@ -227,13 +227,15 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 
 **最新 offline 快照（n=28, v2）：** κ≈**0.90**，精确一致 **92.9%**，±1 一致 100%，MAE≈0.07；`needs_calibration=否`。刻意保留 2 条残留分歧。旧版 n=15 时 κ≈0.47 保留为校准前基线。
 
-> offline κ 是「收紧协议 + 重标边界样本」后的可复现结果，不要直接说成「线上 Judge 天生 0.9」。换模型请跑 `--live`。
+**最新 live 快照（DeepSeek，n=28）：** κ≈**0.68**，精确一致 **78.6%**，±1 一致 **96.4%**，MAE=0.25，Bias≈+0.18；`needs_calibration=否`。见 [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)。
+
+> offline κ 是「收紧协议 + 重标边界样本」后的可复现结果；live 是真实 Judge 重打分。二者不要混谈成同一个数。
 
 标注协议与 `meta.relabel_log` 写在数据文件中。HITL 人工审批（执行前确认）与本校准不是同一能力。
 
 ## 当前局限（诚实说明）
 
-- 人机校准金标准 **28 条（v2）**；offline κ≈0.90 仍是小样本趋势证据，live 需另跑
+- 人机校准金标准 **28 条（v2）**；offline κ≈0.90 / live κ≈0.68 仍是小样本趋势证据
 - HITL 审批 ≠ 人机校准；二者不要在简历里混为一谈
 - `judge_score` 离线冻结分用于可复现；换模型 / 换 prompt 后需 `--live` 或重标
 - 默认 CI 以离线单测为主；真实 Judge 需配置 API Key

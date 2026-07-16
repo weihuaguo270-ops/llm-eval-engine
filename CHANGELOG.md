@@ -4,7 +4,7 @@
 
 ### Changed
 - Judge 人机校准 v2：金标准扩至 **28** 条；收紧三份模板边界裁决；offline κ **0.47→0.90**（旧快照保留作基线）
-- `run_calibration.py --live` 注入刻度锚点；快照附 `relabel_log` / 残留分歧说明
+- `run_calibration.py --live`：自动从姊妹仓 `.env` 映射 DeepSeek Key；live κ≈**0.68**（`docs/calibration_snapshot_20260716_live.md`）
 
 ## 0.1.0 (2026-07-13)
 

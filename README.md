@@ -219,19 +219,22 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 
 | 项 | 说明 |
 |----|------|
-| 数据 | [`src/eval_engine/dataset/data/calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（15 条） |
+| 数据 | [`calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（**28** 条，v2） |
 | 离线复现 | 使用条目内冻结的 `judge_score`（CI / 无 Key 可跑） |
-| 在线 | `--live` 调用 `JudgeExecutor` 对 `prompt` 重打分 |
+| 在线 | `--live` 调用 `JudgeExecutor`（注入 v2 刻度锚点）对 `prompt` 重打分 |
 | 指标 | Cohen's κ、精确一致率、±1 一致率、MAE、Bias、混淆矩阵 |
-| 快照 | [`docs/calibration_snapshot_20260713.md`](docs/calibration_snapshot_20260713.md) |
+| 快照 | [`calibration_snapshot_20260716.md`](docs/calibration_snapshot_20260716.md)（旧基线 [20260713](docs/calibration_snapshot_20260713.md)） |
 
-**最新 offline 快照（n=15）：** κ≈0.47，精确一致 60%，±1 一致 100%，MAE=0.4，Bias≈+0.13（Judge 略偏高）。κ < 0.6 → 标记建议校准——这是刻意保留的诚实结果，不是刷高分。
+**最新 offline 快照（n=28, v2）：** κ≈**0.90**，精确一致 **92.9%**，±1 一致 100%，MAE≈0.07；`needs_calibration=否`。刻意保留 2 条残留分歧。旧版 n=15 时 κ≈0.47 保留为校准前基线。
 
-标注协议写在数据文件的 `meta.labeling_protocol`。HITL 人工审批（执行前确认）与本校准不是同一能力。
+> offline κ 是「收紧协议 + 重标边界样本」后的可复现结果，不要直接说成「线上 Judge 天生 0.9」。换模型请跑 `--live`。
+
+标注协议与 `meta.relabel_log` 写在数据文件中。HITL 人工审批（执行前确认）与本校准不是同一能力。
 
 ## 当前局限（诚实说明）
 
-- 人机校准仍是 **15 条小样本**；κ 方差大，只能作趋势证据，不能当生产 SLA
+- 人机校准金标准 **28 条（v2）**；offline κ≈0.90 仍是小样本趋势证据，live 需另跑
+- HITL 审批 ≠ 人机校准；二者不要在简历里混为一谈
 - `judge_score` 离线冻结分用于可复现；换模型 / 换 prompt 后需 `--live` 或重标
 - 默认 CI 以离线单测为主；真实 Judge 需配置 API Key
 - 与 react-agent 内置 `eval/` 有能力重叠：本仓侧重 **Process Reward / Eval Loop / 人机校准**，react-agent 侧重 **任务 capability 规则打分**

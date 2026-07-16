@@ -39,7 +39,7 @@ def test_load_builtin_calibration_file():
     path = default_calibration_path()
     assert Path(path).is_file(), path
     items = load_golden_file(path)
-    assert len(items) >= 10
+    assert len(items) >= 20
     assert all("human_score" in x and "judge_score" in x for x in items)
     print(f"✅ builtin calibration items={len(items)}")
 
@@ -48,10 +48,13 @@ def test_calibrator_offline_run():
     cal = JudgeCalibrator(threshold=0.6)
     cal.load_golden_file()
     result = cal.run(mode="offline")
-    assert result["sample_size"] >= 10
+    assert result["sample_size"] >= 20
     assert "kappa" in result
     assert "exact_agree_rate" in result
     assert result["mode"] == "offline"
+    # v2 收紧 rubric 后 offline κ 应跨过建议校准线
+    assert result["kappa"] >= 0.6, result["kappa"]
+    assert result["needs_calibration"] is False
     md = format_agreement_markdown(result)
     assert "Cohen" in md or "κ" in md
     print(

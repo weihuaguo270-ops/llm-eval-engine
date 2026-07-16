@@ -1,5 +1,7 @@
 # Judge 人机校准快照（20260713）
 
+> **历史基线**（v1，n=15，无 held-out）。当前口径见 [`calibration_snapshot_20260716_offline.md`](calibration_snapshot_20260716_offline.md) / [`_live.md`](calibration_snapshot_20260716_live.md) 与 [`METRICS_TRUST.md`](METRICS_TRUST.md)。**不要**把本页 κ≈0.47 当作当前结果。
+
 - 样本量: **15**
 - Cohen's κ: **0.4675**
 - 精确一致率: **60.0%**

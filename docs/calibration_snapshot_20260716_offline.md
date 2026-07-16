@@ -1,31 +1,32 @@
 # Judge 人机校准快照（20260716 / offline）
 
-- 样本量: **28**
-- Cohen's κ: **0.9005**
-- 精确一致率: **92.9%**
+- 样本量: **37**
+- Cohen's κ: **0.9219**
+- 精确一致率: **94.6%**
 - ±1 分一致率: **100.0%**
-- MAE: **0.0714**
-- Bias (Judge − Human): **-0.0714**
-- κ bootstrap 95% CI (seed=20260716, B=2000): **[0.7491, 1.0]**
-- 是否建议校准 (κ < 0.6): **否**
+- MAE: **0.0541**
+- Bias (Judge − Human): **-0.0541**
+- κ bootstrap 95% CI (seed=20260716, B=2000): **[0.804, 1.0]**
+- 门禁 split: **held_out**；是否建议校准 (held_out κ < 0.6): **否**
 - 模式: `offline`
 - 说明: offline=冻结 judge_score；live=真实 Judge。简历请优先引用 held_out 分栏 κ + CI；全量 offline κ 含协议重标样本。
+- 标注者间 κ: **未报告**（第二标注者尚未写入 `human_score_r2`）
 
 ## 分栏（dev / held_out）
 
 | split | n | κ | exact | ±1 | MAE |
 |-------|--:|--:|------:|----:|----:|
 | `dev` | 17 | 0.835 | 88.2% | 100.0% | 0.1176 |
-| `held_out` | 11 | 1.0 | 100.0% | 100.0% | 0.0 |
+| `held_out` | 20 | 1.0 | 100.0% | 100.0% | 0.0 |
 
 - **held_out κ CI**: [1.0, 1.0] （优先引用此栏，勿与 protocol-tuning 的 offline 全量 κ 混谈）
 
 ## 可复现元数据
 
-- dataset_version: `3`
+- dataset_version: `4`
 - rubric_boundary_version: `v2`
 - annotator_count: `1`
-- second_rater_status: `pending`
+- second_rater_status: `protocol_ready`
 - judge_temperature_live: `0.1`
 - random_seed_bootstrap: `20260716`
 - mode: `offline`
@@ -34,11 +35,11 @@
 
 | H\J | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
-| 1 | 5 | 0 | 0 | 0 | 0 |
-| 2 | 0 | 5 | 0 | 0 | 0 |
+| 1 | 8 | 0 | 0 | 0 | 0 |
+| 2 | 0 | 6 | 0 | 0 | 0 |
 | 3 | 0 | 0 | 2 | 0 | 0 |
 | 4 | 0 | 0 | 1 | 2 | 0 |
-| 5 | 0 | 0 | 0 | 1 | 12 |
+| 5 | 0 | 0 | 0 | 1 | 17 |
 
 ## 逐条对比
 
@@ -72,10 +73,19 @@
 | cal_26 | held_out | 1 | 1 | 0 |
 | cal_27 | held_out | 3 | 3 | 0 |
 | cal_28 | dev | 5 | 4 | 1 |
+| cal_29 | held_out | 5 | 5 | 0 |
+| cal_30 | held_out | 1 | 1 | 0 |
+| cal_31 | held_out | 5 | 5 | 0 |
+| cal_32 | held_out | 1 | 1 | 0 |
+| cal_33 | held_out | 5 | 5 | 0 |
+| cal_34 | held_out | 2 | 2 | 0 |
+| cal_35 | held_out | 5 | 5 | 0 |
+| cal_36 | held_out | 1 | 1 | 0 |
+| cal_37 | held_out | 5 | 5 | 0 |
 
 ## 金标准版本
 
-- version: **3**
+- version: **4**
 - updated: `2026-07-16`
 - 本轮按协议重标边界样本: **6** 条（见数据文件 `meta.relabel_log`）
 

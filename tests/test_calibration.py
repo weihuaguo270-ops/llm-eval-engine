@@ -39,35 +39,73 @@ def test_load_builtin_calibration_file():
     path = default_calibration_path()
     assert Path(path).is_file(), path
     items = load_golden_file(path)
-    assert len(items) >= 20
-    assert all("human_score" in x and "judge_score" in x for x in items)
-    assert any(x.get("split") == "held_out" for x in items)
-    assert any(x.get("split") == "dev" for x in items)
-    print(f"[PASS] builtin calibration items={len(items)}")
+    scored = [x for x in items if x.get("human_score") is not None]
+    assert len(scored) >= 28
+    assert all("human_score" in x for x in scored)
+    assert any(x.get("split") == "held_out" for x in scored)
+    assert any(x.get("split") == "dev" for x in scored)
+    held = [x for x in scored if x.get("split") == "held_out"]
+    assert len(held) >= 20, len(held)
+    print(f"[PASS] builtin calibration scored={len(scored)} held_out={len(held)}")
 
 
 def test_calibrator_offline_run():
     cal = JudgeCalibrator(threshold=0.6)
     cal.load_golden_file()
     result = cal.run(mode="offline")
-    assert result["sample_size"] >= 20
+    assert result["sample_size"] >= 28
     assert "kappa" in result
     assert "exact_agree_rate" in result
     assert result["mode"] == "offline"
     assert "bootstrap" in result and "kappa" in result["bootstrap"]
     assert "by_split" in result
     assert "held_out" in result["by_split"]
-    assert result["by_split"]["held_out"]["sample_size"] >= 8
+    assert result["by_split"]["held_out"]["sample_size"] >= 20
     # held_out 门控：协议冻结后的独立栏
     assert result["gate_split"] == "held_out"
     assert result["by_split"]["held_out"]["kappa"] >= 0.6, result["by_split"]["held_out"]
     md = format_agreement_markdown(result)
     assert "held_out" in md
+    assert "门禁 split" in md
     assert "Cohen" in md or "κ" in md
     print(
         f"[PASS] offline calibrator: n={result['sample_size']} "
         f"κ={result['kappa']} held_outκ={result['by_split']['held_out']['kappa']}"
     )
+
+
+def test_inter_rater_when_r2_present():
+    cal = JudgeCalibrator()
+    cal.load_golden(
+        [
+            {"id": "a", "human_score": 5, "human_score_r2": 5, "judge_score": 5},
+            {"id": "b", "human_score": 2, "human_score_r2": 2, "judge_score": 2},
+            {"id": "c", "human_score": 4, "human_score_r2": 3, "judge_score": 4},
+        ]
+    )
+    result = cal.run(mode="offline")
+    assert result["inter_rater"]["sample_size"] == 3
+    assert result["inter_rater"]["kappa"] is not None
+    print(f"[PASS] inter_rater κ={result['inter_rater']['kappa']}")
+
+
+def test_skips_pending_annotation():
+    cal = JudgeCalibrator()
+    cal.load_golden(
+        [
+            {
+                "id": "p",
+                "human_score": None,
+                "judge_score": None,
+                "annotation_status": "pending_r1_r2",
+            },
+            {"id": "ok", "human_score": 5, "judge_score": 5},
+        ]
+    )
+    result = cal.run(mode="offline")
+    assert result["sample_size"] == 1
+    assert result["skipped"] >= 1
+    print("[PASS] pending items skipped")
 
 
 def test_bootstrap_ci_shape():

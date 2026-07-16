@@ -18,13 +18,20 @@ python examples/run_calibration.py          # offline + held_out 分栏 + bootst
 python examples/run_calibration.py --live   # 真实 Judge
 ```
 
-- 金标准 **v3**：`dev`（协议调参/重标）与 `held_out`（独立评估）分开。
+- 金标准 **v4**：`dev`（协议调参）与 `held_out`（独立评估，已标 n=20）分开；pending 条目不进 κ。
 - 报告含 **bootstrap 95% CI**（seed 写在 `meta.reproducibility`）。
-- **第二标注者**：`second_rater.status=pending`（当前仅 r1，不假装有双人 κ）。
+- **第二标注者**：`protocol_ready`（见 `SECOND_RATER_PROTOCOL.md`）；`human_score_r2` 全为空 → **不报告双人 κ**。
 
-优先引用：**held_out live κ + CI**，并注明 n、模型与单人标注。
+### 当前应引用的唯一数字表
 
-**2026-07-16 live（DeepSeek）：** held_out κ≈**0.59**（n=11，CI [0.26, 1.0]）；全量 κ≈**0.68**。held_out 略低于门禁 0.6，报告诚实标 `needs_calibration`；区间很宽，小样本下勿夸成稳定 SLA。
+| 引用 | 值 |
+|------|----|
+| held_out **live** | κ≈**0.59**（n=11，CI [0.26, 1.0]，DeepSeek，needs_calibration） |
+| 全量 live | κ≈**0.68**（辅证，勿替代 held_out） |
+| held_out **offline** | κ=**1.0**（n=20，冻结分） |
+| 全量 offline | κ≈**0.92**（n=37） |
+
+**禁止**再写：n=15、κ≈0.47、或「无 held-out / offline κ≈0.90 当线上 SLA」。
 
 ## Execution 通过率（react-agent）
 

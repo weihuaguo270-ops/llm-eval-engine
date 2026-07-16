@@ -3,10 +3,11 @@
 ## Unreleased
 
 ### Changed
-- Judge 人机校准 v2：金标准扩至 **28** 条；收紧三份模板边界裁决；offline κ **0.47→0.90**（旧快照保留作基线）
-- `run_calibration.py --live`：自动从姊妹仓 `.env` 映射 DeepSeek Key；live κ≈**0.68**（`docs/calibration_snapshot_20260716_live.md`）
-- **v3 指标可信度**：`dev`/`held_out` 分栏、bootstrap 95% CI、`docs/METRICS_TRUST.md`；第二标注者标记 pending
-- live 按 v3 重跑（DeepSeek）：全量 κ≈0.68；**held_out** κ≈0.59（门禁略未过，诚实标 needs_calibration）
+- Judge 人机校准：**v4** held_out 已标 **20** + pending 3；第二标注者协议/worksheet；门禁文案标明 gate_split
+- CI：Windows × 3.10/3.11、pytest-cov、mypy、pip-audit
+- 公开口径统一为 held_out live κ≈0.59；废弃简历侧 n=15/κ≈0.47
+- Judge 校准 v2→v3：金标准 28；offline 全量 κ **0.47→≈0.90**；引入 dev/held_out
+- `run_calibration.py --live`：DeepSeek；held_out live κ≈**0.59**（见 live 快照）
 
 ## 0.1.0 (2026-07-13)
 

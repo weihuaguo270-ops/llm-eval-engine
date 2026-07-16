@@ -237,15 +237,27 @@ def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准
             f"(seed={boot.get('seed')}, B={boot.get('n_boot')}): "
             f"**[{k.get('low')}, {k.get('high')}]**"
         )
+    gate = report.get("gate_split") or "all"
     if "needs_calibration" in report:
         lines.append(
-            f"- 是否建议校准 (κ < {report.get('threshold', '?')}): "
+            f"- 门禁 split: **{gate}**；是否建议校准 "
+            f"({gate} κ < {report.get('threshold', '?')}): "
             f"**{'是' if report['needs_calibration'] else '否'}**"
         )
     if report.get("mode"):
         lines.append(f"- 模式: `{report['mode']}`")
     if report.get("notes"):
         lines.append(f"- 说明: {report['notes']}")
+    ir = report.get("inter_rater")
+    if ir and ir.get("sample_size", 0) > 0:
+        lines.append(
+            f"- 标注者间 κ (r1 vs r2, n={ir.get('sample_size')}): **{ir.get('kappa')}**"
+        )
+    elif report.get("reproducibility", {}).get("second_rater_status") in (
+        "pending",
+        "protocol_ready",
+    ):
+        lines.append("- 标注者间 κ: **未报告**（第二标注者尚未写入 `human_score_r2`）")
 
     splits = report.get("by_split") or {}
     if splits:
@@ -420,12 +432,25 @@ class JudgeCalibrator:
             except Exception:
                 meta_repro = {}
 
+        r1_scores: list[float] = []
+        r2_scores: list[float] = []
+        r12_ids: list[str] = []
+
         for item in self.golden_data:
             item_id = str(item.get("id", len(ids)))
+            if item.get("annotation_status", "").startswith("pending"):
+                skipped += 1
+                continue
             human_score = item.get("human_score")
             if human_score is None:
                 skipped += 1
                 continue
+
+            r2 = item.get("human_score_r2")
+            if r2 is not None:
+                r1_scores.append(float(human_score))
+                r2_scores.append(float(r2))
+                r12_ids.append(item_id)
 
             if judge_fn is not None:
                 prompt = item.get("prompt", "")
@@ -537,6 +562,14 @@ class JudgeCalibrator:
                 else "live 模式为当次 Judge 重打分；请同时看 held_out 分栏。"
             ),
         }
+        if len(r1_scores) >= 2:
+            report["inter_rater"] = agreement_table(r1_scores, r2_scores, ids=r12_ids)
+        else:
+            report["inter_rater"] = {
+                "sample_size": len(r1_scores),
+                "kappa": None,
+                "note": "需要至少 2 条 human_score_r2 才报告标注者间 κ",
+            }
         return report
 
 

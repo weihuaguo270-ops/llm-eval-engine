@@ -1,10 +1,10 @@
 {
-  "sample_size": 28,
-  "kappa": 0.9005,
-  "exact_agree_rate": 0.9286,
+  "sample_size": 37,
+  "kappa": 0.9219,
+  "exact_agree_rate": 0.9459,
   "within_one_rate": 1.0,
-  "mae": 0.0714,
-  "bias": -0.0714,
+  "mae": 0.0541,
+  "bias": -0.0541,
   "scale": [
     1,
     5
@@ -18,7 +18,7 @@
   ],
   "confusion": [
     [
-      5,
+      8,
       0,
       0,
       0,
@@ -26,7 +26,7 @@
     ],
     [
       0,
-      5,
+      6,
       0,
       0,
       0
@@ -50,7 +50,7 @@
       0,
       0,
       1,
-      12
+      17
     ]
   ],
   "pairs": [
@@ -249,6 +249,69 @@
       "judge": 4,
       "abs_err": 1,
       "split": "dev"
+    },
+    {
+      "id": "cal_29",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0,
+      "split": "held_out"
+    },
+    {
+      "id": "cal_30",
+      "human": 1,
+      "judge": 1,
+      "abs_err": 0,
+      "split": "held_out"
+    },
+    {
+      "id": "cal_31",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0,
+      "split": "held_out"
+    },
+    {
+      "id": "cal_32",
+      "human": 1,
+      "judge": 1,
+      "abs_err": 0,
+      "split": "held_out"
+    },
+    {
+      "id": "cal_33",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0,
+      "split": "held_out"
+    },
+    {
+      "id": "cal_34",
+      "human": 2,
+      "judge": 2,
+      "abs_err": 0,
+      "split": "held_out"
+    },
+    {
+      "id": "cal_35",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0,
+      "split": "held_out"
+    },
+    {
+      "id": "cal_36",
+      "human": 1,
+      "judge": 1,
+      "abs_err": 0,
+      "split": "held_out"
+    },
+    {
+      "id": "cal_37",
+      "human": 5,
+      "judge": 5,
+      "abs_err": 0,
+      "split": "held_out"
     }
   ],
   "bootstrap": {
@@ -256,13 +319,13 @@
     "seed": 20260716,
     "alpha": 0.05,
     "kappa": {
-      "point": 0.8985,
-      "low": 0.7491,
+      "point": 0.9218,
+      "low": 0.804,
       "high": 1.0
     },
     "exact_agree_rate": {
-      "point": 0.929,
-      "low": 0.8214,
+      "point": 0.9468,
+      "low": 0.8649,
       "high": 1.0
     },
     "note": "百分位 bootstrap；小样本区间偏宽，仅作不确定性展示"
@@ -462,7 +525,7 @@
       }
     },
     "held_out": {
-      "sample_size": 11,
+      "sample_size": 20,
       "kappa": 1.0,
       "exact_agree_rate": 1.0,
       "within_one_rate": 1.0,
@@ -481,24 +544,24 @@
       ],
       "confusion": [
         [
+          5,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
           2,
           0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          2,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          0,
-          2,
-          0,
           0
         ],
         [
@@ -513,7 +576,7 @@
           0,
           0,
           0,
-          5
+          10
         ]
       ],
       "pairs": [
@@ -593,6 +656,69 @@
           "judge": 3,
           "abs_err": 0,
           "split": "held_out"
+        },
+        {
+          "id": "cal_29",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_30",
+          "human": 1,
+          "judge": 1,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_31",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_32",
+          "human": 1,
+          "judge": 1,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_33",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_34",
+          "human": 2,
+          "judge": 2,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_35",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_36",
+          "human": 1,
+          "judge": 1,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_37",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
         }
       ],
       "bootstrap": {
@@ -616,16 +742,16 @@
   "needs_calibration": false,
   "threshold": 0.6,
   "gate_split": "held_out",
-  "avg_human": 3.5,
-  "avg_judge": 3.429,
-  "drift": -0.071,
+  "avg_human": 3.459,
+  "avg_judge": 3.405,
+  "drift": -0.054,
   "worst_dimensions": [],
-  "skipped": 0,
+  "skipped": 3,
   "mode": "offline",
   "source_path": "D:\\agent_learning\\llm-eval-engine\\src\\eval_engine\\dataset\\data\\calibration_human_judge.json",
   "reproducibility": {
     "dataset_id": "calibration_human_judge",
-    "dataset_version": 3,
+    "dataset_version": 4,
     "rubric_templates": [
       "tool_selection",
       "faithfulness",
@@ -633,10 +759,15 @@
     ],
     "rubric_boundary_version": "v2",
     "annotator_count": 1,
-    "second_rater_status": "pending",
+    "second_rater_status": "protocol_ready",
     "judge_temperature_live": 0.1,
     "random_seed_bootstrap": 20260716,
     "mode": "offline"
   },
-  "notes": "offline=冻结 judge_score；live=真实 Judge。简历请优先引用 held_out 分栏 κ + CI；全量 offline κ 含协议重标样本。"
+  "notes": "offline=冻结 judge_score；live=真实 Judge。简历请优先引用 held_out 分栏 κ + CI；全量 offline κ 含协议重标样本。",
+  "inter_rater": {
+    "sample_size": 0,
+    "kappa": null,
+    "note": "需要至少 2 条 human_score_r2 才报告标注者间 κ"
+  }
 }

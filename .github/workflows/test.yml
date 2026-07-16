@@ -84,6 +84,6 @@ jobs:
     - name: Install package + audit
       run: |
         python -m venv .audit-venv
-        .audit-venv/bin/pip install -U pip
-        .audit-venv/bin/pip install ".[judge,test,dev]"
-        .audit-venv/bin/pip-audit
+        .audit-venv/bin/python -m pip install -U pip "setuptools>=83"
+        .audit-venv/bin/python -m pip install ".[judge,test,dev]"
+        .audit-venv/bin/pip-audit --progress-spinner off

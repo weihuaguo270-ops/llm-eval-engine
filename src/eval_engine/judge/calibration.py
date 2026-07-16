@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 from typing import Any, Callable, Optional
 
 
@@ -168,6 +169,54 @@ def agreement_table(
     }
 
 
+def bootstrap_ci(
+    human_scores: list[float],
+    judge_scores: list[float],
+    *,
+    n_boot: int = 2000,
+    seed: int = 20260716,
+    alpha: float = 0.05,
+    scale_min: int = 1,
+    scale_max: int = 5,
+) -> dict[str, Any]:
+    """对 κ / 精确一致率做百分位 bootstrap 置信区间（小样本趋势用）。"""
+    n = len(human_scores)
+    if n == 0 or n != len(judge_scores):
+        return {"n_boot": 0, "seed": seed, "alpha": alpha}
+
+    h0 = _to_likert(human_scores, scale_min, scale_max)
+    j0 = _to_likert(judge_scores, scale_min, scale_max)
+    rng = random.Random(seed)
+    kappas: list[float] = []
+    exacts: list[float] = []
+    idx = list(range(n))
+    for _ in range(n_boot):
+        sample = [rng.choice(idx) for _ in range(n)]
+        hs = [h0[i] for i in sample]
+        js = [j0[i] for i in sample]
+        kappas.append(cohens_kappa(hs, js, likert=True, scale_min=scale_min, scale_max=scale_max))
+        exacts.append(sum(1 for a, b in zip(hs, js) if a == b) / n)
+
+    def _pct(vals: list[float]) -> dict[str, float]:
+        s = sorted(vals)
+        lo_i = int((alpha / 2) * (len(s) - 1))
+        hi_i = int((1 - alpha / 2) * (len(s) - 1))
+        return {
+            "point": round(sum(vals) / len(vals), 4),
+            "low": round(s[lo_i], 4),
+            "high": round(s[hi_i], 4),
+        }
+
+    return {
+        "n_boot": n_boot,
+        "seed": seed,
+        "alpha": alpha,
+        "kappa": _pct(kappas),
+        "exact_agree_rate": _pct(exacts),
+        "note": "百分位 bootstrap；小样本区间偏宽，仅作不确定性展示",
+    }
+
+
 def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准报告") -> str:
     """把 agreement / calibrator 报告格式化为 Markdown。"""
     lines = [
@@ -180,6 +229,14 @@ def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准
         f"- MAE: **{report.get('mae', 0)}**",
         f"- Bias (Judge − Human): **{report.get('bias', 0)}**",
     ]
+    boot = report.get("bootstrap") or {}
+    if boot.get("kappa"):
+        k = boot["kappa"]
+        lines.append(
+            f"- κ bootstrap {int((1 - boot.get('alpha', 0.05)) * 100)}% CI "
+            f"(seed={boot.get('seed')}, B={boot.get('n_boot')}): "
+            f"**[{k.get('low')}, {k.get('high')}]**"
+        )
     if "needs_calibration" in report:
         lines.append(
             f"- 是否建议校准 (κ < {report.get('threshold', '?')}): "
@@ -189,6 +246,43 @@ def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准
         lines.append(f"- 模式: `{report['mode']}`")
     if report.get("notes"):
         lines.append(f"- 说明: {report['notes']}")
+
+    splits = report.get("by_split") or {}
+    if splits:
+        lines.extend(["", "## 分栏（dev / held_out）", ""])
+        lines.append("| split | n | κ | exact | ±1 | MAE |")
+        lines.append("|-------|--:|--:|------:|----:|----:|")
+        for name, sub in splits.items():
+            lines.append(
+                f"| `{name}` | {sub.get('sample_size', 0)} | {sub.get('kappa', 0)} | "
+                f"{sub.get('exact_agree_rate', 0):.1%} | {sub.get('within_one_rate', 0):.1%} | "
+                f"{sub.get('mae', 0)} |"
+            )
+        ho = splits.get("held_out") or {}
+        if ho.get("bootstrap", {}).get("kappa"):
+            k = ho["bootstrap"]["kappa"]
+            lines.append("")
+            lines.append(
+                f"- **held_out κ CI**: [{k.get('low')}, {k.get('high')}] "
+                f"（优先引用此栏，勿与 protocol-tuning 的 offline 全量 κ 混谈）"
+            )
+
+    repro = report.get("reproducibility") or {}
+    if repro:
+        lines.extend(["", "## 可复现元数据", ""])
+        for key in (
+            "dataset_version",
+            "rubric_boundary_version",
+            "annotator_count",
+            "second_rater_status",
+            "judge_temperature_live",
+            "random_seed_bootstrap",
+            "mode",
+        ):
+            if key in repro or key == "mode" and report.get("mode"):
+                val = repro.get(key, report.get("mode") if key == "mode" else None)
+                if val is not None:
+                    lines.append(f"- {key}: `{val}`")
 
     labels = report.get("confusion_labels") or []
     matrix = report.get("confusion") or []
@@ -203,10 +297,11 @@ def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准
 
     pairs = report.get("pairs") or []
     if pairs:
-        lines.extend(["", "## 逐条对比", "", "| id | human | judge | |err| |", "|---|---:|---:|---:|"])
+        lines.extend(["", "## 逐条对比", "", "| id | split | human | judge | |err| |", "|---|---|---:|---:|---:|"])
         for p in pairs:
             lines.append(
-                f"| {p.get('id', '')} | {p.get('human', '')} | {p.get('judge', '')} | {p.get('abs_err', '')} |"
+                f"| {p.get('id', '')} | {p.get('split', '')} | {p.get('human', '')} | "
+                f"{p.get('judge', '')} | {p.get('abs_err', '')} |"
             )
 
     lines.append("")
@@ -310,8 +405,20 @@ class JudgeCalibrator:
         human_scores: list[float] = []
         judge_scores: list[float] = []
         ids: list[str] = []
+        splits: list[str] = []
         dimension_pairs: dict[str, list[tuple[float, float]]] = {}
         skipped = 0
+        meta_repro: dict[str, Any] = {}
+
+        # 尝试读 meta.reproducibility（若 golden 来自文件）
+        if self.source_path and os.path.isfile(self.source_path):
+            try:
+                with open(self.source_path, encoding="utf-8") as f:
+                    raw = json.load(f)
+                if isinstance(raw, dict):
+                    meta_repro = dict((raw.get("meta") or {}).get("reproducibility") or {})
+            except Exception:
+                meta_repro = {}
 
         for item in self.golden_data:
             item_id = str(item.get("id", len(ids)))
@@ -339,6 +446,7 @@ class JudgeCalibrator:
             human_scores.append(float(human_score))
             judge_scores.append(float(judge_score))
             ids.append(item_id)
+            splits.append(str(item.get("split") or "unspecified"))
 
             human_rubrics = {
                 r.get("dimension"): float(r.get("score", human_score))
@@ -364,6 +472,29 @@ class JudgeCalibrator:
             }
 
         table = agreement_table(human_scores, judge_scores, ids=ids)
+        for i, p in enumerate(table.get("pairs") or []):
+            p["split"] = splits[i] if i < len(splits) else ""
+
+        seed = int(meta_repro.get("random_seed_bootstrap") or 20260716)
+        boot = bootstrap_ci(human_scores, judge_scores, seed=seed)
+
+        by_split: dict[str, Any] = {}
+        for name in sorted(set(splits)):
+            idx = [i for i, s in enumerate(splits) if s == name]
+            hs = [human_scores[i] for i in idx]
+            js = [judge_scores[i] for i in idx]
+            sub_ids = [ids[i] for i in idx]
+            sub = agreement_table(hs, js, ids=sub_ids)
+            sub["bootstrap"] = bootstrap_ci(hs, js, seed=seed)
+            for j, p in enumerate(sub.get("pairs") or []):
+                p["split"] = name
+            by_split[name] = sub
+
+        # held_out 优先决定 needs_calibration；无则用全量
+        gate_kappa = table["kappa"]
+        if "held_out" in by_split and by_split["held_out"].get("sample_size", 0) > 0:
+            gate_kappa = by_split["held_out"]["kappa"]
+
         worst_dims = []
         for dim, pairs in dimension_pairs.items():
             drifts = [j - h for h, j in pairs]
@@ -379,8 +510,11 @@ class JudgeCalibrator:
 
         report = {
             **table,
-            "needs_calibration": table["kappa"] < self.threshold,
+            "bootstrap": boot,
+            "by_split": by_split,
+            "needs_calibration": gate_kappa < self.threshold,
             "threshold": self.threshold,
+            "gate_split": "held_out" if "held_out" in by_split else "all",
             "avg_human": round(sum(human_scores) / len(human_scores), 3),
             "avg_judge": round(sum(judge_scores) / len(judge_scores), 3),
             "drift": round(
@@ -392,11 +526,15 @@ class JudgeCalibrator:
             "skipped": skipped,
             "mode": mode,
             "source_path": self.source_path,
+            "reproducibility": {
+                **meta_repro,
+                "mode": mode,
+            },
             "notes": (
-                "offline 使用数据集内冻结的 judge_score，便于 CI/复现；"
-                "live 需配置 Judge API Key 后重打分。"
+                "offline=冻结 judge_score；live=真实 Judge。"
+                "简历请优先引用 held_out 分栏 κ + CI；全量 offline κ 含协议重标样本。"
                 if mode == "offline"
-                else "live 模式为当次 Judge 重打分结果。"
+                else "live 模式为当次 Judge 重打分；请同时看 held_out 分栏。"
             ),
         }
         return report

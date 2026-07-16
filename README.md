@@ -221,31 +221,29 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 
 | 项 | 说明 |
 |----|------|
-| 数据 | [`calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（**28** 条，v2） |
-| 离线复现 | 使用条目内冻结的 `judge_score`（CI / 无 Key 可跑） |
-| 在线 | `--live` 调用 `JudgeExecutor`（注入 v2 刻度锚点）对 `prompt` 重打分 |
-| 指标 | Cohen's κ、精确一致率、±1 一致率、MAE、Bias、混淆矩阵 |
-| 快照 offline | [`calibration_snapshot_20260716.md`](docs/calibration_snapshot_20260716.md)（旧基线 [20260713](docs/calibration_snapshot_20260713.md)） |
-| 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek 重打分） |
+| 数据 | [`calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（**28** 条，**v3** = dev 17 + held_out 11） |
+| 离线复现 | 冻结 `judge_score`；报告含 **dev/held_out 分栏** + bootstrap CI |
+| 在线 | `--live` 调用 `JudgeExecutor`（注入刻度锚点） |
+| 指标 | Cohen's κ、精确一致率、±1、MAE、Bias、混淆矩阵、**bootstrap 95% CI** |
+| 怎么读 | [`docs/METRICS_TRUST.md`](docs/METRICS_TRUST.md) |
+| 快照 offline | [`calibration_snapshot_20260716_offline.md`](docs/calibration_snapshot_20260716_offline.md) |
+| 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek；待按 v3 分栏重跑） |
 
-**最新 offline 快照（n=28, v2）：** κ≈**0.90**，精确一致 **92.9%**，±1 一致 100%，MAE≈0.07；`needs_calibration=否`。刻意保留 2 条残留分歧。旧版 n=15 时 κ≈0.47 保留为校准前基线。
+**offline v3：** 全量 κ≈**0.90**（CI [0.75, 1.0]）；**held_out** κ=**1.0**（n=11，冻结分，优先引用此栏）；dev κ≈0.84（含协议重标样本）。第二标注者 **pending**。
 
-**最新 live 快照（DeepSeek，n=28）：** κ≈**0.68**，精确一致 **78.6%**，±1 一致 **96.4%**，MAE=0.25，Bias≈+0.18；`needs_calibration=否`。见 [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)。
+**live（DeepSeek，全量 n=28，v2 时代快照）：** κ≈**0.68**。换分栏后请再跑 `--live` 更新 held_out live κ。
 
-> offline κ 是「收紧协议 + 重标边界样本」后的可复现结果；live 是真实 Judge 重打分。二者不要混谈成同一个数。
+> 不要把 offline held_out=1.0 说成「线上 Judge 完美」——那是冻结分对齐；live 才是真实模型。
 
 标注协议与 `meta.relabel_log` 写在数据文件中。HITL 人工审批（执行前确认）与本校准不是同一能力。
 
 ## 当前局限（诚实说明）
 
-- 人机校准金标准 **28 条（v2）**；offline κ≈0.90 / live κ≈0.68 仍是小样本趋势证据
-- 当前金标准由仓库维护者单人标注，尚无第二标注者或标注者间一致性结果
-- v2 协议调整与 κ 报告使用同一组 28 条样本，尚无独立 held-out 集；offline/live κ 不能视为泛化结论
-- 下一阶段需冻结 rubric 后补充独立 test split，并报告 bootstrap 置信区间和跨 Judge 结果
-- HITL 审批 ≠ 人机校准；二者不要在简历里混为一谈
-- `judge_score` 离线冻结分用于可复现；换模型 / 换 prompt 后需 `--live` 或重标
-- 默认 CI 以离线单测为主；真实 Judge 需配置 API Key
-- 与 react-agent 内置 `eval/` 有能力重叠：本仓侧重 **Process Reward / Eval Loop / 人机校准**，react-agent 侧重 **任务 capability 规则打分**
+- 金标准 **28 条 v3**（dev/held_out）；小样本 + **单人标注**，第二标注者 pending
+- offline held_out κ=1.0 基于冻结分，**不能**替代 live held_out
+- HITL 审批 ≠ 人机校准
+- 默认 CI 以离线单测为主；真实 Judge 需 API Key
+- 与 react-agent `eval/` 分工：本仓 Process Reward / 校准；react-agent 任务通过率
 
 ## License
 

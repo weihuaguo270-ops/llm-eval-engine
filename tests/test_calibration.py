@@ -41,7 +41,9 @@ def test_load_builtin_calibration_file():
     items = load_golden_file(path)
     assert len(items) >= 20
     assert all("human_score" in x and "judge_score" in x for x in items)
-    print(f"✅ builtin calibration items={len(items)}")
+    assert any(x.get("split") == "held_out" for x in items)
+    assert any(x.get("split") == "dev" for x in items)
+    print(f"[PASS] builtin calibration items={len(items)}")
 
 
 def test_calibrator_offline_run():
@@ -52,15 +54,30 @@ def test_calibrator_offline_run():
     assert "kappa" in result
     assert "exact_agree_rate" in result
     assert result["mode"] == "offline"
-    # v2 收紧 rubric 后 offline κ 应跨过建议校准线
-    assert result["kappa"] >= 0.6, result["kappa"]
-    assert result["needs_calibration"] is False
+    assert "bootstrap" in result and "kappa" in result["bootstrap"]
+    assert "by_split" in result
+    assert "held_out" in result["by_split"]
+    assert result["by_split"]["held_out"]["sample_size"] >= 8
+    # held_out 门控：协议冻结后的独立栏
+    assert result["gate_split"] == "held_out"
+    assert result["by_split"]["held_out"]["kappa"] >= 0.6, result["by_split"]["held_out"]
     md = format_agreement_markdown(result)
+    assert "held_out" in md
     assert "Cohen" in md or "κ" in md
     print(
-        f"✅ offline calibrator: n={result['sample_size']} "
-        f"κ={result['kappa']} agree={result['exact_agree_rate']}"
+        f"[PASS] offline calibrator: n={result['sample_size']} "
+        f"κ={result['kappa']} held_outκ={result['by_split']['held_out']['kappa']}"
     )
+
+
+def test_bootstrap_ci_shape():
+    from eval_engine.judge.calibration import bootstrap_ci
+
+    boot = bootstrap_ci([1, 2, 3, 4, 5], [1, 2, 3, 4, 4], n_boot=200, seed=1)
+    assert boot["n_boot"] == 200
+    assert "low" in boot["kappa"] and "high" in boot["kappa"]
+    assert boot["kappa"]["low"] <= boot["kappa"]["high"]
+    print("[PASS] bootstrap_ci shape OK")
 
 
 def test_calibrator_live_fn():

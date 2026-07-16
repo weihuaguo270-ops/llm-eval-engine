@@ -58,173 +58,564 @@
       "id": "cal_01",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_02",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_03",
       "human": 2,
       "judge": 2,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_04",
       "human": 1,
       "judge": 1,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_05",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_06",
       "human": 2,
       "judge": 2,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_07",
       "human": 1,
       "judge": 1,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_08",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_09",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_10",
       "human": 2,
       "judge": 2,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_11",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_12",
       "human": 1,
       "judge": 1,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_13",
       "human": 4,
       "judge": 4,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_14",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_15",
       "human": 4,
       "judge": 4,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "dev"
     },
     {
       "id": "cal_16",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_17",
       "human": 2,
       "judge": 2,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_18",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_19",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_20",
       "human": 2,
       "judge": 2,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_21",
       "human": 4,
       "judge": 3,
-      "abs_err": 1
+      "abs_err": 1,
+      "split": "dev"
     },
     {
       "id": "cal_22",
       "human": 1,
       "judge": 1,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_23",
       "human": 3,
       "judge": 3,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_24",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_25",
       "human": 5,
       "judge": 5,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_26",
       "human": 1,
       "judge": 1,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_27",
       "human": 3,
       "judge": 3,
-      "abs_err": 0
+      "abs_err": 0,
+      "split": "held_out"
     },
     {
       "id": "cal_28",
       "human": 5,
       "judge": 4,
-      "abs_err": 1
+      "abs_err": 1,
+      "split": "dev"
     }
   ],
+  "bootstrap": {
+    "n_boot": 2000,
+    "seed": 20260716,
+    "alpha": 0.05,
+    "kappa": {
+      "point": 0.8985,
+      "low": 0.7491,
+      "high": 1.0
+    },
+    "exact_agree_rate": {
+      "point": 0.929,
+      "low": 0.8214,
+      "high": 1.0
+    },
+    "note": "百分位 bootstrap；小样本区间偏宽，仅作不确定性展示"
+  },
+  "by_split": {
+    "dev": {
+      "sample_size": 17,
+      "kappa": 0.835,
+      "exact_agree_rate": 0.8824,
+      "within_one_rate": 1.0,
+      "mae": 0.1176,
+      "bias": -0.1176,
+      "scale": [
+        1,
+        5
+      ],
+      "confusion_labels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "confusion": [
+        [
+          3,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          7
+        ]
+      ],
+      "pairs": [
+        {
+          "id": "cal_01",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_02",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_03",
+          "human": 2,
+          "judge": 2,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_04",
+          "human": 1,
+          "judge": 1,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_05",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_06",
+          "human": 2,
+          "judge": 2,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_07",
+          "human": 1,
+          "judge": 1,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_08",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_09",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_10",
+          "human": 2,
+          "judge": 2,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_11",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_12",
+          "human": 1,
+          "judge": 1,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_13",
+          "human": 4,
+          "judge": 4,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_14",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_15",
+          "human": 4,
+          "judge": 4,
+          "abs_err": 0,
+          "split": "dev"
+        },
+        {
+          "id": "cal_21",
+          "human": 4,
+          "judge": 3,
+          "abs_err": 1,
+          "split": "dev"
+        },
+        {
+          "id": "cal_28",
+          "human": 5,
+          "judge": 4,
+          "abs_err": 1,
+          "split": "dev"
+        }
+      ],
+      "bootstrap": {
+        "n_boot": 2000,
+        "seed": 20260716,
+        "alpha": 0.05,
+        "kappa": {
+          "point": 0.8312,
+          "low": 0.5874,
+          "high": 1.0
+        },
+        "exact_agree_rate": {
+          "point": 0.8849,
+          "low": 0.7059,
+          "high": 1.0
+        },
+        "note": "百分位 bootstrap；小样本区间偏宽，仅作不确定性展示"
+      }
+    },
+    "held_out": {
+      "sample_size": 11,
+      "kappa": 1.0,
+      "exact_agree_rate": 1.0,
+      "within_one_rate": 1.0,
+      "mae": 0.0,
+      "bias": 0.0,
+      "scale": [
+        1,
+        5
+      ],
+      "confusion_labels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "confusion": [
+        [
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          5
+        ]
+      ],
+      "pairs": [
+        {
+          "id": "cal_16",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_17",
+          "human": 2,
+          "judge": 2,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_18",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_19",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_20",
+          "human": 2,
+          "judge": 2,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_22",
+          "human": 1,
+          "judge": 1,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_23",
+          "human": 3,
+          "judge": 3,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_24",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_25",
+          "human": 5,
+          "judge": 5,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_26",
+          "human": 1,
+          "judge": 1,
+          "abs_err": 0,
+          "split": "held_out"
+        },
+        {
+          "id": "cal_27",
+          "human": 3,
+          "judge": 3,
+          "abs_err": 0,
+          "split": "held_out"
+        }
+      ],
+      "bootstrap": {
+        "n_boot": 2000,
+        "seed": 20260716,
+        "alpha": 0.05,
+        "kappa": {
+          "point": 1.0,
+          "low": 1.0,
+          "high": 1.0
+        },
+        "exact_agree_rate": {
+          "point": 1.0,
+          "low": 1.0,
+          "high": 1.0
+        },
+        "note": "百分位 bootstrap；小样本区间偏宽，仅作不确定性展示"
+      }
+    }
+  },
   "needs_calibration": false,
   "threshold": 0.6,
+  "gate_split": "held_out",
   "avg_human": 3.5,
   "avg_judge": 3.429,
   "drift": -0.071,
@@ -232,5 +623,20 @@
   "skipped": 0,
   "mode": "offline",
   "source_path": "D:\\agent_learning\\llm-eval-engine\\src\\eval_engine\\dataset\\data\\calibration_human_judge.json",
-  "notes": "offline 使用数据集内冻结的 judge_score，便于 CI/复现；live 需配置 Judge API Key 后重打分。"
+  "reproducibility": {
+    "dataset_id": "calibration_human_judge",
+    "dataset_version": 3,
+    "rubric_templates": [
+      "tool_selection",
+      "faithfulness",
+      "trajectory_safety"
+    ],
+    "rubric_boundary_version": "v2",
+    "annotator_count": 1,
+    "second_rater_status": "pending",
+    "judge_temperature_live": 0.1,
+    "random_seed_bootstrap": 20260716,
+    "mode": "offline"
+  },
+  "notes": "offline=冻结 judge_score；live=真实 Judge。简历请优先引用 held_out 分栏 κ + CI；全量 offline κ 含协议重标样本。"
 }

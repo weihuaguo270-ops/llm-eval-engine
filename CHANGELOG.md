@@ -5,9 +5,9 @@
 ### Changed
 - Judge 人机校准：**v4** held_out 已标 **20** + pending 3；第二标注者协议/worksheet；门禁文案标明 gate_split
 - CI：Windows × 3.10/3.11、pytest-cov、mypy、pip-audit
-- 公开口径统一为 held_out live κ≈0.59；废弃简历侧 n=15/κ≈0.47
+- 公开口径统一为 held_out live κ≈**0.69**（n=20，v4 live 重跑）；废弃 n=15/κ≈0.47 与扩容前 n=11/κ≈0.59
 - Judge 校准 v2→v3：金标准 28；offline 全量 κ **0.47→≈0.90**；引入 dev/held_out
-- `run_calibration.py --live`：DeepSeek；held_out live κ≈**0.59**（见 live 快照）
+- `run_calibration.py --live`：DeepSeek v4；held_out κ≈**0.69**（CI [0.46, 0.92]，门禁已过）
 
 ## 0.1.0 (2026-07-13)
 

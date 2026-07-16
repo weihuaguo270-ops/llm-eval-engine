@@ -227,14 +227,14 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 | 指标 | Cohen's κ、精确一致率、±1、MAE、Bias、混淆矩阵、**bootstrap 95% CI**；有 r2 时报告标注者间 κ |
 | 怎么读 | [`docs/METRICS_TRUST.md`](docs/METRICS_TRUST.md) · [第二标注者](docs/SECOND_RATER_PROTOCOL.md) |
 | 快照 offline | [`calibration_snapshot_20260716_offline.md`](docs/calibration_snapshot_20260716_offline.md)（v4） |
-| 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek；held_out 仍为扩容前 n=11，待重跑） |
+| 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek，**v4** held_out n=20） |
 
 **统一口径（勿混写旧 n=15 / κ≈0.47）：**
 
 | 栏 | 数字 | 说明 |
 |----|------|------|
-| **held_out live**（简历优先） | κ≈**0.59**（n=11，CI [0.26, 1.0]） | DeepSeek；略低于门禁 0.6 |
-| 全量 live | κ≈**0.68**（n=28） | 同日快照；勿单独当 held_out |
+| **held_out live**（简历优先） | κ≈**0.69**（n=20，CI [0.46, 0.92]） | DeepSeek；门禁已过 |
+| 全量 live | κ≈**0.67**（n=37，CI [0.48, 0.85]） | 辅证，勿替代 held_out |
 | **held_out offline** | κ=**1.0**（n=20，冻结分） | 只证明冻结对齐 |
 | 全量 offline | κ≈**0.92**（n=37，CI [0.80, 1.0]） | 含 protocol-tuning 的 dev |
 | 第二标注者 | `protocol_ready` | worksheet 已发；**尚未写入 r2，无双人 κ** |

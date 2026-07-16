@@ -1,31 +1,32 @@
 # Judge 人机校准快照（20260716 / live）
 
-- 样本量: **28**
-- Cohen's κ: **0.6775**
-- 精确一致率: **78.6%**
-- ±1 分一致率: **96.4%**
-- MAE: **0.25**
-- Bias (Judge − Human): **0.1786**
-- κ bootstrap 95% CI (seed=20260716, B=2000): **[0.4462, 0.8824]**
-- 是否建议校准 (κ < 0.6): **是**
+- 样本量: **37**
+- Cohen's κ: **0.6682**
+- 精确一致率: **78.4%**
+- ±1 分一致率: **97.3%**
+- MAE: **0.2432**
+- Bias (Judge − Human): **0.1892**
+- κ bootstrap 95% CI (seed=20260716, B=2000): **[0.4762, 0.8518]**
+- 门禁 split: **held_out**；是否建议校准 (held_out κ < 0.6): **否**
 - 模式: `live`
 - 说明: live 模式为当次 Judge 重打分；请同时看 held_out 分栏。
+- 标注者间 κ: **未报告**（第二标注者尚未写入 `human_score_r2`）
 
 ## 分栏（dev / held_out）
 
 | split | n | κ | exact | ±1 | MAE |
 |-------|--:|--:|------:|----:|----:|
-| `dev` | 17 | 0.733 | 82.3% | 100.0% | 0.1765 |
-| `held_out` | 11 | 0.5926 | 72.7% | 90.9% | 0.3636 |
+| `dev` | 17 | 0.644 | 76.5% | 100.0% | 0.2353 |
+| `held_out` | 20 | 0.6887 | 80.0% | 95.0% | 0.25 |
 
-- **held_out κ CI**: [0.2584, 1.0] （优先引用此栏，勿与 protocol-tuning 的 offline 全量 κ 混谈）
+- **held_out κ CI**: [0.4576, 0.9222] （优先引用此栏，勿与 protocol-tuning 的 offline 全量 κ 混谈）
 
 ## 可复现元数据
 
-- dataset_version: `3`
+- dataset_version: `4`
 - rubric_boundary_version: `v2`
 - annotator_count: `1`
-- second_rater_status: `pending`
+- second_rater_status: `protocol_ready`
 - judge_temperature_live: `0.1`
 - random_seed_bootstrap: `20260716`
 - mode: `live`
@@ -34,11 +35,11 @@
 
 | H\J | 1 | 2 | 3 | 4 | 5 |
 |---|---|---|---|---|---|
-| 1 | 4 | 1 | 0 | 0 | 0 |
-| 2 | 0 | 4 | 1 | 0 | 0 |
+| 1 | 5 | 3 | 0 | 0 | 0 |
+| 2 | 0 | 5 | 1 | 0 | 0 |
 | 3 | 0 | 1 | 0 | 0 | 1 |
 | 4 | 0 | 0 | 0 | 1 | 2 |
-| 5 | 0 | 0 | 0 | 0 | 13 |
+| 5 | 0 | 0 | 0 | 0 | 18 |
 
 ## 逐条对比
 
@@ -55,7 +56,7 @@
 | cal_09 | dev | 5 | 5 | 0 |
 | cal_10 | dev | 2 | 2 | 0 |
 | cal_11 | dev | 5 | 5 | 0 |
-| cal_12 | dev | 1 | 1 | 0 |
+| cal_12 | dev | 1 | 2 | 1 |
 | cal_13 | dev | 4 | 5 | 1 |
 | cal_14 | dev | 5 | 5 | 0 |
 | cal_15 | dev | 4 | 5 | 1 |
@@ -72,10 +73,19 @@
 | cal_26 | held_out | 1 | 2 | 1 |
 | cal_27 | held_out | 3 | 2 | 1 |
 | cal_28 | dev | 5 | 5 | 0 |
+| cal_29 | held_out | 5 | 5 | 0 |
+| cal_30 | held_out | 1 | 1 | 0 |
+| cal_31 | held_out | 5 | 5 | 0 |
+| cal_32 | held_out | 1 | 1 | 0 |
+| cal_33 | held_out | 5 | 5 | 0 |
+| cal_34 | held_out | 2 | 2 | 0 |
+| cal_35 | held_out | 5 | 5 | 0 |
+| cal_36 | held_out | 1 | 2 | 1 |
+| cal_37 | held_out | 5 | 5 | 0 |
 
 ## 金标准版本
 
-- version: **3**
+- version: **4**
 - updated: `2026-07-16`
 - 本轮按协议重标边界样本: **6** 条（见数据文件 `meta.relabel_log`）
 

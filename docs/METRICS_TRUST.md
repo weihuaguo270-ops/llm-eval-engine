@@ -22,7 +22,9 @@ python examples/run_calibration.py --live   # 真实 Judge
 - 报告含 **bootstrap 95% CI**（seed 写在 `meta.reproducibility`）。
 - **第二标注者**：`second_rater.status=pending`（当前仅 r1，不假装有双人 κ）。
 
-优先引用：**held_out κ + CI**，并注明 n 与单人标注。
+优先引用：**held_out live κ + CI**，并注明 n、模型与单人标注。
+
+**2026-07-16 live（DeepSeek）：** held_out κ≈**0.59**（n=11，CI [0.26, 1.0]）；全量 κ≈**0.68**。held_out 略低于门禁 0.6，报告诚实标 `needs_calibration`；区间很宽，小样本下勿夸成稳定 SLA。
 
 ## Execution 通过率（react-agent）
 

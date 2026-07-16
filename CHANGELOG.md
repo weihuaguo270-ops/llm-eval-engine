@@ -6,6 +6,7 @@
 - Judge 人机校准 v2：金标准扩至 **28** 条；收紧三份模板边界裁决；offline κ **0.47→0.90**（旧快照保留作基线）
 - `run_calibration.py --live`：自动从姊妹仓 `.env` 映射 DeepSeek Key；live κ≈**0.68**（`docs/calibration_snapshot_20260716_live.md`）
 - **v3 指标可信度**：`dev`/`held_out` 分栏、bootstrap 95% CI、`docs/METRICS_TRUST.md`；第二标注者标记 pending
+- live 按 v3 重跑（DeepSeek）：全量 κ≈0.68；**held_out** κ≈0.59（门禁略未过，诚实标 needs_calibration）
 
 ## 0.1.0 (2026-07-13)
 

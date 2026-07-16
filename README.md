@@ -227,13 +227,13 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 | 指标 | Cohen's κ、精确一致率、±1、MAE、Bias、混淆矩阵、**bootstrap 95% CI** |
 | 怎么读 | [`docs/METRICS_TRUST.md`](docs/METRICS_TRUST.md) |
 | 快照 offline | [`calibration_snapshot_20260716_offline.md`](docs/calibration_snapshot_20260716_offline.md) |
-| 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek；待按 v3 分栏重跑） |
+| 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek，v3 分栏） |
 
-**offline v3：** 全量 κ≈**0.90**（CI [0.75, 1.0]）；**held_out** κ=**1.0**（n=11，冻结分，优先引用此栏）；dev κ≈0.84（含协议重标样本）。第二标注者 **pending**。
+**offline v3：** 全量 κ≈**0.90**（CI [0.75, 1.0]）；**held_out** κ=**1.0**（n=11，冻结分）；dev κ≈0.84。第二标注者 **pending**。
 
-**live（DeepSeek，全量 n=28，v2 时代快照）：** κ≈**0.68**。换分栏后请再跑 `--live` 更新 held_out live κ。
+**live v3（DeepSeek，2026-07-16 重跑）：** 全量 κ≈**0.68**（CI [0.45, 0.88]）；**held_out** κ≈**0.59**（n=11，CI [0.26, 1.0]，略低于 0.6 门禁 → `needs_calibration=是`）；dev κ≈0.73。
 
-> 不要把 offline held_out=1.0 说成「线上 Judge 完美」——那是冻结分对齐；live 才是真实模型。
+> 简历优先写 **held_out live κ + CI + n**，并注明单人标注。offline held_out=1.0 只证明冻结分对齐，不能当线上 SLA。
 
 标注协议与 `meta.relabel_log` 写在数据文件中。HITL 人工审批（执行前确认）与本校准不是同一能力。
 

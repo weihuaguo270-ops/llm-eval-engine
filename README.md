@@ -225,7 +225,8 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 | 离线复现 | 使用条目内冻结的 `judge_score`（CI / 无 Key 可跑） |
 | 在线 | `--live` 调用 `JudgeExecutor`（注入 v2 刻度锚点）对 `prompt` 重打分 |
 | 指标 | Cohen's κ、精确一致率、±1 一致率、MAE、Bias、混淆矩阵 |
-| 快照 | [`calibration_snapshot_20260716.md`](docs/calibration_snapshot_20260716.md)（旧基线 [20260713](docs/calibration_snapshot_20260713.md)） |
+| 快照 offline | [`calibration_snapshot_20260716.md`](docs/calibration_snapshot_20260716.md)（旧基线 [20260713](docs/calibration_snapshot_20260713.md)） |
+| 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek 重打分） |
 
 **最新 offline 快照（n=28, v2）：** κ≈**0.90**，精确一致 **92.9%**，±1 一致 100%，MAE≈0.07；`needs_calibration=否`。刻意保留 2 条残留分歧。旧版 n=15 时 κ≈0.47 保留为校准前基线。
 

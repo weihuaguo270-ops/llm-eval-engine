@@ -8,4 +8,4 @@ dist/
 build/
 *.egg-info/
 .pytest_cache/
-.DS_Store
+src/eval_engine/gates/baselines/

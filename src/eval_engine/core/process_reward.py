@@ -32,6 +32,10 @@ from eval_engine.core.dynamic_rubric import (
 )
 from eval_engine.core.contract import VerifierContract
 
+# Mirrored by react-agent EVAL_API_VERSION / EVAL_ENGINE_API_CONTRACT.
+# Bump together when ProcessRewardScorer constructor kwargs change.
+EVAL_API_VERSION = "0.1"
+
 
 # ──────────────────────────────────────────────
 # 数据结构

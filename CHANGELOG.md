@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- **P2 API 版本钉**：`EVAL_API_VERSION = "0.1"`（与 react-agent `EVAL_ENGINE_API_CONTRACT` 对齐）
+
 ### Changed
 - Judge 人机校准：**v4** held_out 已标 **20** + pending 3；第二标注者协议/worksheet；门禁文案标明 gate_split
 - CI：Windows × 3.10/3.11、pytest-cov、mypy、pip-audit

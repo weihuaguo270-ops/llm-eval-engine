@@ -2,21 +2,20 @@
 
 [![CI](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml/badge.svg)](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**LLM 评估实验框架**，支持 process-level LLM-as-Judge 步骤评分、动态评分标准生成、自适应 Eval Loop 和人工审批介入。
+个人实验仓库：把 Agent 轨迹拆成步骤，用 Judge LLM 逐步打分（Process Reward），低分步可打包修正指令让 Agent 重跑。另有 Eval Loop 和人机校准（κ）。
 
-> 术语边界：本项目的 `Process Reward` 是基于 Judge LLM 的过程级评分流程，不是训练得到的 Process Reward Model（PRM），也不提供 PRM 训练数据或损失函数。
+> 术语：`Process Reward` 在这里指 Judge LLM 的过程级评分**流程**，不是训练出来的 Process Reward Model（PRM），也不提供 PRM 训练数据或损失函数。
 
-## 为什么需要这个框架
+## 本仓库做什么 / 不做什么
 
-传统 LLM 评估方式的局限性：
+| 做 | 不做 |
+|----|------|
+| 步骤级 Judge 打分 + 错误传播标注 | 训练型 PRM |
+| 按上下文生成 rubric（`dynamic_rubric.py`） | 替代 react-agent 的 capability 主评测集 |
+| Eval Loop：低分 → 修正 → 重跑（`eval_loop.py`） | Agent 运行时本身 |
+| 人机校准：κ、MAE、混淆矩阵（`calibration.py`） | 把 offline κ 当线上 SLA |
 
-| 问题 | 本框架的方案 |
-|------|------------|
-| 所有任务用固定模板评分 | **动态评分标准** — 每步基于实际上下文生成针对性评分标准 |
-| 只对最终答案二分法判对错 | **Process Reward** — 逐步骤评分，追踪错误传播路径 |
-| 一次性评估，没有改进机制 | **自适应 Eval Loop** — 低分触发修正指令 → Agent 重试 → 重新评分 |
-| 没有人参与决策 | **HITL 人工审批钩子** — 修正注入 / 重执行前可回调人工确认 |
-| 手动判断是否需要重试 | **震荡检测** — 分数停滞时自动停止，避免无效循环 |
+和「固定 rubric 打总分」相比，这里多两件事：**逐步打分**、**低分触发重跑**（带震荡检测和可选 HITL）。
 
 ## 架构
 
@@ -189,7 +188,7 @@ pytest tests/test_real_judge.py -v
 
 ## 相关项目
 
-- [react-agent](https://github.com/weihuaguo270-ops/react-agent) — ReAct Agent 学习实现
+- [react-agent](https://github.com/weihuaguo270-ops/react-agent) — Agent 运行时 + 证据化文档排障（轨迹由 Harness 产出）
 - [transformer-attention](https://github.com/weihuaguo270-ops/transformer-attention) — Attention 教学实现
 - [trace-debugger](https://github.com/weihuaguo270-ops/trace-debugger) — 轨迹分析小工具
 
@@ -243,7 +242,7 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 
 标注协议与 `meta.relabel_log` 写在数据文件中。HITL 人工审批（执行前确认）与本校准不是同一能力。
 
-## 当前局限（诚实说明）
+## 当前局限
 
 - 金标准 **v4**（held_out 已标 20 + pending 3）；小样本 + **单人标注**，第二标注者协议已就绪、分数未写入
 - offline held_out κ=1.0 基于冻结分，**不能**替代 live held_out

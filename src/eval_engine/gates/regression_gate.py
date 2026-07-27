@@ -104,12 +104,15 @@ class RegressionGate:
                     f"核心分类 '{cat}' 质量下降: {new_cat_score:.3f} vs {old_cat_score:.3f}"
                 )
 
-        # 3. 新增失败检查
-        new_failures = current_report.get("summary", {}).get("num_failed_steps", 0)
+        # 3. 新增失败用例检查（按 case 数，非 step 数）
+        new_failures = current_report.get("summary", {}).get(
+            "num_failed_cases",
+            current_report.get("summary", {}).get("num_failed_steps", 0),
+        )
         old_failures = baseline_data.get("summary", {}).get("num_failed", 0)
         if new_failures > old_failures + 2:  # 允许 2 条浮动
             blocked = True
-            reasons.append(f"新增失败步骤: {new_failures}（之前: {old_failures}）")
+            reasons.append(f"新增失败用例: {new_failures}（之前: {old_failures}）")
 
         # 结果组装
         message = "; ".join(reasons) if reasons else comparison["message"]
@@ -117,7 +120,11 @@ class RegressionGate:
         return {
             "passed": not blocked,
             "blocked": blocked,
-            "message": f"{'❌ 阻塞' if blocked else '✅ 通过'}: {message}",
+            "message": (
+                f"{'BLOCKED' if blocked else 'PASS'}: "
+                f"质量{'下降' if comparison.get('regression_detected') else '稳定/提升'} "
+                f"{comparison.get('message', '')}"
+            ),
             "reasons": reasons,
             "comparison": comparison,
             "threshold": self.threshold,

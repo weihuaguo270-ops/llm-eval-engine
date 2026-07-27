@@ -40,32 +40,37 @@ def test_load_builtin_calibration_file():
     assert Path(path).is_file(), path
     items = load_golden_file(path)
     scored = [x for x in items if x.get("human_score") is not None]
-    assert len(scored) >= 28
+    assert len(scored) >= 57
     assert all("human_score" in x for x in scored)
     assert any(x.get("split") == "held_out" for x in scored)
     assert any(x.get("split") == "dev" for x in scored)
     held = [x for x in scored if x.get("split") == "held_out"]
-    assert len(held) >= 20, len(held)
-    print(f"[PASS] builtin calibration scored={len(scored)} held_out={len(held)}")
+    assert len(held) >= 50, len(held)
+    r2 = [x for x in held if x.get("human_score_r2") is not None]
+    assert len(r2) >= 50, len(r2)
+    print(f"[PASS] builtin calibration scored={len(scored)} held_out={len(held)} r2={len(r2)}")
 
 
 def test_calibrator_offline_run():
     cal = JudgeCalibrator(threshold=0.6)
     cal.load_golden_file()
     result = cal.run(mode="offline")
-    assert result["sample_size"] >= 28
+    assert result["sample_size"] >= 57
     assert "kappa" in result
     assert "exact_agree_rate" in result
     assert result["mode"] == "offline"
     assert "bootstrap" in result and "kappa" in result["bootstrap"]
     assert "by_split" in result
     assert "held_out" in result["by_split"]
-    assert result["by_split"]["held_out"]["sample_size"] >= 20
+    assert result["by_split"]["held_out"]["sample_size"] >= 50
     # held_out 门控：协议冻结后的独立栏
     assert result["gate_split"] == "held_out"
     assert result["by_split"]["held_out"]["kappa"] >= 0.6, result["by_split"]["held_out"]
+    assert result["inter_rater"]["sample_size"] >= 50
+    assert result["inter_rater"]["kappa"] is not None
     md = format_agreement_markdown(result)
     assert "held_out" in md
+    assert "标注者间" in md or "inter" in md.lower() or "κ" in md
     assert "门禁 split" in md
     assert "Cohen" in md or "κ" in md
     print(
@@ -131,6 +136,15 @@ def test_calibrator_live_fn():
     assert result["kappa"] == 1.0
     assert result["mode"] == "live"
     print("✅ live judge_fn path OK")
+
+
+def test_calibrator_split_held_out():
+    cal = JudgeCalibrator()
+    cal.load_golden_file()
+    result = cal.run(mode="offline", split="held_out")
+    assert result["sample_size"] >= 50
+    assert result["gate_split"] == "held_out"
+    print(f"[PASS] split held_out n={result['sample_size']}")
 
 
 def test_needs_calibration_flag():

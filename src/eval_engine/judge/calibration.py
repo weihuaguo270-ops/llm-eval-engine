@@ -396,11 +396,13 @@ class JudgeCalibrator:
         judge_fn: Optional[Callable[[str], dict[str, Any]]] = None,
         *,
         mode: Optional[str] = None,
+        split: Optional[str] = None,
     ) -> dict[str, Any]:
         """运行校准。
 
         - 若提供 judge_fn：对每条 `prompt` 调用 Judge（mode=live）
         - 否则：使用条目内预填的 `judge_score`（mode=offline，可复现）
+        - split: 仅评估 dev / held_out 分栏（None=全部）
         """
         if not self.golden_data:
             return {
@@ -438,6 +440,8 @@ class JudgeCalibrator:
 
         for item in self.golden_data:
             item_id = str(item.get("id", len(ids)))
+            if split and str(item.get("split") or "") != split:
+                continue
             if item.get("annotation_status", "").startswith("pending"):
                 skipped += 1
                 continue

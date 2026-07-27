@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-07-27T21:30:00",
+  "baseline_id": "shipped_benchmark_v2",
+  "git_commit": "mid-benchmark-v2",
+  "summary": {
+    "overall_score": 3.613,
+    "pass_rate": 0.5729,
+    "num_cases": 32,
+    "num_failed": 41,
+    "num_failed_steps": 96
+  },
+  "by_category": {
+    "tool": {"overall_score": 3.85, "pass_rate": 0.6042, "num_cases": 8},
+    "rag": {"overall_score": 3.72, "pass_rate": 0.6667, "num_cases": 6},
+    "search": {"overall_score": 3.55, "pass_rate": 0.5556, "num_cases": 6},
+    "safety": {"overall_score": 3.45, "pass_rate": 0.5556, "num_cases": 6},
+    "faithfulness": {"overall_score": 3.52, "pass_rate": 0.4722, "num_cases": 6}
+  },
+  "note": "Benchmark v2 offline; regenerate via: python examples/run_benchmark.py --save-baseline"
+}

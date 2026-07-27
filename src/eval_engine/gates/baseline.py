@@ -33,8 +33,8 @@ import json
 import os
 import glob
 import time
-from typing import Any, Optional
 from pathlib import Path
+from typing import Any, Optional
 
 
 def default_baseline_dir() -> str:
@@ -50,6 +50,15 @@ def default_baseline_dir() -> str:
 
 
 DEFAULT_BASELINE_DIR = default_baseline_dir()
+
+
+def shipped_baseline_dir() -> str:
+    """仓库内随版本发布的 baseline 目录（只读参考）。"""
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "baselines")
+
+
+def shipped_baseline_path(name: str = "benchmark_baseline.json") -> Path:
+    return Path(shipped_baseline_dir()) / name
 
 
 class BaselineManager:
@@ -92,17 +101,20 @@ class BaselineManager:
         except Exception:
             pass
 
+        summary = report.get("summary", {})
         baseline = {
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "baseline_id": f"baseline_{timestamp}",
             "git_commit": git_commit,
             "summary": {
                 "overall_score": report.get("overall_score", 0),
-                "pass_rate": report.get("summary", {}).get("pass_rate", 0),
-                "num_cases": report.get("summary", {}).get("num_steps", 0),
-                "num_failed": report.get("summary", {}).get("num_failed_steps", 0),
+                "pass_rate": summary.get("pass_rate", report.get("pass_rate", 0)),
+                "num_cases": summary.get("num_cases", summary.get("num_steps", 0)),
+                "num_failed": summary.get("num_failed_cases", summary.get("num_failed", 0)),
+                "num_failed_steps": summary.get("num_failed_steps", 0),
             },
             "by_category": report.get("by_category", {}),
+            "benchmark": report.get("benchmark"),
         }
 
         filename = f"{timestamp}_baseline.json"
@@ -114,19 +126,29 @@ class BaselineManager:
     def load_latest(self) -> Optional[dict]:
         """加载最新的 baseline
 
+        优先用户态目录；若无则回退到仓库 shipped baseline。
+
         返回:
             dict or None（如果没有 baseline）
         """
         baselines = self.list_baselines()
-        if not baselines:
-            return None
-        latest = baselines[0]  # list_baselines 已按时间倒序
-        filepath = latest["filepath"]
-        try:
-            with open(filepath, encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError):
-            return None
+        if baselines:
+            latest = baselines[0]  # list_baselines 已按时间倒序
+            filepath = latest["filepath"]
+            try:
+                with open(filepath, encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        shipped = shipped_baseline_path()
+        if shipped.is_file():
+            try:
+                with open(shipped, encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError):
+                return None
+        return None
 
     def compare(self, current_report: dict) -> dict[str, Any]:
         """对比当前结果与最新 baseline
@@ -156,7 +178,9 @@ class BaselineManager:
         score_diff = new_score - old_score
 
         old_pass = baseline.get("summary", {}).get("pass_rate", 0)
-        new_pass = current_report.get("summary", {}).get("pass_rate", 0)
+        new_pass = current_report.get("summary", {}).get(
+            "pass_rate", current_report.get("pass_rate", 0)
+        )
         pass_diff = new_pass - old_pass
 
         threshold = 0.1

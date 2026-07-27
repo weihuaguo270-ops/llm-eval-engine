@@ -128,7 +128,14 @@ def main() -> int:
         default=0.6,
         help="κ 低于该值标记 needs_calibration",
     )
+    parser.add_argument(
+        "--split",
+        default="",
+        choices=["", "dev", "held_out"],
+        help="仅评估指定分栏",
+    )
     args = parser.parse_args()
+    split = args.split or None
     _load_dotenv()
     wiring = _ensure_judge_env()
 
@@ -148,8 +155,7 @@ def main() -> int:
             return 2
         print(f"[live] judge wiring: {wiring}")
         print(f"[live] model={os.environ.get('JUDGE_MODEL')} base={os.environ.get('JUDGE_BASE_URL')}")
-        report = cal.run(judge_fn=_live_judge_fn, mode="live")
-        # 全 3 分几乎一定是 fallback（未真正打到模型）
+        report = cal.run(judge_fn=_live_judge_fn, mode="live", split=split)
         scores = [p.get("judge") for p in (report.get("pairs") or [])]
         if scores and len(set(scores)) == 1 and scores[0] == 3:
             print(
@@ -159,11 +165,12 @@ def main() -> int:
             )
             return 3
     else:
-        report = cal.run(mode="offline")
+        report = cal.run(mode="offline", split=split)
 
     stamp = datetime.now().strftime("%Y%m%d")
     mode_tag = "live" if args.live else "offline"
-    stem = f"calibration_snapshot_{stamp}_{mode_tag}"
+    split_tag = f"_{args.split}" if args.split else ""
+    stem = f"calibration_snapshot_{stamp}_{mode_tag}{split_tag}"
     docs_dir = ROOT / "docs"
     reports_dir = ROOT / "reports"
     docs_dir.mkdir(exist_ok=True)
@@ -223,9 +230,15 @@ def main() -> int:
             json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
-    print(md)
     print(f"\n已写入: {md_path}")
     print(f"已写入: {json_path}")
+    if report.get("sample_size"):
+        ho = (report.get("by_split") or {}).get("held_out") or {}
+        ir = report.get("inter_rater") or {}
+        print(
+            f"summary: n={report.get('sample_size')} kappa={report.get('kappa')} "
+            f"held_out_n={ho.get('sample_size', '-')} inter_rater_k={ir.get('kappa', '-')}"
+        )
     return 0 if not report.get("error") else 1
 
 

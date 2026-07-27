@@ -1,0 +1,33 @@
+name: Benchmark Regression
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install ".[test]"
+      - name: Generate benchmark suite
+        run: python scripts/generate_benchmark_suite.py
+      - name: Run benchmark offline
+        run: python examples/run_benchmark.py
+      - name: Regression gate vs shipped baseline
+        run: python examples/run_benchmark.py --compare
+      - name: Generate failure casebook
+        run: python scripts/generate_failure_casebook.py
+      - name: E2E trajectory eval smoke
+        run: python examples/e2e_trajectory_eval.py --case bench_tool_001
+      - name: Clone react-agent (sibling integration)
+        run: git clone --depth=1 https://github.com/weihuaguo270-ops/react-agent.git ../react-agent
+      - name: Agent mock benchmark smoke
+        run: |
+          pip install -e ../react-agent
+          python examples/run_benchmark_agent.py --mode mock --max-cases 5 --providers deepseek-v3

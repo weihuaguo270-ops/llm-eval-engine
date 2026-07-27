@@ -1,0 +1,34 @@
+{
+  "session_id": "bench_tool_001",
+  "query": "计算 (23+45)*2 等于多少",
+  "steps": [
+    {
+      "step_index": 0,
+      "type": "thought",
+      "content": "用计算器"
+    },
+    {
+      "step_index": 1,
+      "type": "action",
+      "action": {
+        "name": "calculator",
+        "args": {
+          "expression": "(23+45)*2"
+        }
+      },
+      "content": "calculator"
+    },
+    {
+      "step_index": 2,
+      "type": "observation",
+      "content": "136",
+      "observation": "136"
+    },
+    {
+      "step_index": 3,
+      "type": "final",
+      "content": "结果是 136"
+    }
+  ],
+  "final_answer": "结果是 136"
+}

@@ -8,4 +8,6 @@ dist/
 build/
 *.egg-info/
 .pytest_cache/
-src/eval_engine/gates/baselines/
+.coverage
+src/eval_engine/gates/baselines/*
+!src/eval_engine/gates/baselines/benchmark_baseline.json

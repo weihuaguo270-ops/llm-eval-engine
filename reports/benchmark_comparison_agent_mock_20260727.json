@@ -1,0 +1,148 @@
+{
+  "timestamp": "2026-07-27T21:47:19",
+  "suite_version": 2,
+  "models": [
+    {
+      "model": "deepseek-v3",
+      "num_cases": 3,
+      "pass_count": 0,
+      "pass_rate": 0.0,
+      "avg_score": 1.055,
+      "avg_latency_ms": 50.0,
+      "total_tokens": 1800,
+      "by_category": {
+        "tool": {
+          "num_cases": 3,
+          "pass_rate": 0.0,
+          "avg_score": 1.055
+        }
+      },
+      "cases": [
+        {
+          "case_id": "bench_tool_001",
+          "category": "tool",
+          "passed": false,
+          "overall_score": 1.0,
+          "pass_rate": 0.0,
+          "num_failed_steps": 2,
+          "error_sources": [
+            0,
+            1
+          ],
+          "latency_ms": 50,
+          "tokens": 600
+        },
+        {
+          "case_id": "bench_tool_002",
+          "category": "tool",
+          "passed": false,
+          "overall_score": 1.0,
+          "pass_rate": 0.0,
+          "num_failed_steps": 2,
+          "error_sources": [
+            0,
+            1
+          ],
+          "latency_ms": 50,
+          "tokens": 600
+        },
+        {
+          "case_id": "bench_tool_003",
+          "category": "tool",
+          "passed": false,
+          "overall_score": 1.165,
+          "pass_rate": 0.0,
+          "num_failed_steps": 2,
+          "error_sources": [
+            0,
+            1
+          ],
+          "latency_ms": 50,
+          "tokens": 600
+        }
+      ]
+    }
+  ],
+  "failure_taxonomy": {
+    "total_failures": 6,
+    "by_type": {
+      "wrong_params": 3,
+      "other": 3
+    },
+    "by_type_pct": {
+      "wrong_params": 0.5,
+      "other": 0.5
+    },
+    "by_category": {
+      "tool": {
+        "wrong_params": 3,
+        "other": 3
+      }
+    },
+    "records": [
+      {
+        "case_id": "bench_tool_001",
+        "step_index": 0,
+        "failure_type": "wrong_params",
+        "failure_label": "参数/调用错误",
+        "step_score": 1.0,
+        "reason": "用户需求是数学计算，但选择了 web_search 工具，且查询参数 'benchmark mock' 与计算任务完全无关，导致步骤无效。 参数 'benchmark mock' 是编造的、与任务无关的内容，没有提供任何有助于计算的信息。 该步骤完全偏离了任务目标，没有为计算 (23+45)*2 提供任何有用信息，反而需要后续纠正。",
+        "is_root_cause": true,
+        "tool_name": "web_search"
+      },
+      {
+        "case_id": "bench_tool_001",
+        "step_index": 1,
+        "failure_type": "other",
+        "failure_label": "其他",
+        "step_score": 1.0,
+        "reason": "Agent 仅输出 'Compose answer'，未提供任何计算结果，完全未满足用户需求。 Agent 未执行任何计算或输出答案，任务未完成。 输出仅为 'Compose answer'，无实际内容，格式不完整且不清晰。",
+        "is_root_cause": true,
+        "tool_name": null
+      },
+      {
+        "case_id": "bench_tool_002",
+        "step_index": 0,
+        "failure_type": "wrong_params",
+        "failure_label": "参数/调用错误",
+        "step_score": 1.0,
+        "reason": "搜索查询 'benchmark mock' 与计算 987*654 完全无关，属于编造或错误步骤，严重偏离任务目标。 web_search 工具用于搜索，但查询 'benchmark mock' 无实际意义，且参数看起来像编造的占位符，不符合计算任务需求。 作为首步，该步骤未提供任何与计算相关的信息，导致后续步骤无法基于此生成正确答案，逻辑断裂。",
+        "is_root_cause": true,
+        "tool_name": "web_search"
+      },
+      {
+        "case_id": "bench_tool_002",
+        "step_index": 1,
+        "failure_type": "other",
+        "failure_label": "其他",
+        "step_score": 1.0,
+        "reason": "前序步骤中只有 mock observation，没有实际计算结果，Agent 未进行任何计算，直接输出 'Compose answer' 作为思考内容，未提供具体数值，完全未完成任务。 用户要求计算 987*654，但 Agent 仅输出思考步骤 'Compose answer'，未给出任何数值结果，任务未完成。 前序步骤为 mock observation，无实际计算过程，Agent 直接跳到",
+        "is_root_cause": true,
+        "tool_name": null
+      },
+      {
+        "case_id": "bench_tool_003",
+        "step_index": 0,
+        "failure_type": "wrong_params",
+        "failure_label": "参数/调用错误",
+        "step_score": 1.33,
+        "reason": "用户需求是计算 100/7，但查询参数 'benchmark mock' 与计算无关，属于完全偏离任务，导致这一步无效。 web_search 可能用于查找计算公式或结果，但查询内容错误，且对于简单除法计算，直接计算更合理，工具选择不当。 参数 'benchmark mock' 是编造的、与任务无关的内容，没有基于用户需求生成，属于严重错误。",
+        "is_root_cause": true,
+        "tool_name": "web_search"
+      },
+      {
+        "case_id": "bench_tool_003",
+        "step_index": 1,
+        "failure_type": "other",
+        "failure_label": "其他",
+        "step_score": 1.0,
+        "reason": "Agent 仅输出 'Compose answer'，未提供任何计算结果，完全未回答用户问题。 Agent 未执行计算或输出结果，任务未完成。 输出仅为 'Compose answer'，无实际内容，格式不完整。",
+        "is_root_cause": true,
+        "tool_name": null
+      }
+    ]
+  },
+  "agent_mode": "mock",
+  "judge_mode": "live",
+  "react_agent_root": "D:\\agent_learning\\react-agent"
+}

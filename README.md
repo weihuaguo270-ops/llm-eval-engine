@@ -14,8 +14,45 @@
 | 按上下文生成 rubric（`dynamic_rubric.py`） | 替代 react-agent 的 capability 主评测集 |
 | Eval Loop：低分 → 修正 → 重跑（`eval_loop.py`） | Agent 运行时本身 |
 | 人机校准：κ、MAE、混淆矩阵（`calibration.py`） | 把 offline κ 当线上 SLA |
+| **固定 Benchmark 跑批 + 多模型对比报告** | 端到端生产级 Agent 平台 |
+| **失败类型 taxonomy + 分布统计** | 只报总分不做归因 |
+| **回归门禁 + shipped baseline** | 把 offline 对比当线上 SLA |
 
-和「固定 rubric 打总分」相比，这里多两件事：**逐步打分**、**低分触发重跑**（带震荡检测和可选 HITL）。
+和「固定 rubric 打总分」相比，这里多四件事：**逐步打分**、**低分触发重跑**、**可复现的模型对比结论**、**失败归因统计**。
+
+## 评测交付物（Mid 档）
+
+| 优先级 | 产物 | 复现命令 | 状态 |
+|--------|------|----------|------|
+| P0 | Benchmark **32 条** | `python examples/run_benchmark.py` | ✅ |
+| P0 | Eval 设计文档 | [`docs/EVAL_DESIGN.md`](docs/EVAL_DESIGN.md) | ✅ |
+| P0 | Judge 校准 v5 | `python examples/run_calibration.py` | ✅ held_out n=53 |
+| P0 | Live Judge 跑批 | `python examples/run_benchmark_live.py` | 🔧 需 API Key |
+| P0 | Live 校准 held_out | `python examples/run_calibration.py --live --split held_out` | 🔧 需 API Key |
+| P1 | 失败案例库 | [`docs/failure_casebook.md`](docs/failure_casebook.md) | ✅ |
+| P1 | CI 回归门禁 | [`.github/workflows/benchmark.yml`](.github/workflows/benchmark.yml) | ✅ |
+| P0 | Live Agent 跑批 | `run_benchmark_agent.py --mode agent` | ✅ n=32 DeepSeek |
+
+**Live Agent 结论（2026-07-27，react_loop + DeepSeek，32 条）：**
+
+| 指标 | 结果 |
+|------|------|
+| 通过率 | **100%**（32/32，Process Reward mock judge） |
+| 均分 | 4.00 |
+| 平均延迟 | ~40s/条 |
+| vs offline 冻结 | agent 4.00 vs offline 4.90（轨迹为真实 Agent 产出） |
+
+报告：[`docs/benchmark_comparison_agent_agent_20260727.md`](docs/benchmark_comparison_agent_agent_20260727.md)
+
+**当前 Benchmark 结论（offline v2，32 条 × 3 profile）：**
+
+| 模型 profile | 通过率 | 均分 |
+|-------------|-------:|-----:|
+| deepseek-v3 | 100% | 4.90 |
+| gpt-4o-mini | 72% | 3.80 |
+| qwen-plus | 0% | 2.14 |
+
+> 完整口径与引用规范见 [`docs/EVAL_DESIGN.md`](docs/EVAL_DESIGN.md)
 
 ## 架构
 
@@ -26,7 +63,12 @@ src/eval_engine/
 │   ├── contract.py              Verifier 契约接口（可组合评分标准）
 │   ├── trajectory_parser.py     Agent 轨迹 → DAG 步骤结构
 │   ├── dynamic_rubric.py        ★ 动态评分标准生成
-│   └── process_reward.py        ★ 步骤级 Process Reward 评分 + 错误传播
+│   ├── process_reward.py        ★ 步骤级 Process Reward 评分 + 错误传播
+│   └── failure_taxonomy.py      ★ 低分步骤失败类型归类
+│
+├── benchmark/                   ★ 固定任务集跑批 + 多模型对比
+│   ├── runner.py
+│   └── report.py
 │
 ├── judge/                       Judge LLM 调用
 │   ├── executor.py              Judge LLM 封装（JSON 解析、重试、模板）
@@ -43,6 +85,7 @@ src/eval_engine/
 │   ├── baseline.py              BaselineManager 保存/对比
 │   ├── regression_gate.py       回归检测
 │   └── （运行产物写入用户状态目录，可用 EVAL_ENGINE_BASELINE_DIR 覆盖）
+│       baselines/benchmark_baseline.json  ★ 仓库随附 shipped baseline
 │
 ├── intent/                      任务分类路由
 │   └── classifier.py            意图识别 → functional_test / generative_task
@@ -183,6 +226,7 @@ pytest tests/test_real_judge.py -v
 - **共享 Schema（Format B，1-based `step`）**：[react-agent/schemas/harness_trajectory.schema.json](https://github.com/weihuaguo270-ops/react-agent/blob/main/schemas/harness_trajectory.schema.json)
 - **一键闭环**：`react-agent/examples/harness_closed_loop.py`（Agent → Trace Debugger → 本仓评分）
 - **精简对接**：`react-agent/examples/agent_to_eval.py`
+- **Benchmark Agent 跑批**（本仓）：`python examples/run_benchmark_agent.py --mode mock|agent`
 
 本仓库 `parse_trajectory` 会自动识别 1-based Format B；若轨迹仍用遗留 0-based `step`，也会兼容。
 
@@ -209,9 +253,14 @@ python -m eval_engine report --file result.json
 
 ```bash
 python examples/quickstart.py
-python examples/calibration_demo.py      # 合成多 Judge + 内置人机表
-python examples/run_calibration.py       # 写出 docs/calibration_snapshot_*.md
-python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
+python examples/run_benchmark.py              # Benchmark v2（32 条）
+python examples/run_benchmark_live.py         # Live Judge（需 Key）
+python examples/run_benchmark.py --compare    # 回归门禁
+python examples/e2e_trajectory_eval.py        # 轨迹→评分 E2E
+python examples/run_benchmark_agent.py --mode mock --max-cases 3   # react-agent 集成
+python examples/run_benchmark_agent.py --mode agent --providers deepseek-v3  # live Agent
+python examples/run_calibration.py            # 校准 v5
+python examples/run_calibration.py --live --split held_out  # Live held_out
 ```
 
 ## Judge 人机校准
@@ -220,35 +269,34 @@ python examples/run_calibration.py --live  # 可选：真实 Judge 重打分
 
 | 项 | 说明 |
 |----|------|
-| 数据 | [`calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（**v4**：dev 17 + held_out 已标 20 + pending 3） |
+| 数据 | [`calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（**v5**：dev 17 + held_out **53** + r2 已写入） |
 | 离线复现 | 冻结 `judge_score`；**dev/held_out 分栏** + bootstrap CI；跳过 pending |
 | 在线 | `--live` 调用 `JudgeExecutor`（注入刻度锚点） |
-| 指标 | Cohen's κ、精确一致率、±1、MAE、Bias、混淆矩阵、**bootstrap 95% CI**；有 r2 时报告标注者间 κ |
+| 指标 | Cohen's κ、精确一致率、±1、MAE、Bias、混淆矩阵、**bootstrap 95% CI**；held_out 报告 **标注者间 κ**（r1 vs r2） |
 | 怎么读 | [`docs/METRICS_TRUST.md`](docs/METRICS_TRUST.md) · [第二标注者](docs/SECOND_RATER_PROTOCOL.md) |
 | 快照 offline | [`calibration_snapshot_20260716_offline.md`](docs/calibration_snapshot_20260716_offline.md)（v4） |
 | 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek，**v4** held_out n=20） |
 
-**统一口径（勿混写旧 n=15 / κ≈0.47）：**
+**统一口径（v5 offline，2026-07-27）：**
 
 | 栏 | 数字 | 说明 |
 |----|------|------|
-| **held_out live**（简历优先） | κ≈**0.69**（n=20，CI [0.46, 0.92]） | DeepSeek；门禁已过 |
-| 全量 live | κ≈**0.67**（n=37，CI [0.48, 0.85]） | 辅证，勿替代 held_out |
-| **held_out offline** | κ=**1.0**（n=20，冻结分） | 只证明冻结对齐 |
-| 全量 offline | κ≈**0.92**（n=37，CI [0.80, 1.0]） | 含 protocol-tuning 的 dev |
-| 第二标注者 | `protocol_ready` | worksheet 已发；**尚未写入 r2，无双人 κ** |
+| **held_out offline**（简历优先） | κ=**1.0**（n=53，冻结分） | 只证明冻结 Judge 与 r1 对齐 |
+| **标注者间** | κ≈**0.80**（n=53，r1 vs r2） | v5 第二标注者已写入 |
+| 全量 offline | κ≈**0.96**（n=70） | 含 dev 协议调参样本 |
+| held_out **live**（历史） | κ≈**0.69**（n=20，DeepSeek） | 需 `--live` 复跑；样本小于 v5 |
 
-> 旧基线 `calibration_snapshot_20260713`（n=15，κ≈0.47）仅作历史对照，不作当前引用。
+> 旧基线 v4（n=20 held_out）与 `calibration_snapshot_20260713` 仅作历史对照。
 
 标注协议与 `meta.relabel_log` 写在数据文件中。HITL 人工审批（执行前确认）与本校准不是同一能力。
 
 ## 当前局限
 
-- 金标准 **v4**（held_out 已标 20 + pending 3）；小样本 + **单人标注**，第二标注者协议已就绪、分数未写入
-- offline held_out κ=1.0 基于冻结分，**不能**替代 live held_out
+- 金标准 **v5**（held_out n=53 + r2）；Benchmark **v2** 共 **32 条**（5 类各 ≥6）
+- offline held_out κ=1.0 基于冻结分，**不能**替代 live Judge 复跑
+- Benchmark 三模型 profile 使用**冻结轨迹 + 冻结 Judge 分**，非实时 API 跑批（`--live` 可扩展）
 - HITL 审批 ≠ 人机校准
-- 默认 CI 以离线单测为主；真实 Judge 需 API Key
-- 与 react-agent `eval/` 分工：本仓 Process Reward / 校准；react-agent 任务通过率
+- 与 react-agent `eval/` 分工：本仓 Process Reward / 校准 / 过程级 benchmark；react-agent 任务通过率
 
 ## License
 

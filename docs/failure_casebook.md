@@ -1,5 +1,7 @@
 # 失败案例库（Failure Casebook）
 
+本项目维护的失败归因样本，供 Benchmark 回归分析与 taxonomy 校验使用。
+
 - 生成方式：benchmark offline 跑批自动提取
 - 失败条目数：**96**
 

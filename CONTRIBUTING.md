@@ -1,6 +1,6 @@
 # 贡献指南（Contributing）
 
-本仓库为 LLM 评估**实验框架**（学习用途）。欢迎 Issue / 小型 PR。
+本仓库为 Agent 过程级评测框架，与 [react-agent](https://github.com/weihuaguo270-ops/react-agent) 配套使用。欢迎 Issue / 小型 PR。
 
 ```bash
 pip install -e ".[test]"

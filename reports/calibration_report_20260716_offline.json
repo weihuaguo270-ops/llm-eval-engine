@@ -764,7 +764,7 @@
     "random_seed_bootstrap": 20260716,
     "mode": "offline"
   },
-  "notes": "offline=冻结 judge_score；live=真实 Judge。简历请优先引用 held_out 分栏 κ + CI；全量 offline κ 含协议重标样本。",
+  "notes": "offline=冻结 judge_score；live=真实 Judge。对外发布以 held_out 分栏 κ + CI 为准；全量 offline κ 含协议调参样本。",
   "inter_rater": {
     "sample_size": 0,
     "kappa": null,

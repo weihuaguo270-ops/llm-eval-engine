@@ -9,7 +9,7 @@
 - κ bootstrap 95% CI (seed=20260716, B=2000): **[0.804, 1.0]**
 - 门禁 split: **held_out**；是否建议校准 (held_out κ < 0.6): **否**
 - 模式: `offline`
-- 说明: offline=冻结 judge_score；live=真实 Judge。简历请优先引用 held_out 分栏 κ + CI；全量 offline κ 含协议重标样本。
+- 说明: offline=冻结 judge_score；live=真实 Judge。对外发布以 held_out 分栏 κ + CI 为准；全量 offline κ 含协议调参样本。
 - 标注者间 κ: **未报告**（第二标注者尚未写入 `human_score_r2`）
 
 ## 分栏（dev / held_out）
@@ -19,7 +19,7 @@
 | `dev` | 17 | 0.835 | 88.2% | 100.0% | 0.1176 |
 | `held_out` | 20 | 1.0 | 100.0% | 100.0% | 0.0 |
 
-- **held_out κ CI**: [1.0, 1.0] （优先引用此栏，勿与 protocol-tuning 的 offline 全量 κ 混谈）
+- **held_out κ CI**: [1.0, 1.0] （项目对外口径以 held_out 分栏为准，勿与 protocol-tuning 的 offline 全量 κ 混谈）
 
 ## 可复现元数据
 

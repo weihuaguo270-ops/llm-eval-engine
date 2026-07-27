@@ -276,7 +276,7 @@ def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准
             lines.append("")
             lines.append(
                 f"- **held_out κ CI**: [{k.get('low')}, {k.get('high')}] "
-                f"（优先引用此栏，勿与 protocol-tuning 的 offline 全量 κ 混谈）"
+                f"（项目对外口径以 held_out 分栏为准，勿与 protocol-tuning 的 offline 全量 κ 混谈）"
             )
 
     repro = report.get("reproducibility") or {}
@@ -561,7 +561,7 @@ class JudgeCalibrator:
             },
             "notes": (
                 "offline=冻结 judge_score；live=真实 Judge。"
-                "简历请优先引用 held_out 分栏 κ + CI；全量 offline κ 含协议重标样本。"
+                "对外发布以 held_out 分栏 κ + CI 为准；全量 offline κ 含协议调参样本。"
                 if mode == "offline"
                 else "live 模式为当次 Judge 重打分；请同时看 held_out 分栏。"
             ),

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- 文档叙述视角调整为项目负责人口径（移除 Mid/简历/面试表述；统一对外发布规范）
+
 ## 0.2.0 (2026-07-27)
 
 ### Added
@@ -14,14 +20,12 @@
 ### Changed
 - 校准金标准 **v5**：held_out **n=53**，写入 `human_score_r2`（标注者间 κ≈0.80 offline）
 - `BaselineManager` 支持 shipped baseline 回退；回归门禁指标口径统一
-- README 更新为 Mid 档评测交付物口径
+- README 更新为项目交付物与对外指标口径
 
 ### Evidence (live snapshots, 2026-07-27)
 - held_out live κ≈**0.67**（n=53，CI [0.52, 0.82]）
 - Live Agent benchmark：**32/32** pass（DeepSeek react_loop）
 - Benchmark live Judge：3-case smoke 66.7% pass
-
-## Unreleased
 
 ## 0.1.0 (2026-07-13)
 

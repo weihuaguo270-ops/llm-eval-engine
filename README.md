@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml/badge.svg)](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-个人实验仓库：把 Agent 轨迹拆成步骤，用 Judge LLM 逐步打分（Process Reward），低分步可打包修正指令让 Agent 重跑。另有 Eval Loop 和人机校准（κ）。
+本项目是 Agent **过程级评测引擎**：将轨迹拆成步骤，用 Judge LLM 逐步打分（Process Reward），低分步可触发修正并重跑（Eval Loop）；并提供固定 Benchmark、失败归因与人机校准（κ）。
 
 > 术语：`Process Reward` 在这里指 Judge LLM 的过程级评分**流程**，不是训练出来的 Process Reward Model（PRM），也不提供 PRM 训练数据或损失函数。
 
@@ -20,7 +20,7 @@
 
 和「固定 rubric 打总分」相比，这里多四件事：**逐步打分**、**低分触发重跑**、**可复现的模型对比结论**、**失败归因统计**。
 
-## 评测交付物（Mid 档）
+## 项目交付物
 
 | 优先级 | 产物 | 复现命令 | 状态 |
 |--------|------|----------|------|
@@ -52,7 +52,7 @@
 | gpt-4o-mini | 72% | 3.80 |
 | qwen-plus | 0% | 2.14 |
 
-> 完整口径与引用规范见 [`docs/EVAL_DESIGN.md`](docs/EVAL_DESIGN.md)
+> 指标口径与对外发布规范见 [`docs/EVAL_DESIGN.md`](docs/EVAL_DESIGN.md)
 
 ## 架构
 
@@ -281,7 +281,7 @@ python examples/run_calibration.py --live --split held_out  # Live held_out
 
 | 栏 | 数字 | 说明 |
 |----|------|------|
-| **held_out offline**（简历优先） | κ=**1.0**（n=53，冻结分） | 只证明冻结 Judge 与 r1 对齐 |
+| **held_out offline**（对外基准） | κ=**1.0**（n=53，冻结分） | 只证明冻结 Judge 与 r1 对齐 |
 | **标注者间** | κ≈**0.80**（n=53，r1 vs r2） | v5 第二标注者已写入 |
 | 全量 offline | κ≈**0.96**（n=70） | 含 dev 协议调参样本 |
 | held_out **live**（历史） | κ≈**0.69**（n=20，DeepSeek） | 需 `--live` 复跑；样本小于 v5 |

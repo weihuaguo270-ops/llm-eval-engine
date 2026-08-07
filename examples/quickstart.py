@@ -37,11 +37,15 @@ def demo_direct_scoring():
                          min_score=3, weight=1.0),
     ]
 
-    # 评分
+    # 评分（fast_mode 期望 overall/efficiency/tool_usage 字段）
     dag = parse_trajectory(trajectory)
     scorer = ProcessRewardScorer(judge_fn=lambda p: {
-        "score": 4.5,
-        "reason": "回答准确且清晰",
+        "overall_score": 4.5,
+        "efficiency_score": 4.0,
+        "tool_usage_score": 4.5,
+        "needs_revision": False,
+        "strengths": ["回答准确"],
+        "weaknesses": [],
         "rubrics": [{"dimension": c.name, "score": 4.0, "reason": "ok"}
                      for c in contracts]
     })

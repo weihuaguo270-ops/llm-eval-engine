@@ -5,17 +5,19 @@
 推荐流程：
   1. 准备 10–20+ 条已人工打分的 Judge 输入（见 dataset/data/calibration_human_judge.json）
   2. 离线：用冻结的 judge_score 复现一致性表；在线：用 JudgeExecutor 重打分
-  3. 看 κ、精确一致率、±1 一致率、MAE、偏差（bias）
-  4. κ 或一致性过低时，收紧 rubric 措辞或加 few-shot，再复测
+  3. 看双视角：类别（κ / 精确一致 / ±1）+ 连续回归（MSE / RMSE / MAE / bias）
+  4. κ 或 MSE 过差时，收紧 rubric 措辞或加 few-shot，再复测
 
 说明：
   - HITL（人工审批）≠ 人机校准；前者管执行权限，后者管评分对齐
   - 小样本 κ 方差大，报告里必须写清 sample_size
+  - Likert 看「落在哪一档」；连续回归把分当 1.0–5.0 实数，看「差多远」
 """
 
 from __future__ import annotations
 
 import json
+import math
 import os
 import random
 from typing import Any, Callable, Optional
@@ -36,6 +38,61 @@ def _to_likert(scores: list[float], lo: int = 1, hi: int = 5) -> list[int]:
             v = lo
         out.append(max(lo, min(hi, v)))
     return out
+
+
+def _to_continuous(
+    scores: list[float], lo: float = 1.0, hi: float = 5.0
+) -> list[float]:
+    """将分数解析为实数并裁剪到 [lo, hi]（默认 1.0–5.0）。允许 3.7、4.2 等小数分。"""
+    out: list[float] = []
+    for s in scores:
+        try:
+            v = float(s)
+        except (TypeError, ValueError):
+            v = lo
+        if math.isnan(v) or math.isinf(v):
+            v = lo
+        out.append(max(lo, min(hi, v)))
+    return out
+
+
+def regression_metrics(
+    human_scores: list[float],
+    judge_scores: list[float],
+    *,
+    scale_min: float = 1.0,
+    scale_max: float = 5.0,
+) -> dict[str, Any]:
+    """连续回归视角：把分当作 [scale_min, scale_max] 上的实数，衡量幅度误差。
+
+    与 Likert 类别指标互补：κ / 精确一致只看档位；MSE / RMSE / MAE 看预测与真值差多远。
+    """
+    empty = {
+        "sample_size": 0,
+        "scale": [scale_min, scale_max],
+        "mse": 0.0,
+        "rmse": 0.0,
+        "mae": 0.0,
+        "bias": 0.0,
+    }
+    if len(human_scores) != len(judge_scores) or not human_scores:
+        return empty
+
+    h = _to_continuous(human_scores, scale_min, scale_max)
+    j = _to_continuous(judge_scores, scale_min, scale_max)
+    n = len(h)
+    errs = [b - a for a, b in zip(h, j)]
+    sq = [e * e for e in errs]
+    abs_err = [abs(e) for e in errs]
+    mse = sum(sq) / n
+    return {
+        "sample_size": n,
+        "scale": [scale_min, scale_max],
+        "mse": round(mse, 4),
+        "rmse": round(math.sqrt(mse), 4),
+        "mae": round(sum(abs_err) / n, 4),
+        "bias": round(sum(errs) / n, 4),
+    }
 
 
 def cohens_kappa(
@@ -117,7 +174,12 @@ def agreement_table(
     scale_max: int = 5,
     ids: Optional[list[str]] = None,
 ) -> dict[str, Any]:
-    """人机一致性汇总表（κ / 一致率 / MAE / bias / 混淆矩阵）。"""
+    """人机一致性汇总表：Likert 类别 + 连续回归幅度。
+
+    - 类别：κ / 精确一致 / ±1 / Likert-MAE / bias / 混淆矩阵（整数档）
+    - 回归：MSE / RMSE / MAE / bias（1.0–5.0 实数，保留小数幅度）
+    """
+    empty_reg = regression_metrics([], [], scale_min=float(scale_min), scale_max=float(scale_max))
     if len(human_scores) != len(judge_scores) or not human_scores:
         return {
             "sample_size": 0,
@@ -126,17 +188,25 @@ def agreement_table(
             "within_one_rate": 0.0,
             "mae": 0.0,
             "bias": 0.0,
+            "mse": 0.0,
+            "rmse": 0.0,
+            "regression": empty_reg,
             "confusion": [],
             "pairs": [],
         }
 
     h = _to_likert(human_scores, scale_min, scale_max)
     j = _to_likert(judge_scores, scale_min, scale_max)
+    h_c = _to_continuous(human_scores, float(scale_min), float(scale_max))
+    j_c = _to_continuous(judge_scores, float(scale_min), float(scale_max))
     n = len(h)
     exact = sum(1 for a, b in zip(h, j) if a == b)
     within_one = sum(1 for a, b in zip(h, j) if abs(a - b) <= 1)
     abs_err = [abs(a - b) for a, b in zip(h, j)]
     bias = sum(b - a for a, b in zip(h, j)) / n
+    reg = regression_metrics(
+        human_scores, judge_scores, scale_min=float(scale_min), scale_max=float(scale_max)
+    )
 
     labels = list(range(scale_min, scale_max + 1))
     index = {lab: i for i, lab in enumerate(labels)}
@@ -150,7 +220,11 @@ def agreement_table(
             "id": pair_ids[i],
             "human": h[i],
             "judge": j[i],
+            "human_continuous": h_c[i],
+            "judge_continuous": j_c[i],
             "abs_err": abs(h[i] - j[i]),
+            "abs_err_continuous": round(abs(h_c[i] - j_c[i]), 4),
+            "sq_err": round((h_c[i] - j_c[i]) ** 2, 4),
         }
         for i in range(n)
     ]
@@ -160,8 +234,13 @@ def agreement_table(
         "kappa": cohens_kappa(h, j, likert=True, scale_min=scale_min, scale_max=scale_max),
         "exact_agree_rate": round(exact / n, 4),
         "within_one_rate": round(within_one / n, 4),
+        # Likert 整数档上的 MAE / bias（与历史快照兼容）
         "mae": round(sum(abs_err) / n, 4),
         "bias": round(bias, 4),
+        # 连续回归幅度（与 regression 块同值，便于顶层读取）
+        "mse": reg["mse"],
+        "rmse": reg["rmse"],
+        "regression": reg,
         "scale": [scale_min, scale_max],
         "confusion_labels": labels,
         "confusion": matrix,
@@ -219,15 +298,25 @@ def bootstrap_ci(
 
 def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准报告") -> str:
     """把 agreement / calibrator 报告格式化为 Markdown。"""
+    reg = report.get("regression") or {}
     lines = [
         f"# {title}",
+        "",
+        "## 类别视角（Likert 1–5）",
         "",
         f"- 样本量: **{report.get('sample_size', 0)}**",
         f"- Cohen's κ: **{report.get('kappa', 0)}**",
         f"- 精确一致率: **{report.get('exact_agree_rate', 0):.1%}**",
         f"- ±1 分一致率: **{report.get('within_one_rate', 0):.1%}**",
-        f"- MAE: **{report.get('mae', 0)}**",
-        f"- Bias (Judge − Human): **{report.get('bias', 0)}**",
+        f"- MAE（整数档）: **{report.get('mae', 0)}**",
+        f"- Bias (Judge − Human，整数档): **{report.get('bias', 0)}**",
+        "",
+        "## 连续回归视角（1.0–5.0 实数）",
+        "",
+        f"- MSE: **{report.get('mse', reg.get('mse', 0))}**",
+        f"- RMSE: **{report.get('rmse', reg.get('rmse', 0))}**",
+        f"- MAE（连续）: **{reg.get('mae', report.get('mae', 0))}**",
+        f"- Bias（连续，Judge − Human）: **{reg.get('bias', report.get('bias', 0))}**",
     ]
     boot = report.get("bootstrap") or {}
     if boot.get("kappa"):
@@ -262,13 +351,15 @@ def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准
     splits = report.get("by_split") or {}
     if splits:
         lines.extend(["", "## 分栏（dev / held_out）", ""])
-        lines.append("| split | n | κ | exact | ±1 | MAE |")
-        lines.append("|-------|--:|--:|------:|----:|----:|")
+        lines.append("| split | n | κ | exact | ±1 | MAE | MSE | RMSE |")
+        lines.append("|-------|--:|--:|------:|----:|----:|----:|-----:|")
         for name, sub in splits.items():
+            sub_reg = sub.get("regression") or {}
             lines.append(
                 f"| `{name}` | {sub.get('sample_size', 0)} | {sub.get('kappa', 0)} | "
                 f"{sub.get('exact_agree_rate', 0):.1%} | {sub.get('within_one_rate', 0):.1%} | "
-                f"{sub.get('mae', 0)} |"
+                f"{sub.get('mae', 0)} | {sub.get('mse', sub_reg.get('mse', 0))} | "
+                f"{sub.get('rmse', sub_reg.get('rmse', 0))} |"
             )
         ho = splits.get("held_out") or {}
         if ho.get("bootstrap", {}).get("kappa"):
@@ -309,11 +400,21 @@ def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准
 
     pairs = report.get("pairs") or []
     if pairs:
-        lines.extend(["", "## 逐条对比", "", "| id | split | human | judge | |err| |", "|---|---|---:|---:|---:|"])
+        lines.extend(
+            [
+                "",
+                "## 逐条对比",
+                "",
+                "| id | split | human | judge | human_c | judge_c | abs_err | sq_err |",
+                "|---|---|---:|---:|---:|---:|---:|---:|",
+            ]
+        )
         for p in pairs:
             lines.append(
                 f"| {p.get('id', '')} | {p.get('split', '')} | {p.get('human', '')} | "
-                f"{p.get('judge', '')} | {p.get('abs_err', '')} |"
+                f"{p.get('judge', '')} | {p.get('human_continuous', p.get('human', ''))} | "
+                f"{p.get('judge_continuous', p.get('judge', ''))} | "
+                f"{p.get('abs_err', '')} | {p.get('sq_err', '')} |"
             )
 
     lines.append("")

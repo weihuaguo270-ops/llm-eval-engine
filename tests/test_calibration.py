@@ -8,6 +8,7 @@ from eval_engine.judge.calibration import (
     default_calibration_path,
     format_agreement_markdown,
     load_golden_file,
+    regression_metrics,
 )
 
 
@@ -26,12 +27,43 @@ def test_cohens_kappa_likert_not_range_binned():
     print(f"✅ Likert κ={k}")
 
 
+def test_regression_metrics_continuous():
+    # 允许小数分：幅度误差用 MSE，不因 round 到同一档而抹平
+    human = [4.0, 2.0, 5.0]
+    judge = [3.7, 2.0, 4.2]
+    reg = regression_metrics(human, judge)
+    assert reg["sample_size"] == 3
+    # errors: -0.3, 0, -0.8 → mse = (0.09 + 0 + 0.64) / 3
+    assert reg["mse"] == round((0.09 + 0.0 + 0.64) / 3, 4)
+    assert reg["rmse"] == round(reg["mse"] ** 0.5, 4)
+    assert reg["mae"] == round((0.3 + 0.0 + 0.8) / 3, 4)
+    assert reg["bias"] == round((-0.3 + 0.0 - 0.8) / 3, 4)
+    assert reg["scale"] == [1.0, 5.0]
+    print(f"✅ continuous regression mse={reg['mse']} rmse={reg['rmse']}")
+
+
+def test_agreement_table_keeps_likert_and_adds_regression():
+    # human=4 vs judge=3.7：Likert 同档（都 round 到 4），连续仍有幅度误差
+    table = agreement_table([4.0, 2.0], [3.7, 2.5], ids=["a", "b"])
+    assert table["sample_size"] == 2
+    assert "mse" in table and "rmse" in table
+    assert "regression" in table
+    assert table["mse"] == table["regression"]["mse"]
+    assert table["pairs"][0]["human_continuous"] == 4.0
+    assert table["pairs"][0]["judge_continuous"] == 3.7
+    assert table["pairs"][0]["sq_err"] == 0.09
+    # Likert MAE 可能为 0（两档都 round 一致），连续 MAE > 0
+    assert table["regression"]["mae"] > 0
+    print("✅ agreement_table dual view OK")
+
+
 def test_agreement_table_shape():
     table = agreement_table([5, 4, 2], [5, 5, 1], ids=["a", "b", "c"])
     assert table["sample_size"] == 3
     assert table["exact_agree_rate"] == round(1 / 3, 4)
     assert len(table["confusion"]) == 5
     assert len(table["pairs"]) == 3
+    assert table["mse"] >= 0
     print("✅ agreement_table shape OK")
 
 
@@ -58,6 +90,8 @@ def test_calibrator_offline_run():
     assert result["sample_size"] >= 57
     assert "kappa" in result
     assert "exact_agree_rate" in result
+    assert "mse" in result and "rmse" in result
+    assert "regression" in result
     assert result["mode"] == "offline"
     assert "bootstrap" in result and "kappa" in result["bootstrap"]
     assert "by_split" in result
@@ -73,9 +107,11 @@ def test_calibrator_offline_run():
     assert "标注者间" in md or "inter" in md.lower() or "κ" in md
     assert "门禁 split" in md
     assert "Cohen" in md or "κ" in md
+    assert "MSE" in md and "连续回归" in md
     print(
         f"[PASS] offline calibrator: n={result['sample_size']} "
-        f"κ={result['kappa']} held_outκ={result['by_split']['held_out']['kappa']}"
+        f"κ={result['kappa']} held_outκ={result['by_split']['held_out']['kappa']} "
+        f"mse={result['mse']}"
     )
 
 
@@ -165,6 +201,8 @@ def test_needs_calibration_flag():
 if __name__ == "__main__":
     test_cohens_kappa_perfect()
     test_cohens_kappa_likert_not_range_binned()
+    test_regression_metrics_continuous()
+    test_agreement_table_keeps_likert_and_adds_regression()
     test_agreement_table_shape()
     test_load_builtin_calibration_file()
     test_calibrator_offline_run()

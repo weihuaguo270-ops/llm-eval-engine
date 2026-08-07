@@ -23,7 +23,8 @@ def demo_inter_judge():
         "Judge_C": [5, 3, 4, 2, 3, 4, 3, 3, 2, 4],
     }
 
-    print(f"\n{'Judge 对':20s} {'Cohen\\'s κ':12s}")
+    header_kappa = "Cohen's κ"
+    print(f"\n{'Judge 对':20s} {header_kappa:12s}")
     print("-" * 40)
     for j1, j2 in [("Judge_A", "Judge_B"), ("Judge_B", "Judge_C"), ("Judge_A", "Judge_C")]:
         k = cohens_kappa(judges[j1], judges[j2])

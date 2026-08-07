@@ -13,7 +13,7 @@
 | 步骤级 Judge 打分 + 错误传播标注 | 训练型 PRM |
 | 按上下文生成 rubric（`dynamic_rubric.py`） | 替代 react-agent 的 capability 主评测集 |
 | Eval Loop：低分 → 修正 → 重跑（`eval_loop.py`） | Agent 运行时本身 |
-| 人机校准：κ、MAE、混淆矩阵（`calibration.py`） | 把 offline κ 当线上 SLA |
+| 人机校准：κ、MAE、MSE/RMSE、混淆矩阵（`calibration.py`） | 把 offline κ 当线上 SLA |
 | **固定 Benchmark 跑批 + 多模型对比报告** | 端到端生产级 Agent 平台 |
 | **失败类型 taxonomy + 分布统计** | 只报总分不做归因 |
 | **回归门禁 + shipped baseline** | 把 offline 对比当线上 SLA |
@@ -73,7 +73,7 @@ src/eval_engine/
 ├── judge/                       Judge LLM 调用
 │   ├── executor.py              Judge LLM 封装（JSON 解析、重试、模板）
 │   ├── template_loader.py       YAML 评分模板加载
-│   ├── calibration.py           人机校准（κ / 一致率 / MAE / bias）
+│   ├── calibration.py           人机校准（κ / 一致率 / MAE / MSE·RMSE / bias）
 │   └── templates/               faithfulness.yaml / tool_selection.yaml /
 │                                trajectory_safety.yaml
 │
@@ -272,7 +272,7 @@ python examples/run_calibration.py --live --split held_out  # Live held_out
 | 数据 | [`calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（**v5**：dev 17 + held_out **53** + r2 已写入） |
 | 离线复现 | 冻结 `judge_score`；**dev/held_out 分栏** + bootstrap CI；跳过 pending |
 | 在线 | `--live` 调用 `JudgeExecutor`（注入刻度锚点） |
-| 指标 | Cohen's κ、精确一致率、±1、MAE、Bias、混淆矩阵、**bootstrap 95% CI**；held_out 报告 **标注者间 κ**（r1 vs r2） |
+| 指标 | Cohen's κ、精确一致率、±1、MAE、Bias、**MSE/RMSE（连续 1.0–5.0）**、混淆矩阵、**bootstrap 95% CI**；held_out 报告 **标注者间 κ**（r1 vs r2） |
 | 怎么读 | [`docs/METRICS_TRUST.md`](docs/METRICS_TRUST.md) · [第二标注者](docs/SECOND_RATER_PROTOCOL.md) |
 | 快照 offline | [`calibration_snapshot_20260716_offline.md`](docs/calibration_snapshot_20260716_offline.md)（v4） |
 | 快照 live | [`calibration_snapshot_20260716_live.md`](docs/calibration_snapshot_20260716_live.md)（DeepSeek，**v4** held_out n=20） |

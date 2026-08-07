@@ -8,7 +8,7 @@
 |------|------|------|
 | **Process Reward** | Agent 轨迹每一步 | 逐步得分、根因步、错误传播 |
 | **Benchmark** | 固定任务集 × 模型 profile | 通过率、均分、失败 taxonomy |
-| **Judge 校准** | Judge 输入片段 vs 人工分 | κ、MAE、held_out CI、标注者间 κ |
+| **Judge 校准** | Judge 输入片段 vs 人工分 | κ、MAE、MSE/RMSE、held_out CI、标注者间 κ |
 
 **不评：** 最终答案单一对错（由 react-agent `eval/` 等 capability eval 负责）；本仓聚焦 **过程质量** 与 **Judge 可信度**。
 
@@ -41,8 +41,23 @@
 | `overall_score` | 步骤加权均分（根因步权 1.5） | 0–5 |
 | `pass_rate` | 无需修正步骤占比 / 或用例通过率 | 0–1 |
 | `passed`（用例） | 无低分步且 overall ≥ 3.5 | bool |
-| Cohen's κ | Likert 1–5 整数类别一致率 | -1–1 |
+| Cohen's κ | Likert 1–5 **整数类别**一致率 | -1–1 |
+| MAE / Bias（Likert） | 整数档上的平均绝对误差 / 系统性偏差 | ≥0 / 实数 |
+| MSE / RMSE / MAE（连续） | 把分当 **1.0–5.0 实数**（可输出 3.7、4.2），衡量幅度误差 | ≥0 |
 | `failure_type` | wrong_tool / wrong_params / hallucination / error_propagation / … | 枚举 |
+
+### 3.1 双视角：类别 vs 连续回归
+
+人机校准默认同时报告两套口径（见 `calibration.agreement_table` / `regression_metrics`）：
+
+| 视角 | 分数怎么看 | 主指标 | 回答的问题 |
+|------|------------|--------|------------|
+| **类别（Likert）** | 四舍五入到 1–5 整数档 | κ、精确一致、±1、混淆矩阵 | 「有没有落在同一档？」 |
+| **连续回归** | 裁剪到 [1.0, 5.0] 的任意实数 | MSE、RMSE、连续 MAE、bias | 「预测值和真值差多远？」 |
+
+- 类别设定保留门禁与对外 κ 口径；连续指标补「幅度」——例如 human=4、judge=3.7 在 κ 上可能仍算同档（round 后都是 4），但 MSE 会记下 0.09 的平方误差。
+- Judge / 标注允许输出小数分；计算前统一 `_to_continuous` 裁剪，避免越界。
+- 报告里 `mae` / `bias` 仍为 **整数档**（兼容历史快照）；连续幅度见 `mse` / `rmse` / `regression.*`。
 
 ## 4. 数据版本（当前）
 

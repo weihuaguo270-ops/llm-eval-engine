@@ -21,17 +21,18 @@ python examples/run_calibration.py --live --split held_out   # 真实 Judge
 - 金标准 **v5**：`dev`（协议调参）与 `held_out`（独立评估，n=53）分开；pending 条目不进 κ。
 - 报告含 **bootstrap 95% CI**（seed 写在 `meta.reproducibility`）。
 - **第二标注者**：v5 已写入 `human_score_r2`（n=53）；协议见 `SECOND_RATER_PROTOCOL.md`。
+- **双视角**：Likert κ / 精确一致看档位；**MSE / RMSE / 连续 MAE** 把分当 1.0–5.0 实数，补幅度误差（见 `EVAL_DESIGN.md` §3.1）。
 
-### 当前对外基准（v5，2026-07-27）
+### 当前对外基准（v5；live 刷新 2026-08-07）
 
 | 栏 | 值 | 说明 |
 |----|-----|------|
-| held_out **live** | κ≈**0.67**（n=53，CI [0.52, 0.82]，DeepSeek） | 对外 Judge 可信度主证据 |
+| held_out **live** | κ≈**0.73**（n=53，CI [0.58, 0.88]，DeepSeek） | 对外 Judge 可信度主证据 |
 | held_out **offline** | κ=**1.0**（n=53，冻结分） | 仅证明冻结 Judge 与 r1 对齐 |
 | 标注者间 | κ≈**0.80**（n=53，r1 vs r2） | 金标准内部一致性 |
 | 全量 offline | κ≈**0.96**（n=70） | 含 dev 协议调参样本，不作对外 SLA |
 
-**废止口径：** n=15、κ≈0.47、held_out live n=20/κ≈0.69（v4 历史快照）、或「offline κ 当线上 SLA」。
+**废止口径：** n=15、κ≈0.47、held_out live n=20/κ≈0.69（v4 历史快照）、held_out live κ≈0.67（2026-07-27 快照）、或「offline κ 当线上 SLA」。
 
 ## Execution 通过率（react-agent）
 

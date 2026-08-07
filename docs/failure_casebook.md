@@ -1,9 +1,10 @@
 # 失败案例库（Failure Casebook）
 
-本项目维护的失败归因样本，供 Benchmark 回归分析与 taxonomy 校验使用。
+本项目维护的失败归因样本，供 Benchmark 回归分析与 taxonomy 校验。
 
-- 生成方式：benchmark offline 跑批自动提取
+- 生成：`scripts/generate_failure_casebook.py`（由 offline 跑批结果提取）
 - 失败条目数：**96**
+- 复现：`python examples/run_benchmark.py` 后重新生成本页
 
 ## 案例列表
 

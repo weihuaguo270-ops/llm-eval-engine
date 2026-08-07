@@ -19,7 +19,7 @@
 | `dev` | 17 | 0.644 | 76.5% | 100.0% | 0.2353 |
 | `held_out` | 20 | 0.6887 | 80.0% | 95.0% | 0.25 |
 
-- **held_out κ CI**: [0.4576, 0.9222] （项目对外口径以 held_out 分栏为准，勿与 protocol-tuning 的 offline 全量 κ 混谈）
+- **held_out κ CI**: [0.4576, 0.9222] （引用以 held_out 分栏为准，勿与 protocol-tuning 的 offline 全量 κ 混谈）
 
 ## 可复现元数据
 

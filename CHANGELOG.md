@@ -4,7 +4,14 @@
 
 ### Changed
 
-- 文档叙述视角调整为项目负责人口径（移除 Mid/简历/面试表述；统一对外发布规范）
+- 文档改为项目负责人口径：范围 / 复现入口 / 分栏证据，去掉交付清单与营销式表述
+- README、METRICS_TRUST、SECOND_RATER_PROTOCOL 对齐 **2026-08-07** live 证据（held_out κ≈0.73；live Judge / Agent 全量快照）
+
+### Evidence (2026-08-07)
+
+- held_out live κ≈**0.73**（n=53，CI [0.58, 0.88]，DeepSeek）
+- Live Judge benchmark：32×3（deepseek 46.9% / gpt-4o-mini 40.6% / qwen 15.6%）
+- Live Agent benchmark：32/32 pass（DeepSeek，mock Process Reward judge）
 
 ## 0.2.0 (2026-07-27)
 
@@ -20,7 +27,7 @@
 ### Changed
 - 校准金标准 **v5**：held_out **n=53**，写入 `human_score_r2`（标注者间 κ≈0.80 offline）
 - `BaselineManager` 支持 shipped baseline 回退；回归门禁指标口径统一
-- README 更新为项目交付物与对外指标口径
+- README 改为复现入口与分栏证据（后续 Unreleased 继续收紧表述）
 
 ### Evidence (live snapshots, 2026-07-27)
 - held_out live κ≈**0.67**（n=53，CI [0.52, 0.82]）
@@ -36,7 +43,7 @@
 - **P2 API 版本钉**：`EVAL_API_VERSION = "0.1"`（与 react-agent 对齐）
 
 ### Changed
-- README 定位为实验框架；从 react-agent 拆分为独立仓库
+- 从 react-agent 拆分为独立实验仓库
 - Judge 人机校准 v4、CI hardening（Windows / cov / mypy / pip-audit）
 
 ### Infrastructure

@@ -14,7 +14,7 @@
       "边界裁决（v2）：常识直答且未要求工具→5；观测未支持的概括→≤2；只读公开网页→5；正确调用必需工具→5；与观测直接矛盾→1；用户已批准的沙箱计算→5",
       "人工分由仓库维护者按协议独立标注；judge_score 为冻结的 Judge 输出（离线复现用）",
       "样本量仍有限，κ 作趋势证据，不能当作生产 SLA",
-      "v3：每条含 split=dev|held_out；对外口径优先 held_out κ",
+      "v3：每条含 split=dev|held_out；引用优先 held_out κ",
       "v4：held_out 已标扩至 20 条（+9）+ 3 条 pending_r1_r2；κ 跳过无 human_score",
       "第二标注者按 docs/SECOND_RATER_PROTOCOL.md 独立填 human_score_r2；未写入前不报告双人 κ",
       "v5：held_out 扩至 ≥50；held_out 全部写入 human_score_r2（第二标注者 r2）"

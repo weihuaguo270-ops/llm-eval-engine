@@ -1,6 +1,6 @@
 # Eval 设计文档
 
-本文档是 **llm-eval-engine** 的评测设计说明，约定评测范围、指标口径、数据版本与复现方式。项目对外发布指标时，以本文及对应日期的快照为准。
+本文档是 **llm-eval-engine** 的评测设计说明，约定评测范围、指标口径、数据版本与复现方式。对外引用数字时，以本文 + [`METRICS_TRUST.md`](METRICS_TRUST.md) + 对应日期快照为准。
 
 ## 1. 评什么
 
@@ -20,7 +20,7 @@
 |----|------|------------------|
 | **offline / frozen** | 冻结 Judge 分或轨迹 | 否（验证机制） |
 | **live Judge** | 真实 JudgeExecutor 当次重打分 | 趋势证据，须绑定模型与日期 |
-| **held_out** | 协议冻结后的独立样本 | **对外发布优先** |
+| **held_out** | 协议冻结后的独立样本 | **引用优先** |
 
 ### 2.2 Judge 校准门禁
 
@@ -116,22 +116,22 @@ python examples/run_benchmark_agent.py --mode agent --providers deepseek-v3 gpt-
 3. 三模型 profile **不是**同一 Agent 框架实时换 API 的 live 跑批（需 react-agent 闭环扩展）。
 4. r2 标注为 v5 协议化写入；真实盲标流程见 `docs/SECOND_RATER_PROTOCOL.md`。
 
-## 8. 对外表述规范
+## 8. 引用指标时的要求
 
-发布 README、Release Notes 或对外报告时，本项目要求：
+写 README、Release Notes 或对外报告时：
 
-- 写明数据集版本与快照日期（如 benchmark v2、calibration v5、2026-07-27）
+- 写明数据集版本与快照日期（如 benchmark v2、calibration v5、**2026-08-07**）
 - 分栏引用 offline / live / held_out，不合成单一「总分」
-- 优先发布 held_out live κ + bootstrap 95% CI
+- 优先引用 **held_out live κ + bootstrap 95% CI**（当前见 `docs/METRICS_TRUST.md`）
 
-**认可的表述：**
+**可接受的引用形态：**
 
-- 「32 条 Process Reward benchmark，三模型 profile 对比」
-- 「held_out n=53，标注者间 κ≈0.80（offline）」
+- 「32 条 Process Reward benchmark，三模型 profile 对比（offline，日期…）」
+- 「held_out n=53，live κ≈0.73（DeepSeek，2026-08-07）」
 - 「失败 taxonomy：幻觉 / 工具错 / 传播错误分布」
 
-**禁止的表述：**
+**不要这样写：**
 
 - 「offline κ=1.0 证明线上 Judge 可靠」
-- 「小样本可代表生产评测」（当前 32 条，持续扩展中）
-- 「三模型 live 大规模跑批」（除非已跑 live 脚本并附日期）
+- 「小样本可代表生产评测」（当前 benchmark 32 条，按需扩展）
+- 「三模型 live 大规模跑批」（除非已跑 live 脚本并附日期与报告链接）

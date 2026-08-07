@@ -1,5 +1,5 @@
 # Security Policy
 
-本项目接受负责任的安全披露。安全问题请邮件 **weihuaguo270@gmail.com**，勿在公开 Issue 粘贴密钥。
+负责任披露请邮件 **weihuaguo270@gmail.com**。勿在公开 Issue 粘贴密钥或私有评测内容。
 
-请勿将 Judge API Key、私有评测集中的敏感内容提交进仓库。
+仓库禁止提交：Judge / Provider API Key、含敏感信息的标注或轨迹。本地密钥放在 `.env`（已 gitignore）；脚本可从本仓或姊妹仓 `react-agent/.env` 加载。

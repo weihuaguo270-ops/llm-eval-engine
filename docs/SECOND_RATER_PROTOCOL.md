@@ -23,7 +23,7 @@ python examples/run_calibration.py
 python examples/run_calibration.py --live   # 扩样后刷新 held_out live
 ```
 
-报告出现 **标注者间 κ (r1 vs r2)** 后，本项目才对外发布「双人标注」结论。在此之前公开口径保持：`second_rater_status=protocol_ready`，**不报告双人 κ**。
+报告出现 **标注者间 κ (r1 vs r2)** 后，才可引用「双人标注」结论。在此之前公开口径保持：`second_rater_status=protocol_ready`，**不报告双人 κ**。
 
 ## 禁止事项
 
@@ -31,8 +31,11 @@ python examples/run_calibration.py --live   # 扩样后刷新 held_out live
 - 用模型生成「伪人工分」填入 `human_score_r2`
 - 把 pending 条目（无 `human_score`）计入 κ
 
-## 当前状态（2026-07-27，v5）
+## 当前状态（v5；live 刷新 2026-08-07）
 
 - 协议与 worksheet 已就绪
 - held_out **n=53** 已全部写入 `human_score_r2`
-- 标注者间 κ≈**0.80**（offline）；live held_out κ≈**0.67**（DeepSeek，2026-07-27）
+- 标注者间 κ≈**0.80**（offline）
+- held_out live κ≈**0.73**（n=53，CI [0.58, 0.88]，DeepSeek，2026-08-07）
+  - 快照：[`calibration_snapshot_20260807_live_held_out.md`](calibration_snapshot_20260807_live_held_out.md)
+  - 2026-07-27 live κ≈0.67 仅作历史对照

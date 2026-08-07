@@ -33,16 +33,26 @@
 | P1 | CI 回归门禁 | [`.github/workflows/benchmark.yml`](.github/workflows/benchmark.yml) | ✅ |
 | P0 | Live Agent 跑批 | `run_benchmark_agent.py --mode agent` | ✅ n=32 DeepSeek |
 
-**Live Agent 结论（2026-07-27，react_loop + DeepSeek，32 条）：**
+**Live Agent 结论（2026-08-07，react_loop + DeepSeek，32 条）：**
 
 | 指标 | 结果 |
 |------|------|
 | 通过率 | **100%**（32/32，Process Reward mock judge） |
 | 均分 | 4.00 |
-| 平均延迟 | ~40s/条 |
+| 平均延迟 | ~11s/条 |
 | vs offline 冻结 | agent 4.00 vs offline 4.90（轨迹为真实 Agent 产出） |
 
-报告：[`docs/benchmark_comparison_agent_agent_20260727.md`](docs/benchmark_comparison_agent_agent_20260727.md)
+报告：[`docs/benchmark_comparison_live_agent_20260807.md`](docs/benchmark_comparison_live_agent_20260807.md)
+
+**Live Judge 结论（2026-08-07，冻结轨迹 × DeepSeek Judge，32×3）：**
+
+| 模型 profile | 通过率 | 均分 |
+|-------------|-------:|-----:|
+| deepseek-v3 | 46.9% | 4.24 |
+| gpt-4o-mini | 40.6% | 3.70 |
+| qwen-plus | 15.6% | 2.26 |
+
+报告：[`docs/benchmark_comparison_live_20260807.md`](docs/benchmark_comparison_live_20260807.md)（轨迹冻结、Judge live；勿与 offline 冻结分混谈）
 
 **当前 Benchmark 结论（offline v2，32 条 × 3 profile）：**
 

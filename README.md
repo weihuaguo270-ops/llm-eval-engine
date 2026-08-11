@@ -192,6 +192,26 @@ python examples/e2e_trajectory_eval.py
 - offline 三模型 profile 是行为档位冻结轨迹，不是同一框架实时换 API 的大规模 live（live 脚本另跑并带日期）
 - HITL 审批 ≠ 人机校准
 
+## 数据治理与发布检查（原型）
+
+当前实现：
+
+- 数据集指纹、JSONL 读写、切分泄漏检查、双人标注一致性和仲裁；
+- Artifact 元数据完整性检查和外部指标适配接口；
+- 提示词注入、工具越权安全回归；
+- 质量、时延、Token 成本漂移检查和离线发布结论。
+
+运行：
+
+~~~bash
+python examples/run_business_closed_loop.py
+pytest tests/test_business_closed_loop.py
+~~~
+
+示例使用固定 fixture 验证离线编排，不包含真实图片/视频指标、线上样本回流或 CI 发布阻断。
+实现边界见 [docs/BUSINESS_CLOSED_LOOP.md](docs/BUSINESS_CLOSED_LOOP.md)，后续里程碑见
+[docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md](docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md)。
+
 ## License / 贡献 / 安全
 
 MIT · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)

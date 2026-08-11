@@ -2,16 +2,34 @@
 
 ## Unreleased
 
+（下一批变更写在这里。）
+
+## 0.3.0 (2026-08-11)
+
+### Added
+
+- 数据集 Manifest、Fingerprint、JSONL I/O、split 泄漏审计和标注仲裁
+- 多模态 Artifact 契约、元数据完整性指标和外部指标适配接口
+- 提示词注入、工具越权、信息外传和良性对照安全回归
+- 质量、时延、Token 成本的整体及业务切片漂移检查
+- 综合数据、安全、漂移和 held-out Judge 证据的离线发布检查
+- 离线评测示例、能力边界说明和带 DRI/日期/依赖的交付计划
+
+### Fixed
+
+- 根因定位的上游低分判断改为使用调用方 threshold，避免 1-5 分制下误标下游节点
+
 ### Changed
 
-- 文档改为项目负责人口径：范围 / 复现入口 / 分栏证据，去掉交付清单与营销式表述
-- README、METRICS_TRUST、SECOND_RATER_PROTOCOL 对齐 **2026-08-07** live 证据（held_out κ≈0.73；live Judge / Agent 全量快照）
+- README 和评测文档改为项目负责人口径，区分离线原型与未实现的线上闭环
+- README、METRICS_TRUST、SECOND_RATER_PROTOCOL 对齐 2026-08-07 live 证据
 
-### Evidence (2026-08-07)
+### Evidence
 
-- held_out live κ≈**0.73**（n=53，CI [0.58, 0.88]，DeepSeek）
+- held_out live κ≈0.73（n=53，CI [0.58, 0.88]，DeepSeek）
 - Live Judge benchmark：32×3（deepseek 46.9% / gpt-4o-mini 40.6% / qwen 15.6%）
 - Live Agent benchmark：32/32 pass（DeepSeek，mock Process Reward judge）
+- 自动测试：71 passed
 
 ## 0.2.0 (2026-07-27)
 

@@ -105,7 +105,7 @@ def test_step_context():
 
 
 def test_dag_find_error_sources():
-    """错误源头定位"""
+    """错误源头定位（1–5 分制，threshold=3.0）"""
     trajectory = {
         "session_id": "traj_test_003",
         "query": "计算 123*456 是多少",
@@ -126,14 +126,42 @@ def test_dag_find_error_sources():
 
     dag = parse_trajectory(trajectory)
 
-    # 手动设置低分（模拟评分结果）
-    dag.get_node(1).score = 0.3  # 工具调用有问题
-    dag.get_node(2).score = 0.9
-    dag.get_node(3).score = 0.5  # 最终答案受波及
+    # 1–5 分制：Step1 根因低分，下游受波及也低分但不应再标根因
+    dag.get_node(1).score = 1.5
+    dag.get_node(2).score = 2.0  # < 3.0 且 >= 0.6：旧 bug 会漏掉此上游
+    dag.get_node(3).score = 2.5
 
-    sources = dag.find_error_sources()
-    assert 1 in [s.step_index for s in sources]
-    print(f"✅ test_dag_find_error_sources passed: 根因 Step {[s.step_index for s in sources]}")
+    sources = dag.find_error_sources(threshold=3.0)
+    source_idx = [s.step_index for s in sources]
+    assert source_idx == [1], source_idx
+    print(f"✅ test_dag_find_error_sources passed: 根因 Step {source_idx}")
+
+
+def test_dag_find_error_sources_upstream_same_threshold():
+    """回归：上游检查必须与入口共用 threshold，避免下游误标根因
+
+    旧实现写死 u.score < 0.6：上游 2.0 在 1–5 制下已是低分，却不被认作
+    upstream_low，导致直接下游也被标成根因。
+    """
+    trajectory = {
+        "query": "q",
+        "steps": [
+            {"step_index": 0, "type": "thought", "content": "t"},
+            {"step_index": 1, "type": "action",
+             "action": {"name": "web_search", "args": {"q": "x"}},
+             "content": "web_search"},
+            {"step_index": 2, "type": "observation",
+             "content": "bad", "observation": "bad"},
+        ],
+    }
+    dag = parse_trajectory(trajectory)
+    dag.get_node(1).score = 2.0  # < 3.0 且 >= 0.6
+    dag.get_node(2).score = 2.5  # 直接下游低分
+
+    sources = dag.find_error_sources(threshold=3.0)
+    source_idx = [s.step_index for s in sources]
+    assert source_idx == [1], source_idx
+    print(f"✅ upstream threshold aligned: {source_idx}")
 
 
 def test_summary():
@@ -168,6 +196,7 @@ if __name__ == "__main__":
     test_parse_trajectory()
     test_step_context()
     test_dag_find_error_sources()
+    test_dag_find_error_sources_upstream_same_threshold()
     test_summary()
     print("\n" + "=" * 50)
     print("✅ 全部测试通过")

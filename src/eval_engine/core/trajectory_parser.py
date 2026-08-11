@@ -149,9 +149,10 @@ class StepsDAG:
         error_sources = []
         for node in low_score_nodes:
             upstream = self.get_upstream(node.step_index)
+            # 与入口同一 threshold（1–5 分制）；勿写死 0.6，否则上游低分仍会被漏掉、下游被误标为根因
             upstream_low = [
                 u for u in upstream
-                if u.score is not None and u.score < 0.6
+                if u.score is not None and u.score < threshold
             ]
             if not upstream_low:
                 error_sources.append(node)

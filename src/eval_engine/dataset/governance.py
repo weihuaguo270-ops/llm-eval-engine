@@ -230,7 +230,8 @@ def apply_adjudications(
 ) -> list[dict[str, Any]]:
     """应用仲裁结果，不修改输入数据。"""
     # 仲裁结果写入副本，保留原数据版本供审计。
-    result = deepcopy(list(cases))
+    # Materialize each read-only Mapping as a mutable, independent case record.
+    result: list[dict[str, Any]] = [deepcopy(dict(case)) for case in cases]
     known_ids = {str(case.get("id", "")) for case in result}
     unknown = sorted(set(adjudications) - known_ids)
     if unknown:

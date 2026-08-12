@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Made OpenAI Agents trace evidence non-null by construction so the CI mypy gate can prove span access is safe
+
 ### Documentation
 
 - Added real SDK and cross-Agent release commands to the primary reproduction table

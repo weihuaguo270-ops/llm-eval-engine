@@ -45,6 +45,8 @@ Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步�
 | Live Judge 跑批 | `python examples/run_benchmark_live.py` | 需 API Key；轨迹冻结 |
 | Live Agent 跑批 | `python examples/run_benchmark_agent.py --mode agent` | 需 react-agent + Key |
 | E2E 轨迹评分 | `python examples/e2e_trajectory_eval.py` | 单条冒烟 |
+| 真实 Agent SDK 接入 | `python examples/run_sdk_integrations.py --out sdk-episodes` | 需安装 `.[sdk]`；本地确定性模型，不调用远程 API |
+| 跨 Agent 发布判断 | `python examples/run_cross_agent_release.py path/to/episodes --process-quality process.json --failure-gate failures.json --performance performance.json` | 汇总业务、过程、失败与性能证据 |
 | 设计 / 失败案例 | [`EVAL_DESIGN.md`](docs/EVAL_DESIGN.md) · [`failure_casebook.md`](docs/failure_casebook.md) | — |
 
 ## 当前证据（请分栏引用）
@@ -221,6 +223,7 @@ python examples/e2e_trajectory_eval.py
 - Artifact 元数据完整性检查和外部指标适配接口；
 - 提示词注入、工具越权安全回归；
 - 质量、时延、Token 成本漂移检查和离线发布结论。
+- `evaluation-episode/v1` 跨框架导入，以及业务终态、过程质量、失败回归和性能预算四类证据的发布判断函数。
 
 运行：
 
@@ -229,7 +232,8 @@ python examples/run_business_closed_loop.py
 pytest tests/test_business_closed_loop.py
 ~~~
 
-示例使用固定 fixture 验证离线编排，不包含真实图片/视频指标、线上样本回流或 CI 发布阻断。
+示例使用固定 fixture 验证离线编排，不包含真实图片/视频指标或线上样本回流。跨 Agent
+发布判断已经可由 CLI 调用，但当前 GitHub Actions 尚未将其配置为目标仓库的强制发布阻断。
 实现边界见 [docs/BUSINESS_CLOSED_LOOP.md](docs/BUSINESS_CLOSED_LOOP.md)，后续里程碑见
 [docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md](docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md)。
 

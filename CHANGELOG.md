@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-（下一批变更写在这里。）
+### Documentation
+
+- Added real SDK and cross-Agent release commands to the primary reproduction table
+- Clarified that the release gate is callable but is not yet a required GitHub Actions job
 
 ## 0.4.0 (2026-08-12)
 

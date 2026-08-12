@@ -402,5 +402,5 @@
   },
   "agent_mode": "agent",
   "judge_mode": "mock",
-  "react_agent_root": "D:\\agent_learning\\react-agent"
+  "react_agent_root": "${WORKSPACE_ROOT}/react-agent"
 }

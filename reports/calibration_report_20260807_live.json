@@ -1355,7 +1355,7 @@
   ],
   "skipped": 0,
   "mode": "live",
-  "source_path": "D:\\agent_learning\\llm-eval-engine\\src\\eval_engine\\dataset\\data\\calibration_human_judge.json",
+  "source_path": "${WORKSPACE_ROOT}/llm-eval-engine\\src\\eval_engine\\dataset\\data\\calibration_human_judge.json",
   "reproducibility": {
     "dataset_id": "calibration_human_judge",
     "dataset_version": 5,

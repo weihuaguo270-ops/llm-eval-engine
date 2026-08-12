@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eval-engine"
-version = "0.3.0"
+version = "0.4.0"
 description = "Experimental LLM evaluation framework with Process Reward scoring, dynamic rubric generation, adaptive eval loop, and human-in-the-loop oversight."
 readme = "README.md"
 license = {text = "MIT"}
@@ -31,6 +31,10 @@ test = [
 judge = [
     "requests>=2.28",
 ]
+sdk = [
+    "langgraph>=1.2,<2",
+    "openai-agents>=0.20,<1",
+]
 dev = [
     "mypy>=1.8",
     "pip-audit>=2.6",
@@ -43,6 +47,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 eval_engine = [
     "dataset/data/*.json",
+    "integrations/*.json",
     "judge/templates/*.yaml",
     "gates/baselines/*.json",
 ]

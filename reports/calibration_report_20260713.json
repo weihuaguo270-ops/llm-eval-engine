@@ -153,6 +153,6 @@
   "worst_dimensions": [],
   "skipped": 0,
   "mode": "offline",
-  "source_path": "D:\\agent_learning\\llm-eval-engine\\src\\eval_engine\\dataset\\data\\calibration_human_judge.json",
+  "source_path": "${WORKSPACE_ROOT}/llm-eval-engine\\src\\eval_engine\\dataset\\data\\calibration_human_judge.json",
   "notes": "offline 使用数据集内冻结的 judge_score，便于 CI/复现；live 需配置 Judge API Key 后重打分。"
 }

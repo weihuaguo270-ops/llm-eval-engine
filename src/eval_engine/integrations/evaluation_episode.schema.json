@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/weihuaguo270-ops/llm-eval-engine/evaluation_episode.schema.json",
+  "title": "EvaluationEpisode v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "episode_id",
+    "task",
+    "framework",
+    "agent_version",
+    "split",
+    "trajectory"
+  ],
+  "properties": {
+    "schema_version": {"const": "evaluation-episode/v1"},
+    "episode_id": {"type": "string", "minLength": 1},
+    "task": {"type": "string"},
+    "framework": {"type": "string", "minLength": 1},
+    "agent_version": {"type": "string"},
+    "split": {
+      "type": "string",
+      "enum": ["dev", "golden", "held_out", "production"]
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "expected_state": {"type": "object"},
+    "final_state": {"type": "object"},
+    "state_verification": {
+      "type": "object",
+      "properties": {
+        "passed": {"type": "boolean"},
+        "checks": {"type": "array", "items": {"type": "object"}}
+      },
+      "required": ["passed"]
+    },
+    "trajectory": {
+      "type": "object",
+      "required": ["session_id", "query", "steps", "final_answer"],
+      "properties": {
+        "session_id": {"type": "string", "minLength": 1},
+        "query": {"type": "string"},
+        "steps": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+        "final_answer": {"type": "string"}
+      }
+    },
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": true
+}

@@ -167,6 +167,13 @@ pytest tests/test_real_judge.py -v   # 无 API Key 时 skip
 
 `parse_trajectory` 识别 1-based Format B，并兼容遗留 0-based `step`。
 
+### 跨 Agent Episode
+
+`EvaluationEpisode v1` 将任务、框架、Agent 版本、dev/golden/held_out 切分、
+Format B 轨迹和业务终态统一封装。当前支持 Format B、LangGraph 风格节点记录和
+OpenAI Agents 风格 span 记录；接入与证据边界见
+[`docs/CROSS_AGENT_EVALUATION.md`](docs/CROSS_AGENT_EVALUATION.md)。
+
 相关运行时： [react-agent](https://github.com/weihuaguo270-ops/react-agent)、[trace-debugger](https://github.com/weihuaguo270-ops/trace-debugger)。
 
 ## CLI 与示例

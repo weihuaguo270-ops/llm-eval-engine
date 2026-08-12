@@ -32,6 +32,8 @@ jobs:
     - name: Test
       if: matrix.python-version != '3.11'
       run: pytest tests/ -v --tb=short
+    - name: Portable Episode contract without SDK extras
+      run: pytest tests/test_portability_contract.py -q
     - name: Test with coverage
       if: matrix.python-version == '3.11'
       run: >

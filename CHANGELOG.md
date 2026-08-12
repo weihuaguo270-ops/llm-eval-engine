@@ -4,6 +4,27 @@
 
 （下一批变更写在这里。）
 
+## 0.4.0 (2026-08-12)
+
+### Added
+
+- `evaluation-episode/v1` with deterministic business-state verification
+- Format B, LangGraph, and OpenAI Agents SDK trajectory imports
+- Real LangGraph StateGraph and OpenAI Agents Runner integration tests
+- Evidence bundle gate for business, process, failure, and performance evidence
+- Evidence path normalization and portability contract tests
+
+### Changed
+
+- Agent SDK integrations are optional and isolated from the core evaluator
+- Historical report paths use `${WORKSPACE_ROOT}`
+- Linux CI verifies Episode imports without the producing Agent SDK
+
+### Verified
+
+- Offline regression: 80 passed
+- Real SDK integration: 2 passed
+
 ## 0.3.0 (2026-08-11)
 
 ### Added

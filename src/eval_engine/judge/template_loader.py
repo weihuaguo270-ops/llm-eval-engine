@@ -55,6 +55,7 @@ def _try_load_yaml(filepath: str) -> Optional[dict]:
         return None
 
 def load_template(name: str) -> Optional[VerifierContract]:
+    """Load one verifier contract by template name, returning ``None`` if absent."""
     filepath = os.path.join(_TEMPLATES_DIR, f"{name}.yaml")
     if not os.path.exists(filepath):
         return None
@@ -70,6 +71,7 @@ def load_template(name: str) -> Optional[VerifierContract]:
     )
 
 def load_all_templates() -> list[VerifierContract]:
+    """Load every valid verifier template in deterministic filename order."""
     contracts = []
     if not os.path.isdir(_TEMPLATES_DIR):
         return contracts
@@ -81,6 +83,7 @@ def load_all_templates() -> list[VerifierContract]:
     return contracts
 
 def list_available_templates() -> list[str]:
+    """Return available template stems without parsing their contracts."""
     if not os.path.isdir(_TEMPLATES_DIR):
         return []
     return sorted(fname.replace(".yaml", "") for fname in os.listdir(_TEMPLATES_DIR) if fname.endswith(".yaml"))

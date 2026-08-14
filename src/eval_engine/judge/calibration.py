@@ -427,6 +427,7 @@ def format_agreement_markdown(report: dict[str, Any], title: str = "人机校准
 
 
 def default_calibration_path() -> str:
+    """Return the shipped human/Judge calibration dataset path."""
     here = os.path.dirname(os.path.abspath(__file__))
     return os.path.abspath(
         os.path.join(here, "..", "dataset", "data", "calibration_human_judge.json")
@@ -484,10 +485,12 @@ class JudgeCalibrator:
         self.source_path: Optional[str] = None
 
     def load_golden(self, data: list[dict]) -> None:
+        """Replace the in-memory calibration rows used by the next run."""
         self.golden_data = list(data)
         self.source_path = None
 
     def load_golden_file(self, path: Optional[str] = None) -> None:
+        """Load calibration rows from an explicit or shipped JSON file."""
         path = path or default_calibration_path()
         self.golden_data = load_golden_file(path)
         self.source_path = path

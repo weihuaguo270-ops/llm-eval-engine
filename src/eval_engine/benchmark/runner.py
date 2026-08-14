@@ -28,6 +28,8 @@ DEFAULT_SUITE_PATH = os.path.join(
 
 @dataclass
 class CaseResult:
+    """单个模型变体在一个固定任务上的过程评分结果。"""
+
     case_id: str
     category: str
     query: str
@@ -44,46 +46,57 @@ class CaseResult:
 
 @dataclass
 class ModelRunResult:
+    """同一模型在当前任务集上的全部结果及聚合指标。"""
+
     model: str
     cases: list[CaseResult] = field(default_factory=list)
 
     @property
     def num_cases(self) -> int:
+        """返回该模型实际执行的用例数。"""
         return len(self.cases)
 
     @property
     def pass_count(self) -> int:
+        """返回同时满足过程修订标记和得分阈值的用例数。"""
         return sum(1 for c in self.cases if c.passed)
 
     @property
     def pass_rate(self) -> float:
+        """返回执行用例内的通过比例；空运行返回零。"""
         return self.pass_count / self.num_cases if self.num_cases else 0.0
 
     @property
     def avg_score(self) -> float:
+        """返回用例等权平均过程得分。"""
         if not self.cases:
             return 0.0
         return sum(c.overall_score for c in self.cases) / len(self.cases)
 
     @property
     def avg_latency_ms(self) -> float:
+        """返回用例记录延迟的算术平均值。"""
         if not self.cases:
             return 0.0
         return sum(c.latency_ms for c in self.cases) / len(self.cases)
 
     @property
     def total_tokens(self) -> int:
+        """返回任务集记录的总 token 数。"""
         return sum(c.tokens for c in self.cases)
 
 
 @dataclass
 class BenchmarkRunResult:
+    """可序列化的跨模型 benchmark 运行证据。"""
+
     suite_version: int
     models: list[ModelRunResult]
     taxonomy: dict[str, Any] = field(default_factory=dict)
     timestamp: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """生成报告层使用的稳定字典结构。"""
         return {
             "timestamp": self.timestamp,
             "suite_version": self.suite_version,
@@ -134,6 +147,7 @@ def _aggregate_by_category(cases: list[CaseResult]) -> dict[str, dict[str, Any]]
 
 
 def load_benchmark_suite(path: Optional[str] = None) -> dict[str, Any]:
+    """加载固定任务集；结构完整性由运行器消费时校验。"""
     path = path or DEFAULT_SUITE_PATH
     with open(path, encoding="utf-8") as f:
         return json.load(f)
@@ -172,6 +186,7 @@ class BenchmarkRunner:
 
     @property
     def models(self) -> list[str]:
+        """返回任务集声明的模型标识，保留清单顺序。"""
         return list(self.suite.get("meta", {}).get("models", []))
 
     def run(
@@ -180,7 +195,12 @@ class BenchmarkRunner:
         *,
         judge_fn: Optional[Callable[[str, str], dict[str, Any]]] = None,
     ) -> BenchmarkRunResult:
-        """跑批。judge_fn(model, prompt) 可选，用于 live 模式。"""
+        """对指定模型跑批并生成过程得分与失败分类。
+
+        未传 ``judge_fn`` 时读取任务集内冻结的逐步分数，结果可离线
+        复现；传入时调用 ``judge_fn(model, prompt)``，属于 live Judge
+        证据。用例仅在无需修订且总分达到 ``min_step_score`` 时通过。
+        """
         target_models = models or self.models
         cases = self.suite.get("cases", [])
         model_results: list[ModelRunResult] = []

@@ -11,6 +11,7 @@ from eval_engine.integrations.episode import import_episode, verify_episode_stat
 
 
 def _load_json(path: str | None) -> dict | None:
+    """Load optional evidence while keeping absent evidence explicitly absent."""
     if not path:
         return None
     return json.loads(Path(path).read_text(encoding="utf-8"))
@@ -28,6 +29,8 @@ def main() -> int:
     parser.add_argument("--out")
     args = parser.parse_args()
 
+    # Verify each episode before evaluating the bundle so malformed trajectories
+    # cannot be mistaken for a passing business result.
     episodes = []
     for path in sorted(Path(args.episodes_dir).glob("*.json")):
         episode = import_episode(json.loads(path.read_text(encoding="utf-8")))
@@ -43,6 +46,7 @@ def main() -> int:
         version_comparison=_load_json(args.version_comparison),
         human_review=_load_json(args.human_review),
     )
+    # Only an explicit pass is a zero exit code for release automation.
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
     if args.out:
         Path(args.out).write_text(rendered + "\n", encoding="utf-8")

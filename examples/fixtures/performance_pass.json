@@ -1,0 +1,7 @@
+{
+  "schema_version": "agent-release-evidence/v1",
+  "evidence_type": "inference_performance",
+  "source": "ci-contract-fixture",
+  "passed": true,
+  "claim_boundary": "CI fixture validates evidence wiring only; it is not a latency benchmark."
+}

@@ -22,6 +22,9 @@ def main() -> int:
     parser.add_argument("--process-quality")
     parser.add_argument("--failure-gate")
     parser.add_argument("--performance")
+    parser.add_argument("--dataset-audit")
+    parser.add_argument("--version-comparison")
+    parser.add_argument("--human-review")
     parser.add_argument("--out")
     args = parser.parse_args()
 
@@ -36,6 +39,9 @@ def main() -> int:
         process_quality=_load_json(args.process_quality),
         failure_gate=_load_json(args.failure_gate),
         performance_evidence=_load_json(args.performance),
+        dataset_audit=_load_json(args.dataset_audit),
+        version_comparison=_load_json(args.version_comparison),
+        human_review=_load_json(args.human_review),
     )
     rendered = json.dumps(report, ensure_ascii=False, indent=2)
     if args.out:

@@ -1,0 +1,41 @@
+{
+  "schema_version": "portfolio-module-contracts/v1",
+  "modules": {
+    "external_business_system": {
+      "status": "initialized",
+      "required_fields": ["system", "task_id", "tool_schema_version", "request", "response", "side_effect", "idempotency_key", "latency_ms", "error"],
+      "completion_evidence": ["real endpoint configuration", "sanitized request/response samples", "held-out task results", "failure and retry report"]
+    },
+    "online_observability": {
+      "status": "initialized",
+      "required_fields": ["trace_id", "release_version", "task_id", "span_id", "tool", "status", "latency_ms", "tokens", "cost", "incident_id"],
+      "completion_evidence": ["persistent trace store", "dashboard export", "alert firing record", "incident-to-trace link"]
+    },
+    "shadow_or_ab_experiment": {
+      "status": "initialized",
+      "required_fields": ["experiment_id", "baseline", "candidate", "allocation", "primary_kpi", "guardrails", "sample_size", "confidence_interval", "decision", "rollback_owner"],
+      "completion_evidence": ["traffic assignment log", "pre-registered KPI", "statistical report", "release or rollback record"]
+    },
+    "multimodal_generation_benchmark": {
+      "status": "initialized",
+      "required_fields": ["case_id", "split", "task_type", "prompt", "references", "model", "model_version", "seed", "generation_config", "artifacts", "automatic_metrics", "human_ratings", "safety_result", "latency_ms", "cost"],
+      "completion_evidence": ["real generated artifacts", "metric versions and preprocessing", "blind dual ratings", "held-out judge calibration", "slice and significance report"]
+    },
+    "multi_leaderboard_analysis": {
+      "status": "initialized",
+      "required_fields": ["benchmark", "task_scope", "model_version", "score", "uncertainty", "sample_size", "rank", "cost", "latency", "source_date"],
+      "completion_evidence": ["source snapshots", "normalization method", "correlation analysis", "significance tests", "Pareto analysis"]
+    },
+    "service_reliability": {
+      "status": "initialized",
+      "required_fields": ["scenario", "load", "dependency_fault", "expected_behavior", "actual_behavior", "error_rate", "p95_latency_ms", "recovery_time_ms", "error_budget_impact"],
+      "completion_evidence": ["deployed service target", "repeatable load configuration", "fault injection log", "recovery evidence"]
+    },
+    "incident_feedback": {
+      "status": "initialized",
+      "required_fields": ["incident_id", "detected_at", "impact", "root_cause", "source_trace_ids", "regression_case_ids", "fix_commit", "verification_report", "closed_at"],
+      "completion_evidence": ["real defect or incident", "root-cause review", "new regression case", "before/after verification"]
+    }
+  },
+  "claim_boundary": "Initialized contracts are interfaces, not completed business evidence."
+}

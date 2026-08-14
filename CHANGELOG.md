@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+## 0.5.0 (2026-08-14)
+
+### Added
+
+- Real image benchmark for SD v1.5 and SD-Turbo with frozen splits, CLIP, safety, latency,
+  slice metrics, bootstrap confidence intervals, and blind human review
+- Real video benchmark for Wan 2.1 T2V and ModelScope T2V with frame quality, temporal
+  consistency, safety, latency, licensing, and artifact checks
+- Real-model safety suite and multimodal leaderboard aggregation
+- Portfolio readiness audit covering broad Agent application, evaluation, and quality roles
+- Expense Agent release pipeline and cross-Agent business evidence gates
+
+### Changed
+
+- Human review supports one full-set rater plus disjoint block-panel raters with shared anchors
+- CI verifies multimodal contracts without downloading model weights
+- Evidence bundle gates track dataset, version comparison, performance, and human-review evidence
+
+### Evidence
+
+- Image benchmark: 100 prompts, 200 generated PNG files, dev/golden/held-out split
+- Video benchmark: 30 prompts, 60 generated MP4 files
+- Safety and leaderboard suites marked `offline_real`; human image gate remains pending panel completion
+
+### Verified
+
+- Full local regression: 108 passed, 2 skipped
+
 ### Fixed
 
 - Made OpenAI Agents trace evidence non-null by construction so the CI mypy gate can prove span access is safe

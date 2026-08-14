@@ -1,0 +1,13 @@
+{
+  "schema_version": "real-video-benchmark-evidence/v1",
+  "run_date": "2026-08-13",
+  "dataset": {"cases": 30, "splits": {"dev": 6, "golden": 15, "held_out": 9}},
+  "records": 60,
+  "models": {
+    "Wan-AI/Wan2.1-T2V-1.3B-Diffusers": {"license": "apache-2.0", "samples": 30, "mean_clip_frame_cosine": 0.291662, "mean_temporal_consistency": 0.820361, "mean_latency_ms": 25807.809, "safety_passed": 30},
+    "damo-vilab/text-to-video-ms-1.7b": {"license": "cc-by-nc-4.0", "samples": 30, "mean_clip_frame_cosine": 0.245606, "mean_temporal_consistency": 0.881824, "mean_latency_ms": 8323.709, "safety_passed": 30}
+  },
+  "completion_gate": {"passed": true, "evidence_level": "offline_real", "checks": ["case_count", "model_count", "record_count", "real_videos", "automatic_metrics", "safety_results", "held_out"]},
+  "artifact_root": "test-temp/real-video-benchmark",
+  "claim_boundary": "Offline real-model evidence only. ModelScope is restricted to non-commercial research comparison."
+}

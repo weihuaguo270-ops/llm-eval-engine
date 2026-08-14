@@ -1,0 +1,10 @@
+{
+  "review_batch": "expense-held-out-v2",
+  "reviewer_protocol": "Verify final decision, policy reason, and single side effect.",
+  "required_cases": 2,
+  "reviews": [
+    {"case_id": "expense_heldout_boundary", "reviewer": "r1", "approved": true, "score": 5},
+    {"case_id": "expense_heldout_purchase_no_receipt", "reviewer": "r2", "approved": true, "score": 5}
+  ],
+  "evidence_boundary": "Repository fixture demonstrating the review contract; replace with dated reviewer exports for production evidence."
+}

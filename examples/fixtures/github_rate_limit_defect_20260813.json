@@ -1,0 +1,33 @@
+{
+  "schema_version": "offline-defect-feedback/v1",
+  "incident_id": "DEFECT-20260813-GITHUB-RATE-LIMIT",
+  "detected_at": "2026-08-13T03:56:19Z",
+  "environment": "local offline evidence run",
+  "impact": "The 50-task dataset stopped after 15 tasks; golden and held-out splits were not collected.",
+  "source_report": "test-temp/github_portfolio_dataset_20260813.json",
+  "root_cause": "The unauthenticated GitHub REST limit is 60 requests/hour and the first collector used four requests per repository. The configured gh token was invalid.",
+  "fix": {
+    "implementation": "react-agent/examples/eval/run_github_portfolio_dataset.py",
+    "changes": [
+      "Derive five independently asserted metadata tasks from one repository response.",
+      "Cache each successful repository snapshot and resume without repeating completed requests.",
+      "Keep a hard completion gate for 50 tasks, held-out coverage, and request traceability."
+    ]
+  },
+  "regression_cases": [
+    "react-agent/tests/test_github_portfolio_dataset.py::test_dataset_has_50_tasks_cluster_splits_and_fingerprint",
+    "react-agent/tests/test_github_portfolio_dataset.py::test_cache_allows_resume_without_network",
+    "react-agent/tests/test_github_portfolio_dataset.py::test_traceability_gate_rejects_missing_request_id"
+  ],
+  "verification": {
+    "local_tests": "3 passed",
+    "request_budget_before_per_repository": 4,
+    "request_budget_after_per_repository": 1,
+    "external_rerun": "50/50 passed with authenticated GitHub API access",
+    "external_report": "react-agent/docs/snapshots/github_portfolio_dataset_20260813.json",
+    "dataset_fingerprint": "f4fa7aaeafc3e97b0454c6e59375e0835cdcd5c00ee02ac2d2856fb2f258ee2e",
+    "closed_at": "2026-08-13T04:38:26Z",
+    "closed": true
+  },
+  "claim_boundary": "A closed real offline defect, not a production incident."
+}

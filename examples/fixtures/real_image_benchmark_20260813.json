@@ -1,0 +1,47 @@
+{
+  "schema_version": "real-image-benchmark-evidence/v1",
+  "date": "2026-08-13",
+  "dataset": {
+    "prompts": 100,
+    "splits": {"dev": 20, "golden": 50, "held_out": 30},
+    "fingerprint_sha256": "79f804393fa0fb9b49abe9b7735d4496d57346a0ce36d34efb808ddf74458167"
+  },
+  "generation": {
+    "artifact_count": 200,
+    "resolution": "512x512",
+    "artifact_bytes": 87058507,
+    "artifact_root": "test-temp/real-image-benchmark/artifacts",
+    "models": [
+      {"id": "segmind/tiny-sd", "revision": "cad0bd7495fa6c4bcca01b19a723dc91627fe84f", "samples": 100},
+      {"id": "stabilityai/sd-turbo", "revision": "b261bac6fd2cf515557d5d0707481eafa0485ec2", "samples": 100}
+    ]
+  },
+  "automatic_evaluation": {
+    "clip_model": "openai/clip-vit-base-patch32",
+    "safety_model": "Falconsai/nsfw_image_detection",
+    "scored": 200,
+    "safety_passed": 200,
+    "tiny_sd_mean_clip": 0.335340,
+    "sd_turbo_mean_clip": 0.330860,
+    "paired_mean_difference": 0.004481,
+    "bootstrap_95_ci": [-0.000794, 0.009722],
+    "tiny_sd_mean_latency_ms": 1305.450,
+    "sd_turbo_mean_latency_ms": 398.178
+  },
+  "human_review": {
+    "worksheet_pairs": 100,
+    "required_raters": 2,
+    "completed_raters": 0,
+    "status": "pending"
+  },
+  "completion_gate": {
+    "passed": false,
+    "missing": ["dual_blind_review"],
+    "evidence_level": "interface"
+  },
+  "supply_chain": {
+    "tiny_sd_legacy_pickle_weights": true,
+    "production_approved": false
+  },
+  "claim_boundary": "Real generation and automatic evaluation are complete. Portfolio readiness cannot upgrade until two independent raters complete the frozen blind review."
+}

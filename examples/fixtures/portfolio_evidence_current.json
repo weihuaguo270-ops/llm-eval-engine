@@ -1,0 +1,30 @@
+{
+  "portfolio": "agent-learning-four-repository-portfolio",
+  "evidence_version": "2026-08-13",
+  "evidence": {
+    "agent_runtime": {"level": "offline_real", "artifacts": ["react-agent/src/react_agent/react_loop.py"]},
+    "rag_and_tools": {"level": "offline_real", "artifacts": ["react-agent/src/react_agent/rag.py"]},
+    "external_system_integration": {"level": "offline_real", "artifacts": ["test-temp/github_business_tasks_20260813.json", "react-agent/examples/eval/run_github_business_tasks.py"]},
+    "business_task_success": {"level": "offline_real", "artifacts": ["react-agent/docs/snapshots/github_portfolio_dataset_20260813.json", "react-agent/examples/eval/run_github_portfolio_dataset.py"]},
+    "deployment_service": {"level": "offline_real"},
+    "online_observability": {"level": "interface", "gap": "Persist traces, metrics, alerts, and incident links."},
+    "feedback_iteration": {"level": "offline_real", "artifacts": ["llm-eval-engine/examples/fixtures/github_rate_limit_defect_20260813.json", "react-agent/tests/test_github_portfolio_dataset.py"]},
+    "model_provider_integration": {"level": "offline_real"},
+    "rag_and_context_engineering": {"level": "offline_real"},
+    "quality_cost_latency_tradeoff": {"level": "offline_real"},
+    "online_experiment": {"level": "missing", "gap": "Run shadow or A/B traffic with a business KPI."},
+    "agent_task_evaluation": {"level": "offline_real"},
+    "trajectory_evaluation": {"level": "offline_real"},
+    "judge_human_calibration": {"level": "offline_real"},
+    "multimodal_generation_evaluation": {"level": "offline_real", "artifacts": ["llm-eval-engine/examples/fixtures/real_video_benchmark_20260813.json", "llm-eval-engine/docs/REAL_VIDEO_BENCHMARK.md", "llm-eval-engine/examples/run_real_video_benchmark.py", "llm-eval-engine/docs/REAL_IMAGE_BENCHMARK.md"], "gap": "Video passed the 30-case, two-model offline gate. Image generation and automatic scoring are complete, but its human-preference claim remains blocked until two independent raters finish the frozen 100-pair review."},
+    "safety_evaluation": {"level": "offline_real", "artifacts": ["llm-eval-engine/examples/fixtures/real_safety_benchmark_20260813.json", "llm-eval-engine/examples/run_real_safety_benchmark.py", "llm-eval-engine/docs/REAL_SAFETY_AND_LEADERBOARDS.md"]},
+    "leaderboard_statistics": {"level": "offline_real", "artifacts": ["llm-eval-engine/examples/fixtures/real_multimodal_leaderboards_20260813.json", "llm-eval-engine/examples/run_real_multimodal_leaderboards.py", "llm-eval-engine/docs/REAL_SAFETY_AND_LEADERBOARDS.md"]},
+    "online_evaluation": {"level": "missing", "gap": "Add sampled production evaluation with rollback ownership."},
+    "deterministic_regression": {"level": "offline_real"},
+    "non_deterministic_testing": {"level": "offline_real"},
+    "failure_triage": {"level": "offline_real"},
+    "release_gate": {"level": "offline_real"},
+    "service_reliability": {"level": "offline_real", "artifacts": ["test-temp/http_reliability_20260813.json", "react-agent/examples/eval/run_http_reliability.py"]},
+    "production_incident_feedback": {"level": "missing", "artifacts": ["llm-eval-engine/examples/fixtures/github_rate_limit_defect_20260813.json"], "gap": "The recorded case is a closed offline defect, not production incident evidence."}
+  }
+}

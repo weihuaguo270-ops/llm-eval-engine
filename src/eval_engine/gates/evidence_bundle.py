@@ -11,11 +11,22 @@ def evaluate_evidence_bundle(
     process_quality: Mapping[str, Any] | None = None,
     failure_gate: Mapping[str, Any] | None = None,
     performance_evidence: Mapping[str, Any] | None = None,
+    dataset_audit: Mapping[str, Any] | None = None,
+    version_comparison: Mapping[str, Any] | None = None,
+    human_review: Mapping[str, Any] | None = None,
     min_process_score: float = 3.5,
 ) -> dict[str, Any]:
     """Fail closed on business state and budgets; keep Judge quality separate."""
     reasons: list[str] = []
     review_reasons: list[str] = []
+
+    if dataset_audit is not None and dataset_audit.get("passed") is not True:
+        reasons.append("dataset audit failed")
+    if version_comparison is not None:
+        if version_comparison.get("decision") == "hold":
+            reasons.append("business version comparison=hold")
+        elif version_comparison.get("decision") == "review":
+            review_reasons.append("business version comparison=review")
 
     if not episodes:
         reasons.append("no evaluation episodes")
@@ -45,6 +56,17 @@ def evaluate_evidence_bundle(
                 f"process score {score:.3f} below {min_process_score:.3f}"
             )
 
+    if human_review is not None:
+        reviewed = int(human_review.get("reviewed_cases") or 0)
+        required = int(human_review.get("required_cases") or 0)
+        rejected = list(human_review.get("rejected_case_ids") or [])
+        if reviewed < required:
+            review_reasons.append(
+                f"human review coverage {reviewed}/{required} below requirement"
+            )
+        if rejected:
+            reasons.append(f"human review rejected cases: {rejected}")
+
     if failure_gate is not None:
         decision = str(
             failure_gate.get("decision") or failure_gate.get("gate_decision") or ""
@@ -73,5 +95,8 @@ def evaluate_evidence_bundle(
             "process_quality_present": process_quality is not None,
             "failure_gate_present": failure_gate is not None,
             "performance_present": performance_evidence is not None,
+            "dataset_audit_present": dataset_audit is not None,
+            "version_comparison_present": version_comparison is not None,
+            "human_review_present": human_review is not None,
         },
     }

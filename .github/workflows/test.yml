@@ -42,6 +42,34 @@ jobs:
         --cov-report=term-missing
         --cov-fail-under=50
 
+  business-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - name: Install evaluation engine
+      run: pip install ".[test]"
+    - name: Install portfolio dependencies
+      run: |
+        git clone --depth=1 https://github.com/weihuaguo270-ops/react-agent.git /tmp/react-agent
+        git clone --depth=1 https://github.com/weihuaguo270-ops/trace-debugger.git /tmp/trace-debugger
+        pip install -e /tmp/react-agent -e /tmp/trace-debugger
+    - name: Run expense release gate
+      env:
+        PORTFOLIO_WORKSPACE: /tmp
+      run: |
+        python examples/run_expense_release_pipeline.py \
+          --out /tmp/expense-release \
+          --performance examples/fixtures/performance_pass.json
+    - name: Upload release evidence
+      uses: actions/upload-artifact@v4
+      with:
+        name: expense-release-evidence
+        path: /tmp/expense-release
+
   test-windows:
     runs-on: windows-latest
     timeout-minutes: 15

@@ -18,7 +18,8 @@ Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步�
 | 风险验收 | 安全对抗集、多模态 Artifact 指标适配 | 分开核验质量、安全和内容产物 |
 | 发布治理 | baseline、业务切片漂移、质量/时延/成本硬门禁 | 输出 pass/review/hold 依据 |
 
-**当前阶段：** 上述能力是可运行的离线发布门禁原型。真实 Dataset、真实业务负责人签字、Shadow 流量、在线告警和回滚演练尚未完成，不能将离线结果表述为线上 SLA。
+**当前阶段：** 文本/工具、图像、视频和安全评测已经有真实离线运行证据，可用于离线发布决策。真实业务负责人签字、
+Shadow 流量、在线告警和回滚演练尚未接入，不能将离线结果表述为线上 SLA。
 
 ## 范围
 
@@ -232,7 +233,32 @@ python examples/run_business_closed_loop.py
 pytest tests/test_business_closed_loop.py
 ~~~
 
-示例使用固定 fixture 验证离线编排，不包含真实图片/视频指标或线上样本回流。跨 Agent
+岗位职责覆盖不能用功能数量代替。当前证据可通过以下命令审计；核心职责缺少真实证据时
+会返回非零退出码：
+
+~~~bash
+python examples/audit_portfolio_readiness.py examples/fixtures/portfolio_evidence_current.json
+~~~
+
+各岗位完整职责、模块初始化状态和投递前硬门槛见
+[`docs/ROLE_COVERAGE_ROADMAP.md`](docs/ROLE_COVERAGE_ROADMAP.md)。
+审计按广义岗位的完整核心职责判定；接口、fixture 和未完成的外部运行不会被平均分掩盖。
+
+跨仓业务发布演练已提供统一入口：
+
+~~~bash
+python examples/run_expense_release_pipeline.py --out reports/expense-release/latest
+~~~
+
+它执行报销 Agent 的 baseline/candidate、dev/golden/held_out 审计、业务终态、
+人工抽检、轨迹失败、性能证据和反馈排队。运行方式、门禁及证据边界见
+[`docs/EXPENSE_AGENT_RELEASE.md`](docs/EXPENSE_AGENT_RELEASE.md)。
+
+上述闭环示例使用固定 fixture 验证离线编排，本身不构成真实图片/视频或线上样本证据。
+真实双模型图像生成与评测入口见 [`docs/REAL_IMAGE_BENCHMARK.md`](docs/REAL_IMAGE_BENCHMARK.md)；
+真实双模型视频生成与评测入口见 [`docs/REAL_VIDEO_BENCHMARK.md`](docs/REAL_VIDEO_BENCHMARK.md)。
+真实模型安全红队评测与版本化多模态榜单见 [`docs/REAL_SAFETY_AND_LEADERBOARDS.md`](docs/REAL_SAFETY_AND_LEADERBOARDS.md)。
+当前已完成 200 张图像生成与自动指标、60 条视频生成与自动门禁；图像双人盲评仍未完成。跨 Agent
 发布判断已经可由 CLI 调用，但当前 GitHub Actions 尚未将其配置为目标仓库的强制发布阻断。
 实现边界见 [docs/BUSINESS_CLOSED_LOOP.md](docs/BUSINESS_CLOSED_LOOP.md)，后续里程碑见
 [docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md](docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md)。

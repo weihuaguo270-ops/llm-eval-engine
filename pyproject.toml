@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eval-engine"
-version = "0.4.0"
+version = "0.5.0"
 description = "Experimental LLM evaluation framework with Process Reward scoring, dynamic rubric generation, adaptive eval loop, and human-in-the-loop oversight."
 readme = "README.md"
 license = {text = "MIT"}
@@ -30,6 +30,15 @@ test = [
 ]
 judge = [
     "requests>=2.28",
+]
+multimodal = [
+    "Pillow>=10,<13",
+    "diffusers>=0.35,<1",
+    "transformers>=4.45,<6",
+    "accelerate>=1,<2",
+    "safetensors>=0.4,<1",
+    "imageio>=2.34,<3",
+    "imageio-ffmpeg>=0.5,<1",
 ]
 sdk = [
     "langgraph>=1.2,<2",

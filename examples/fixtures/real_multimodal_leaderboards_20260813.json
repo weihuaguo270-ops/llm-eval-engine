@@ -1,0 +1,30 @@
+{
+  "schema_version": "real-multimodal-leaderboard-evidence/v1",
+  "run_date": "2026-08-13",
+  "leaderboards": {
+    "image_clip": {
+      "paired_cases": 100,
+      "leader": "stabilityai/sd-turbo",
+      "mean_difference_left_minus_right": 0.004685,
+      "difference_bootstrap_95_ci": [-0.000197, 0.009659],
+      "statistically_separated": false
+    },
+    "video_clip": {
+      "paired_cases": 30,
+      "leader": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+      "mean_difference_left_minus_right": 0.046056,
+      "difference_bootstrap_95_ci": [0.026519, 0.066827],
+      "statistically_separated": true
+    },
+    "video_temporal_consistency": {
+      "paired_cases": 30,
+      "leader": "damo-vilab/text-to-video-ms-1.7b",
+      "mean_difference_left_minus_right": -0.061463,
+      "difference_bootstrap_95_ci": [-0.099459, -0.024211],
+      "statistically_separated": true
+    }
+  },
+  "completion_gate": {"passed": true, "evidence_level": "offline_real"},
+  "artifact": "test-temp/real-multimodal-leaderboards/final_report.json",
+  "claim_boundary": "Internal frozen benchmark rankings, not public leaderboard standings or proof of a universal best model. Image human preference remains pending."
+}

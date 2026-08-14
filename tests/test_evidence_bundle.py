@@ -51,3 +51,20 @@ def test_bundle_holds_performance_budget_and_reviews_missing_held_out():
     review = evaluate_evidence_bundle(episodes=[_episode(split="golden")])
     assert review["decision"] == "review"
     assert review["review_reasons"] == ["no held_out episodes"]
+
+
+def test_bundle_enforces_dataset_version_and_human_review_evidence():
+    held = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        dataset_audit={"passed": False},
+        version_comparison={"decision": "hold"},
+        human_review={
+            "reviewed_cases": 1,
+            "required_cases": 2,
+            "rejected_case_ids": ["e1"],
+        },
+    )
+    assert held["decision"] == "hold"
+    assert "dataset audit failed" in held["hard_failures"]
+    assert "business version comparison=hold" in held["hard_failures"]
+    assert "human review rejected cases" in held["hard_failures"][-1]

@@ -84,6 +84,13 @@ Shadow 流量、在线告警和回滚演练尚未接入，不能将离线结果�
 
 **Live Agent**（2026-08-07，react_loop + DeepSeek，32 条，Process Reward mock judge）：通过率 **100%**，均分 **4.00**（~11s/条）。报告：[`benchmark_comparison_live_agent_20260807.md`](docs/benchmark_comparison_live_agent_20260807.md)
 
+**工程 Agent 外部沙箱发布门禁**（2026-08-14）：独立
+[`agent-delivery-sandbox`](https://github.com/weihuaguo270-ops/agent-delivery-sandbox)
+导入真实 GitHub PR 生命周期产生的 Episode。选定发布集 task_01 + task_18 共 2 条，其中 held-out 1 条；
+业务终态、失败、性能、数据集和人工复核证据齐备，门禁为 `pass`。全量 4 条 guarded 候选保留
+1 条人工拒绝和 1 条回滚记录，因此全量实验门禁为 `hold`。这是 `external_real_sandbox`，不代表生产流量或线上 SLA。
+证据：[`selected_release_20260814.json`](https://github.com/weihuaguo270-ops/agent-delivery-sandbox/blob/main/evidence/selected_release_20260814.json)。
+
 ## 架构
 
 ```

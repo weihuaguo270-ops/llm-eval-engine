@@ -81,6 +81,7 @@ class MetricResult:
     skipped_reason: str = ""
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize one metric result for reports and release gates."""
         return asdict(self)
 
 
@@ -96,6 +97,7 @@ class MetricAdapter(Protocol):
         case: Mapping[str, Any],
         artifacts: Sequence[ArtifactRef],
     ) -> MetricResult:
+        """Evaluate one artifact-bearing case and return normalized evidence."""
         ...
 
 

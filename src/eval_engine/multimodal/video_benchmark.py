@@ -10,6 +10,7 @@ from typing import Any, Mapping, Sequence
 
 
 def build_video_prompt_dataset() -> list[dict[str, Any]]:
+    """Build the frozen 30-case prompt set with dev/golden/held-out splits."""
     prompts = (
         ("motion", "A red toy car drives from left to right across a white table."),
         ("motion", "A blue ball rolls down a wooden ramp and stops."),
@@ -53,6 +54,7 @@ def build_video_prompt_dataset() -> list[dict[str, Any]]:
 
 
 def video_dataset_manifest(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Validate dataset cardinality and return its reproducibility fingerprint."""
     if len(cases) != 30 or len({case["id"] for case in cases}) != 30:
         raise ValueError("video benchmark requires exactly 30 unique prompts")
     canonical = json.dumps(list(cases), sort_keys=True, separators=(",", ":"))
@@ -64,6 +66,11 @@ def video_dataset_manifest(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]
 
 def video_artifact_record(path: str | Path, *, case: Mapping[str, Any], model: Mapping[str, Any],
                           seed: int, latency_ms: float, config: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate a generated video and bind its media metadata to one model run.
+
+    This validates artifact existence and basic decodability, not semantic quality.
+    Semantic and safety metrics are attached by downstream evaluators.
+    """
     target = Path(path)
     if not target.is_file() or target.stat().st_size == 0:
         raise ValueError(f"missing video artifact: {target}")
@@ -87,6 +94,12 @@ def video_artifact_record(path: str | Path, *, case: Mapping[str, Any], model: M
 
 
 def video_completion_gate(records: Sequence[Mapping[str, Any]], *, expected_cases: int = 30) -> dict[str, Any]:
+    """Require complete two-model evidence before claiming a real offline run.
+
+    The gate checks coverage, readable multi-frame artifacts, automatic metrics,
+    safety results and held-out inclusion. It does not claim human preference or
+    online production evidence.
+    """
     cases = {str(row.get("case_id", "")) for row in records}
     models = {str(row.get("model", "")) for row in records}
     artifacts = [item for row in records for item in row.get("artifacts", [])]

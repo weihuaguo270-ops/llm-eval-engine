@@ -28,6 +28,7 @@ class EvaluationEpisode:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize the episode without framework-specific runtime objects."""
         return {
             "schema_version": EPISODE_SCHEMA_VERSION,
             "episode_id": self.episode_id,
@@ -45,6 +46,8 @@ class EvaluationEpisode:
 
 @dataclass(frozen=True)
 class StateCheck:
+    """Comparison of one expected business-state leaf against actual state."""
+
     path: str
     expected: Any
     actual: Any
@@ -53,12 +56,15 @@ class StateCheck:
 
 @dataclass
 class EpisodeVerification:
+    """Aggregate state verification result for one evaluation episode."""
+
     episode_id: str
     passed: bool
     checks: list[StateCheck]
     missing_expected_state: bool = False
 
     def to_dict(self) -> dict[str, Any]:
+        """Return a stable report representation for gates and evidence files."""
         return {
             "episode_id": self.episode_id,
             "passed": self.passed,

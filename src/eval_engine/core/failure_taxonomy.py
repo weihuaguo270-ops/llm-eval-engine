@@ -35,6 +35,8 @@ _TYPE_LABELS = {
 
 @dataclass
 class FailureRecord:
+    """One normalized failure assigned to the earliest causal step available."""
+
     case_id: str
     step_index: int
     failure_type: str
@@ -46,12 +48,15 @@ class FailureRecord:
 
 @dataclass
 class TaxonomySummary:
+    """Failure counts and records emitted for one benchmark run."""
+
     total_failures: int = 0
     by_type: dict[str, int] = field(default_factory=dict)
     by_category: dict[str, dict[str, int]] = field(default_factory=dict)
     records: list[FailureRecord] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        """Return the stable failure-taxonomy report representation."""
         return {
             "total_failures": self.total_failures,
             "by_type": self.by_type,

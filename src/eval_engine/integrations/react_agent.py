@@ -19,6 +19,8 @@ PROFILE_PROVIDERS: dict[str, str] = {
 
 @dataclass
 class AgentRunResult:
+    """Normalized react-agent output consumed by benchmark adapters."""
+
     query: str
     stdout: str
     trajectory: Optional[dict[str, Any]]
@@ -30,6 +32,7 @@ class AgentRunResult:
 
 
 def default_react_agent_roots() -> list[Path]:
+    """Return portable candidate roots without assuming one checkout layout."""
     here = Path(__file__).resolve()
     eval_root = here.parents[3]  # .../llm-eval-engine/
     return [
@@ -58,12 +61,14 @@ def _is_react_agent_root(path: Path) -> bool:
 
 
 def ensure_react_agent_importable(root: Path) -> None:
+    """Add the selected source root to ``sys.path`` once for lazy integration."""
     src = str(root / "src")
     if src not in sys.path:
         sys.path.insert(0, src)
 
 
 def has_agent_api_key(provider: str) -> bool:
+    """Return whether the provider's required credential is available."""
     mapping = {
         "deepseek": "DEEPSEEK_API_KEY",
         "openai": "OPENAI_API_KEY",
@@ -77,6 +82,7 @@ def has_agent_api_key(provider: str) -> bool:
 
 
 def load_dotenv_from_react_agent(root: Path) -> None:
+    """Load the react-agent dotenv without overwriting process configuration."""
     env_path = root / ".env"
     if not env_path.is_file():
         return
@@ -181,6 +187,7 @@ def run_query_via_react_loop(
 
 
 def provider_for_profile(profile: str) -> str:
+    """Map a benchmark profile to the provider expected by react-agent."""
     return PROFILE_PROVIDERS.get(profile, profile)
 
 

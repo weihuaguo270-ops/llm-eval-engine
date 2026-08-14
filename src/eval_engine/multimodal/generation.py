@@ -41,6 +41,7 @@ class LocalDiffusersGenerator:
         self.pipeline.set_progress_bar_config(disable=True)
 
     def generate(self, case: Mapping[str, Any], path: str | Path, seed: int) -> dict[str, Any]:
+        """Generate one seeded image and return artifact-bound run evidence."""
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
         generator = self.torch.Generator(device="cuda").manual_seed(seed)
@@ -59,6 +60,7 @@ class LocalDiffusersGenerator:
                                latency_ms=latency_ms, generation_config=config)
 
     def close(self) -> None:
+        """Release pipeline references and cached CUDA allocations."""
         del self.pipeline
         self.torch.cuda.empty_cache()
 
@@ -79,6 +81,7 @@ class ClipSafetyScorer:
         self.safety = pipeline("image-classification", model=self.safety_id, device=0)
 
     def score(self, record: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Return CLIP prompt alignment and NSFW screening evidence."""
         from PIL import Image
 
         image = Image.open(record["artifacts"][0]["uri"]).convert("RGB")

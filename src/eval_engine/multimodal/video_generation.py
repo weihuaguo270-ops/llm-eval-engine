@@ -53,6 +53,7 @@ class LocalVideoGenerator:
 
     def generate(self, case: Mapping[str, Any], path: str | Path, seed: int,
                  *, frames: int = 9, width: int = 256, height: int = 256, fps: int = 8) -> dict[str, Any]:
+        """Generate one seeded MP4 and bind decoded media metadata to the run."""
         import imageio.v3 as iio
         import numpy as np
 
@@ -83,6 +84,7 @@ class LocalVideoGenerator:
                                      latency_ms=latency_ms, config=config)
 
     def close(self) -> None:
+        """Release pipeline references and cached CUDA allocations."""
         del self.pipeline
         self.torch.cuda.empty_cache()
 
@@ -103,6 +105,7 @@ class VideoClipSafetyScorer:
         self.safety = pipeline("image-classification", model=self.safety_id, device=0)
 
     def score(self, record: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Score sampled-frame alignment, temporal change and NSFW risk."""
         import imageio.v3 as iio
         import numpy as np
         from PIL import Image

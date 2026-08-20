@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.5.1 (2026-08-20)
+
+### Documentation and contracts
+
+- Documented evaluation evidence contracts across benchmark execution, Episode import,
+  Judge calibration, multimodal artifacts, video generation, and release-gate reporting.
+- Added report indexing that distinguishes offline, external-sandbox, and unverified
+  online evidence.
+
+### Verified
+
+- Existing full local regression remains green: 108 passed, 2 skipped.
+
 ## 0.5.0 (2026-08-14)
 
 ### Added

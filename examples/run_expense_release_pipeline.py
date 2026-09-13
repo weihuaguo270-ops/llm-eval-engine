@@ -7,7 +7,6 @@ import json
 import os
 import subprocess
 import sys
-from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -124,21 +123,79 @@ def _compare_versions(
     }
 
 
+def _failure_snapshot(episodes: list[dict[str, Any]]) -> dict[str, Any]:
+    from eval_engine.integrations.trace_findings import snapshot_episode_failures
+
+    return snapshot_episode_failures(
+        episodes,
+        trajectory_key="trajectory",
+        episode_id_key="episode_id",
+    )
+
+
 def _process_quality(episodes: list[dict[str, Any]]) -> dict[str, Any]:
-    scores = []
-    rows = []
+    """过程质量：确定性 rubric + trace-debugger findings 注入 Process Reward。"""
+    from eval_engine.core.eval_contracts import EvalContract
+    from eval_engine.core.process_reward import ProcessRewardScorer
+    from eval_engine.core.trajectory_parser import parse_trajectory
+
+    def _judge(_prompt: str) -> dict[str, Any]:
+        return {
+            "role_understanding": "expense process step",
+            "rubrics": [
+                {
+                    "dimension": "process",
+                    "criteria": "expense tool sequence",
+                    "score": 4.5,
+                    "reason": "deterministic baseline",
+                }
+            ],
+            "step_score": 4.5,
+            "needs_revision": False,
+        }
+
+    scores: list[float] = []
+    rows: list[dict[str, Any]] = []
+    contract = EvalContract(
+        expected_tools_all=("inspect_expense_claim", "decide_expense_claim"),
+        require_nonempty_final=False,
+    )
+    scorer = ProcessRewardScorer(
+        judge_fn=_judge,
+        eval_contract=contract,
+        enable_trace_findings=True,
+    )
     for episode in episodes:
+        trajectory = episode["trajectory"]
         tools = [
             step.get("action", {}).get("name")
-            for step in episode["trajectory"].get("steps", [])
+            for step in trajectory.get("steps", [])
             if isinstance(step.get("action"), dict)
         ]
         state_ok = episode["state_verification"]["passed"] is True
-        score = 5.0 if state_ok and tools == ["inspect_expense_claim", "decide_expense_claim"] else 1.0
+        rubric_score = (
+            5.0
+            if state_ok and tools == ["inspect_expense_claim", "decide_expense_claim"]
+            else 1.0
+        )
+        dag = parse_trajectory(trajectory)
+        report = scorer.score_trajectory(dag, trajectory=trajectory)
+        # 业务终态仍是硬门槛；过程分与规则 findings 一并记账
+        score = min(rubric_score, report.overall_score if report.check_findings else rubric_score)
+        if report.needs_revision and report.check_findings:
+            score = min(score, 2.0)
         scores.append(score)
-        rows.append({"case_id": episode["episode_id"], "score": score, "tools": tools})
+        rows.append(
+            {
+                "case_id": episode["episode_id"],
+                "score": score,
+                "tools": tools,
+                "check_findings": report.check_findings,
+                "process_overall_score": report.overall_score,
+            }
+        )
     return {
-        "metric": "deterministic_expense_process_rubric/v1",
+        "metric": "expense_process_with_trace_findings/v1",
         "overall_score": sum(scores) / len(scores) if scores else 0.0,
         "cases": rows,
     }
@@ -154,38 +211,6 @@ def _human_review(path: Path) -> dict[str, Any]:
         "approved_case_ids": [row["case_id"] for row in reviews if row.get("approved") is True],
         "rejected_case_ids": [row["case_id"] for row in reviews if row.get("approved") is not True],
         "evidence_boundary": source.get("evidence_boundary"),
-    }
-
-
-def _failure_snapshot(episodes: list[dict[str, Any]]) -> dict[str, Any]:
-    try:
-        from trace_debugger import analyze_trajectory_dict, analysis_to_dict
-    except ImportError as exc:
-        raise RuntimeError("trace-debugger must be installed for the portfolio release pipeline") from exc
-
-    rows = []
-    distribution: Counter[str] = Counter()
-    for episode in episodes:
-        analysis = analysis_to_dict(analyze_trajectory_dict(episode["trajectory"]))
-        failures = sorted(
-            {
-                failure
-                for path in analysis["paths"]
-                for failure in path.get("failures") or []
-            }
-        )
-        distribution.update(failures)
-        rows.append(
-            {
-                "session_id": episode["episode_id"],
-                "failure_types": failures,
-                "needs_fix": analysis["needs_fix"],
-            }
-        )
-    return {
-        "n_trajectories": len(rows),
-        "distribution": dict(sorted(distribution.items())),
-        "trajectories": rows,
     }
 
 

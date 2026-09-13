@@ -19,18 +19,32 @@ from .sdk_runtime import (
     run_langgraph_expense_episode,
     run_openai_agents_expense_episode,
 )
+from .trace_findings import (
+    CheckFinding,
+    TraceFindingsReport,
+    analyze_trajectory_findings,
+    findings_by_step,
+    normalize_analysis_dict,
+    snapshot_episode_failures,
+)
 
 __all__ = [
     "AgentRunResult",
+    "CheckFinding",
     "EPISODE_SCHEMA_VERSION",
     "EpisodeVerification",
     "EvaluationEpisode",
     "StateCheck",
+    "TraceFindingsReport",
+    "analyze_trajectory_findings",
     "find_react_agent_root",
+    "findings_by_step",
     "import_episode",
+    "normalize_analysis_dict",
     "provider_for_profile",
     "run_benchmark_query",
-    "verify_episode_state",
     "run_langgraph_expense_episode",
     "run_openai_agents_expense_episode",
+    "snapshot_episode_failures",
+    "verify_episode_state",
 ]

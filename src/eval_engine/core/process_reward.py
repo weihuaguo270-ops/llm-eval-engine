@@ -22,7 +22,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any, Optional, Callable
+from typing import Any, Mapping, Optional, Callable, Sequence
 
 from eval_engine.core.trajectory_parser import StepsDAG, dag_summary
 from eval_engine.core.dynamic_rubric import (
@@ -31,10 +31,16 @@ from eval_engine.core.dynamic_rubric import (
     build_trajectory_judge_prompt,
 )
 from eval_engine.core.contract import VerifierContract
+from eval_engine.core.eval_contracts import EvalContract, evaluate_eval_contracts
+from eval_engine.integrations.trace_findings import (
+    CheckFinding,
+    analyze_trajectory_findings,
+    findings_by_step,
+)
 
 # Mirrored by react-agent EVAL_API_VERSION / EVAL_ENGINE_API_CONTRACT.
 # Bump together when ProcessRewardScorer constructor kwargs change.
-EVAL_API_VERSION = "0.1"
+EVAL_API_VERSION = "0.2"
 
 
 # ──────────────────────────────────────────────
@@ -50,6 +56,7 @@ class RubricResult:
     score: float           # 得分 [1, 5]
     reason: str            # 评分理由
     needs_revision: bool = False  # 是否低于阈值
+    check_source: str = ""  # judge | trace_debugger | eval_contract
 
 
 @dataclass
@@ -62,6 +69,8 @@ class StepScore:
     step_score: float            # 该步平均分
     needs_revision: bool = False
     role_understanding: str = ""  # Judge 对该步角色的理解
+    failure_type: Optional[str] = None
+    check_sources: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -77,6 +86,7 @@ class ProcessRewardReport:
     needs_revision: bool         # 是否有任何一步需修正
     healing_log: list[dict]      # 自愈记录（如有）
     dag_summary: dict
+    check_findings: list[dict] = field(default_factory=list)
 
     @property
     def pass_rate(self) -> float:
@@ -112,6 +122,8 @@ class ProcessRewardScorer:
         judge_fn: Callable[[str], dict[str, Any]],
         min_step_score: float = 3.5,
         extra_contracts: Optional[list[VerifierContract]] = None,
+        eval_contract: Optional[EvalContract] = None,
+        enable_trace_findings: bool = True,
     ) -> None:
         """初始化评分器
 
@@ -119,30 +131,138 @@ class ProcessRewardScorer:
             judge_fn:   Judge LLM 调用函数。
                        输入 prompt 字符串，输出解析后的 JSON 字典。
             min_step_score: 单步最低分阈值（低于此标记为 needs_revision）
-            extra_contracts: 额外的固定契约（在动态标准之外补充）
+            extra_contracts: 额外的固定 VerifierContract（注入 Judge 维度）
+            eval_contract: 评测用例契约（期望/禁止工具、终态）
+            enable_trace_findings: 是否消费 trace-debugger 规则失败
         """
         self.judge_fn = judge_fn
         self.min_step_score = min_step_score
         self.extra_contracts = extra_contracts or []
+        self.eval_contract = eval_contract
+        self.enable_trace_findings = enable_trace_findings
 
     def score_trajectory(
         self,
         dag: StepsDAG,
         fast_mode: bool = False,
+        *,
+        trajectory: Optional[Mapping[str, Any]] = None,
+        trace_analysis: Optional[Mapping[str, Any]] = None,
+        eval_contract: Optional[EvalContract] = None,
+        final_state: Optional[Mapping[str, Any]] = None,
+        extra_findings: Optional[Sequence[CheckFinding]] = None,
     ) -> ProcessRewardReport:
         """对整条轨迹执行 Process Reward 评分
 
         参数:
             dag:        解析后的 StepsDAG
             fast_mode:  快速模式。为 True 时只做整体评估，不逐步骤深入
+            trajectory / trace_analysis: 供 trace-debugger 规则失败消费
+            eval_contract: 覆盖构造时的评测契约
+            final_state: 业务终态（评测契约匹配用）
+            extra_findings: 已归一化的外部 findings
 
         返回:
             ProcessRewardReport: 完整评分报告
         """
+        findings = self._collect_findings(
+            dag,
+            trajectory=trajectory,
+            trace_analysis=trace_analysis,
+            eval_contract=eval_contract,
+            final_state=final_state,
+            extra_findings=extra_findings,
+        )
         if fast_mode:
-            return self._score_fast(dag)
+            report = self._score_fast(dag)
+        else:
+            report = self._score_step_by_step(dag)
+        return self._apply_findings(report, findings, dag)
 
-        return self._score_step_by_step(dag)
+    def _collect_findings(
+        self,
+        dag: StepsDAG,
+        *,
+        trajectory: Optional[Mapping[str, Any]],
+        trace_analysis: Optional[Mapping[str, Any]],
+        eval_contract: Optional[EvalContract],
+        final_state: Optional[Mapping[str, Any]],
+        extra_findings: Optional[Sequence[CheckFinding]],
+    ) -> list[CheckFinding]:
+        findings: list[CheckFinding] = []
+        contract = eval_contract if eval_contract is not None else self.eval_contract
+        if contract is not None:
+            findings.extend(
+                evaluate_eval_contracts(dag, contract, final_state=final_state)
+            )
+
+        if self.enable_trace_findings and (
+            trajectory is not None or trace_analysis is not None
+        ):
+            report = analyze_trajectory_findings(
+                trajectory or {},
+                analysis=trace_analysis,
+            )
+            findings.extend(report.findings)
+
+        if extra_findings:
+            findings.extend(list(extra_findings))
+        return findings
+
+    def _apply_findings(
+        self,
+        report: ProcessRewardReport,
+        findings: list[CheckFinding],
+        dag: StepsDAG,
+    ) -> ProcessRewardReport:
+        if not findings:
+            report.check_findings = []
+            return report
+
+        by_step = findings_by_step(findings)
+        orphan = [f for f in findings if f.step_index is None]
+        for step in report.per_step:
+            step_findings = list(by_step.get(step.step_index, []))
+            if orphan and step is report.per_step[-1]:
+                step_findings.extend(orphan)
+            for finding in step_findings:
+                if finding.severity != "fail":
+                    continue
+                step.rubrics.append(
+                    RubricResult(
+                        dimension=f"check:{finding.code}",
+                        criteria=finding.message,
+                        score=float(finding.score),
+                        reason=finding.message,
+                        needs_revision=True,
+                        check_source=finding.source,
+                    )
+                )
+                step.needs_revision = True
+                step.step_score = min(step.step_score, float(finding.score))
+                if finding.source not in step.check_sources:
+                    step.check_sources.append(finding.source)
+                if step.failure_type is None:
+                    step.failure_type = finding.failure_type
+                node = dag.get_node(step.step_index)
+                if node is not None:
+                    node.score = step.step_score
+
+        report.error_sources = [n.step_index for n in dag.find_error_sources()]
+        report.num_failed_steps = sum(1 for s in report.per_step if s.needs_revision)
+        report.needs_revision = any(s.needs_revision for s in report.per_step)
+        scored = [s for s in report.per_step if s.step_score > 0]
+        if scored:
+            total_weight = 0.0
+            weighted_sum = 0.0
+            for s in scored:
+                weight = 1.5 if s.step_index in report.error_sources else 1.0
+                weighted_sum += s.step_score * weight
+                total_weight += weight
+            report.overall_score = round(weighted_sum / total_weight, 3)
+            report.num_scored = len(scored)
+        report.check_findings = [f.to_dict() for f in findings]
+        return report
 
     def _score_fast(self, dag: StepsDAG) -> ProcessRewardReport:
         """快速模式：整体评估，不逐步骤"""

@@ -97,6 +97,38 @@ def classify_step_failure(
         return None
 
     error_sources = error_sources or []
+
+    structured = getattr(step, "failure_type", None)
+    if structured and structured in FAILURE_TYPES:
+        if (
+            step.step_index not in error_sources
+            and error_sources
+            and structured
+            not in ("safety_violation", "judge_error", "inefficient_loop")
+            and not any(
+                (getattr(r, "check_source", "") or "")
+                in ("trace_debugger", "eval_contract")
+                for r in step.rubrics
+            )
+        ):
+            ftype = "error_propagation"
+        else:
+            ftype = structured
+        reasons = " ".join(r.reason for r in step.rubrics if r.reason)
+        primary_reason = (
+            reasons.strip() or step.role_understanding or "低分未标注原因"
+        )
+        primary_reason = re.sub(r"\s+", " ", primary_reason)[:200]
+        return FailureRecord(
+            case_id=case_id,
+            step_index=step.step_index,
+            failure_type=ftype,
+            step_score=step.step_score,
+            reason=primary_reason,
+            is_root_cause=step.step_index in error_sources,
+            tool_name=step.tool_name,
+        )
+
     reasons = " ".join(r.reason for r in step.rubrics if r.reason)
     dims = " ".join(r.dimension for r in step.rubrics)
     blob = f"{reasons} {dims} {step.role_understanding}".lower()

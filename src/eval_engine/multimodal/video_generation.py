@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from typing import Any, Mapping
 
-from .generation import require_cuda_for_generation
+from .generation import local_model_snapshot, require_cuda_for_generation, resolve_model_revision
 from .video_benchmark import video_artifact_record
 
 VIDEO_MODELS = (
@@ -23,31 +23,36 @@ class LocalVideoGenerator:
     def __init__(self, model: Mapping[str, Any]):
         require_cuda_for_generation(purpose="LocalVideoGenerator")
         import torch
-        from huggingface_hub import model_info
 
         self.torch = torch
         self.model = dict(model)
-        revision = model_info(self.model["id"], revision=self.model["revision"]).sha
-        if not revision:
-            raise RuntimeError(f"unable to resolve model revision: {self.model['id']}")
+        revision = resolve_model_revision(
+            self.model["id"], str(self.model.get("revision") or "main")
+        )
         self.model["revision"] = revision
+        source = local_model_snapshot(self.model["id"], revision)
+        pretrained = str(source) if source is not None else self.model["id"]
+        local_only = source is not None
+        load_kwargs: dict[str, Any] = {"use_safetensors": True, "local_files_only": local_only}
+        if source is None:
+            load_kwargs["revision"] = revision
         if self.model["pipeline"] == "wan":
             from diffusers import AutoencoderKLWan, WanPipeline
 
             vae = AutoencoderKLWan.from_pretrained(
-                self.model["id"], subfolder="vae", revision=revision,
-                torch_dtype=torch.float32, use_safetensors=True,
+                pretrained, subfolder="vae",
+                torch_dtype=torch.float32, **load_kwargs,
             )
             self.pipeline = WanPipeline.from_pretrained(
-                self.model["id"], revision=revision, vae=vae,
-                torch_dtype=torch.bfloat16, use_safetensors=True,
+                pretrained, vae=vae,
+                torch_dtype=torch.bfloat16, **load_kwargs,
             )
         else:
             from diffusers import TextToVideoSDPipeline
 
             self.pipeline = TextToVideoSDPipeline.from_pretrained(
-                self.model["id"], revision=revision,
-                torch_dtype=torch.float16, use_safetensors=True,
+                pretrained,
+                torch_dtype=torch.float16, **load_kwargs,
             )
         self.pipeline.enable_model_cpu_offload()
         if hasattr(self.pipeline, "enable_vae_slicing"):
@@ -103,9 +108,13 @@ class VideoClipSafetyScorer:
         from transformers import CLIPModel, CLIPProcessor, pipeline
 
         self.torch = torch
-        self.clip = CLIPModel.from_pretrained(self.clip_id).to("cuda")
-        self.processor = CLIPProcessor.from_pretrained(self.clip_id)
-        self.safety = pipeline("image-classification", model=self.safety_id, device=0)
+        self.clip = CLIPModel.from_pretrained(self.clip_id, local_files_only=True).to("cuda")
+        self.processor = CLIPProcessor.from_pretrained(self.clip_id, local_files_only=True)
+        self.safety = pipeline(
+            "image-classification",
+            model=self.safety_id,
+            device=0,
+        )
 
     def score(self, record: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         """Score sampled-frame alignment, temporal change and NSFW risk."""

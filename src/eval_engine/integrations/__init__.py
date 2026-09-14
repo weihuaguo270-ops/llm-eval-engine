@@ -12,6 +12,8 @@ from .episode import (
     EpisodeVerification,
     EvaluationEpisode,
     StateCheck,
+    attach_output_artifacts,
+    episode_as_multimodal_case,
     import_episode,
     verify_episode_state,
 )
@@ -37,6 +39,8 @@ __all__ = [
     "StateCheck",
     "TraceFindingsReport",
     "analyze_trajectory_findings",
+    "attach_output_artifacts",
+    "episode_as_multimodal_case",
     "find_react_agent_root",
     "findings_by_step",
     "import_episode",

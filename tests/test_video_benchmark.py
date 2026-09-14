@@ -1,6 +1,7 @@
 import pytest
 
 from eval_engine.multimodal.video_benchmark import (
+    build_video_dimension_scores,
     build_video_prompt_dataset,
     video_artifact_record,
     video_completion_gate,
@@ -25,3 +26,21 @@ def test_video_gate_rejects_empty_records():
     gate = video_completion_gate([])
     assert gate["passed"] is False
     assert gate["evidence_level"] == "interface"
+
+
+def test_video_thin_dimension_scores_require_core_fields():
+    incomplete = build_video_dimension_scores({"clip_frame_cosine_mean": 0.2})
+    assert incomplete["complete"] is False
+    assert "temporal_consistency" in incomplete["missing"]
+
+    complete = build_video_dimension_scores(
+        {
+            "clip_frame_cosine_mean": 0.4,
+            "temporal_consistency": 0.7,
+            "adjacent_frame_mean_abs_change": 2.5,
+        },
+        {"nsfw_probability_max": 0.05, "passed": True},
+    )
+    assert complete["complete"] is True
+    assert complete["dimensions"]["safety"]["passed"] is True
+

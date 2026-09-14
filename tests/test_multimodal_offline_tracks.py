@@ -2,6 +2,12 @@
 
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("PIL")
+pytest.importorskip("imageio")
+pytest.importorskip("numpy")
+
 from eval_engine.multimodal import (
     generation_track_gate,
     run_generation_track,

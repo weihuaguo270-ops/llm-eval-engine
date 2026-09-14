@@ -1,7 +1,8 @@
 """Materialize real local image/video files for offline multimodal tracks.
 
-Avoids GPU diffusion/VLM weights while still writing real PNG/MP4 bytes so
-completion gates can verify filesystem artifacts for ``offline_real`` wiring.
+Heavy dependencies (Pillow, imageio, numpy) are imported lazily so the base
+package remains importable under ``pip install .[test]`` until track runners
+actually render media.
 """
 
 from __future__ import annotations
@@ -11,7 +12,18 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-import numpy as np
+
+def _require_media_stack():
+    try:
+        import numpy as np
+        from PIL import Image, ImageDraw
+        import imageio.v3 as iio
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        raise ImportError(
+            "multimodal offline tracks require Pillow, imageio, imageio-ffmpeg, "
+            "and numpy. Install with: pip install '.[multimodal]' or '.[test]'"
+        ) from exc
+    return np, Image, ImageDraw, iio
 
 
 def write_labeled_png(
@@ -23,8 +35,7 @@ def write_labeled_png(
     size: tuple[int, int] = (512, 512),
 ) -> dict[str, Any]:
     """Write a real PNG with painted labels and a JSON sidecar."""
-    from PIL import Image, ImageDraw
-
+    _np, Image, ImageDraw, _iio = _require_media_stack()
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     width, height = size
@@ -69,9 +80,7 @@ def write_labeled_mp4(
     fps: int = 4,
 ) -> dict[str, Any]:
     """Write a real multi-frame MP4 with a moving banner and answer label."""
-    import imageio.v3 as iio
-    from PIL import Image, ImageDraw
-
+    np, Image, ImageDraw, iio = _require_media_stack()
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     width, height = size

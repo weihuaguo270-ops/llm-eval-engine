@@ -125,11 +125,12 @@
     "multimodal_understanding_evaluation": {
       "level": "offline_real",
       "artifacts": [
+        "llm-eval-engine/examples/run_real_understanding_benchmark.py",
         "llm-eval-engine/examples/fixtures/multimodal_offline_tracks_20260914.json",
         "llm-eval-engine/examples/run_multimodal_offline_tracks.py",
         "llm-eval-engine/docs/MULTIMODAL_UNDERSTANDING_BENCHMARK.md"
       ],
-      "gap": "Local materialized media + sidecar readers reached offline_real wiring. Frontier VLM leaderboard claims remain separate."
+      "gap": "Formal init→materialize→predict→score→finalize wiring reaches offline_real with real media + predictors. Sidecar proves scoring; calibrated VLM/Video-LLM claims remain separate."
     }
   }
 }

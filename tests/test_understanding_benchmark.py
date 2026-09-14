@@ -4,6 +4,7 @@ from eval_engine.multimodal import (
     IMAGE_VQA_CASE_COUNT,
     VIDEO_QA_CASE_COUNT,
     MultimodalEvaluator,
+    build_held_out_understanding_report,
     build_image_vqa_dataset,
     build_video_qa_dataset,
     evaluate_understanding_predictions,
@@ -11,6 +12,7 @@ from eval_engine.multimodal import (
     metric_catalog,
     score_understanding_answer,
     understanding_case_to_eval_input,
+    understanding_evidence_from_finalize,
     video_qa_dataset_manifest,
 )
 
@@ -69,3 +71,33 @@ def test_metric_catalog_lists_understanding_accuracy():
     catalog = {item["name"]: item["status"] for item in metric_catalog()}
     assert catalog["image_vqa_accuracy"] == "built_in"
     assert catalog["video_qa_accuracy"] == "built_in"
+
+
+def test_held_out_report_and_release_evidence_helpers():
+    cases = build_image_vqa_dataset()
+    predictions = {case["id"]: case["answer"] for case in cases}
+    held = build_held_out_understanding_report(
+        cases,
+        predictions,
+        model_id="local/sidecar-reader",
+        modality="image_vqa",
+    )
+    assert held["schema_version"] == "understanding-held-out-report/v1"
+    assert held["held_out_case_count"] == 12
+    assert held["passed"] is True
+
+    video_cases = build_video_qa_dataset()
+    video_held = build_held_out_understanding_report(
+        video_cases,
+        {case["id"]: case["answer"] for case in video_cases},
+        model_id="local/sidecar-reader",
+        modality="video_qa",
+    )
+    evidence = understanding_evidence_from_finalize(
+        track_gate={"passed": True, "evidence_level": "offline_real"},
+        image_held_out=held,
+        video_held_out=video_held,
+        predictor_claim="wiring-only",
+    )
+    assert evidence["passed"] is True
+    assert evidence["schema_version"] == "multimodal-understanding-evidence/v1"

@@ -331,6 +331,74 @@ def evaluate_understanding_predictions(
     }
 
 
+def build_held_out_understanding_report(
+    cases: Sequence[Mapping[str, Any]],
+    predictions: Mapping[str, str],
+    *,
+    model_id: str,
+    modality: str,
+) -> dict[str, Any]:
+    """Score only held_out cases for release-facing understanding evidence."""
+    held = [case for case in cases if str(case.get("split")) == "held_out"]
+    report = evaluate_understanding_predictions(held, predictions)
+    return {
+        "schema_version": "understanding-held-out-report/v1",
+        "modality": modality,
+        "model_id": model_id,
+        "held_out_case_count": len(held),
+        "overall_accuracy": report["overall_accuracy"],
+        "split_accuracy": report["split_accuracy"],
+        "category_accuracy": report["category_accuracy"],
+        "missing_predictions": report["missing_predictions"],
+        "passed": report["passed"] and len(held) > 0 and not report["missing_predictions"],
+        "cases": report["cases"],
+        "claim_boundary": (
+            "Held-out understanding accuracy for one predictor. Requires real media "
+            "and model predictions; not a public MMMU/Video-MME submission."
+        ),
+    }
+
+
+def understanding_evidence_from_finalize(
+    *,
+    track_gate: Mapping[str, Any],
+    image_held_out: Mapping[str, Any],
+    video_held_out: Mapping[str, Any],
+    predictor_claim: str,
+) -> dict[str, Any]:
+    """Build multimodal-understanding evidence for evaluate_evidence_bundle."""
+    hard: list[str] = []
+    review: list[str] = []
+    if track_gate.get("evidence_level") != "offline_real" or track_gate.get("passed") is not True:
+        hard.append("understanding track gate did not reach offline_real")
+    if image_held_out.get("passed") is not True:
+        hard.append("image VQA held-out report incomplete or failed")
+    if video_held_out.get("passed") is not True:
+        hard.append("video QA held-out report incomplete or failed")
+    decision = "hold" if hard else "pass"
+    return {
+        "schema_version": "multimodal-understanding-evidence/v1",
+        "gate_decision": decision,
+        "passed": decision == "pass",
+        "hard_failures": hard,
+        "review_reasons": review,
+        "track_gate": dict(track_gate),
+        "image_held_out": {
+            "overall_accuracy": image_held_out.get("overall_accuracy"),
+            "held_out_case_count": image_held_out.get("held_out_case_count"),
+            "passed": image_held_out.get("passed"),
+            "model_id": image_held_out.get("model_id"),
+        },
+        "video_held_out": {
+            "overall_accuracy": video_held_out.get("overall_accuracy"),
+            "held_out_case_count": video_held_out.get("held_out_case_count"),
+            "passed": video_held_out.get("passed"),
+            "model_id": video_held_out.get("model_id"),
+        },
+        "claim_boundary": predictor_claim,
+    }
+
+
 def understanding_case_to_eval_input(case: Mapping[str, Any]) -> dict[str, Any]:
     """Project a dataset case into a MultimodalEvaluator-friendly payload."""
     media_type = "video" if str(case.get("task_type")) == "video_qa" else "image"

@@ -68,3 +68,29 @@ def test_bundle_enforces_dataset_version_and_human_review_evidence():
     assert "dataset audit failed" in held["hard_failures"]
     assert "business version comparison=hold" in held["hard_failures"]
     assert "human review rejected cases" in held["hard_failures"][-1]
+
+
+def test_bundle_accepts_multimodal_understanding_evidence():
+    passed = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        multimodal_understanding={
+            "schema_version": "multimodal-understanding-evidence/v1",
+            "gate_decision": "pass",
+            "passed": True,
+            "hard_failures": [],
+        },
+    )
+    assert passed["decision"] == "pass"
+    assert passed["evidence"]["multimodal_understanding_present"] is True
+
+    held = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        multimodal_understanding={
+            "schema_version": "multimodal-understanding-evidence/v1",
+            "gate_decision": "hold",
+            "passed": False,
+            "hard_failures": ["understanding track gate did not reach offline_real"],
+        },
+    )
+    assert held["decision"] == "hold"
+    assert "multimodal understanding: understanding track gate" in held["hard_failures"][0]

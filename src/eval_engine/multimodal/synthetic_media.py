@@ -99,6 +99,8 @@ def write_labeled_mp4(
         draw.text((24, 144), f"DESC: {description[:70]}", fill=(50, 50, 50))
         stack.append(np.asarray(image, dtype=np.uint8))
     iio.imwrite(target, np.stack(stack), fps=fps, codec="libx264")
+    preview = target.with_name(target.stem + "-preview.png")
+    Image.fromarray(stack[len(stack) // 2]).save(preview, format="PNG")
     sidecar = target.with_suffix(".json")
     sidecar.write_text(
         json.dumps(
@@ -107,6 +109,7 @@ def write_labeled_mp4(
                 "title": title,
                 "description": description,
                 "frame_count": frames,
+                "preview_frame_uri": str(preview.resolve()),
             },
             ensure_ascii=False,
             indent=2,
@@ -126,6 +129,7 @@ def write_labeled_mp4(
         "sha256": digest,
         "bytes": target.stat().st_size,
         "sidecar_uri": str(sidecar.resolve()),
+        "preview_frame_uri": str(preview.resolve()),
     }
 
 

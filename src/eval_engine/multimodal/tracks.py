@@ -71,7 +71,7 @@ def understanding_completion_gate(
         "checks": checks,
         "evidence_level": "offline_real" if all(checks.values()) else "interface",
         "claim_boundary": (
-            "Understanding offline_real means materialized media + local readers + "
+            "Understanding offline_real means materialized media + predictors + "
             "scored predictions. It is not a hosted MMMU/Video-MME leaderboard run."
         ),
     }
@@ -146,7 +146,7 @@ def understanding_track_gate(
         "video_qa_gate": video_gate,
         "claim_boundary": (
             "Understanding track offline_real requires materialized image and "
-            "video media, two local readers, automatic accuracy and held-out."
+            "video media, predictors, automatic accuracy and held-out."
         ),
     }
 
@@ -269,7 +269,7 @@ def run_generation_track(output_dir: str | Path, *, smoke: bool = False) -> dict
 def run_understanding_track(
     output_dir: str | Path, *, smoke: bool = False
 ) -> dict[str, Any]:
-    """Materialize understanding media, run two local readers, and gate the track."""
+    """Materialize understanding media, run predictors, and gate the track."""
     root = Path(output_dir)
     media_root = root / "understanding" / "media"
     image_cases = build_image_vqa_dataset()

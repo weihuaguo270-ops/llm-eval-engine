@@ -57,6 +57,8 @@ PYTHONPATH=src python examples/run_real_understanding_benchmark.py predict \
   --output /tmp/u \
   --adapter sidecar-reader=openai_vision
 
+Override remaps `local/sidecar-reader` → `openai/gpt-4o-mini` in prediction records and held-out reports; claim_boundary comes from the OpenAI vision adapter (not sidecar-only).
+
 # Hugging Face VLM（需 CUDA + transformers）
 PYTHONPATH=src python examples/run_real_understanding_benchmark.py predict \
   --output /tmp/u \

@@ -72,3 +72,13 @@ def test_video_materialize_exports_preview_frame(tmp_path):
     preview = Path(video_cases[0]["artifact"]["preview_frame_uri"])
     assert preview.is_file()
     assert preview.suffix == ".png"
+
+def test_openai_vision_adapter_remaps_local_registry_model_id():
+    predictor = build_understanding_predictor(
+        adapter="openai_vision",
+        model_id="local/sidecar-reader",
+    )
+    assert predictor.adapter_name == "openai_vision"
+    assert predictor.model_id == "openai/gpt-4o-mini"
+    assert not str(predictor.model_id).startswith("local/")
+

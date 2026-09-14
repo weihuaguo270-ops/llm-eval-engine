@@ -3,9 +3,11 @@
 Mirrors generation-side ``run_real_image/video_benchmark.py`` for understanding
 (image VQA + video QA).
 
-Default predictors are local sidecar readers (offline wiring). Use real models via:
+Default predictors are local sidecar readers (offline wiring). Override to real VLMs via:
   --adapter sidecar-reader=openai_vision
   --adapter noisy-sidecar-reader=hf_vlm
+
+When openai_vision is selected, records use model id openai/gpt-4o-mini (not local/sidecar-reader).
 
 Usage:
   PYTHONPATH=src python examples/run_real_understanding_benchmark.py init --output /tmp/u
@@ -144,20 +146,24 @@ def predict(
     completed = {(row["case_id"], row["model"]) for row in records}
     overrides = adapter_overrides or {}
     predictors = {}
+    resolved_models = {}
     for model in source["models"]:
         adapter = (
             overrides.get(model["id"])
             or overrides.get(model["alias"])
             or model["adapter"]
         )
-        predictors[model["id"]] = build_understanding_predictor(
+        predictor = build_understanding_predictor(
             adapter=adapter,
             model_id=model["id"],
         )
+        predictors[model["id"]] = predictor
+        resolved_models[model["id"]] = getattr(predictor, "model_id", model["id"])
     for model in source["models"]:
         predictor = predictors[model["id"]]
+        resolved_id = resolved_models[model["id"]]
         for case in list(source["image_cases"]) + list(source["video_cases"]):
-            key = (case["id"], model["id"])
+            key = (case["id"], resolved_id)
             if key in completed:
                 continue
             result = predictor.predict(case)
@@ -168,7 +174,8 @@ def predict(
                     "task_type": case["task_type"],
                     "category": case["category"],
                     "question": case["question"],
-                    "model": model["id"],
+                    "model": resolved_id,
+                    "registry_model_id": model["id"],
                     "adapter": result.get("adapter") or model["adapter"],
                     "prediction": result["prediction"],
                     "latency_ms": result.get("latency_ms"),
@@ -240,7 +247,26 @@ def finalize(output: Path, smoke: bool = False) -> dict:
         expected_image_cases=len(image_cases),
         expected_video_cases=len(video_cases),
     )
-    primary_model = str(materialized["models"][0]["id"])
+    openai_models = sorted(
+        {
+            str(row["model"])
+            for row in records
+            if str(row.get("adapter") or "") in {"openai_vision", "openai-vision", "openai"}
+        }
+    )
+    if openai_models:
+        primary_model = openai_models[0]
+    else:
+        primary_model = str(
+            next(
+                (
+                    row["model"]
+                    for row in records
+                    if row.get("registry_model_id") == materialized["models"][0]["id"]
+                ),
+                materialized["models"][0]["id"],
+            )
+        )
     image_predictions = {
         row["case_id"]: row["prediction"]
         for row in image_records

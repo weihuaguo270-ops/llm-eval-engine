@@ -221,6 +221,13 @@ class HuggingFaceVLMUnderstandingPredictor:
         }
 
 
+def _resolve_remote_model_id(adapter: str, model_id: str | None, default: str) -> str:
+    """Keep registry aliases for local adapters; map local/* away from remote APIs."""
+    if model_id and not str(model_id).startswith("local/"):
+        return str(model_id)
+    return default
+
+
 def build_understanding_predictor(
     *,
     adapter: str,
@@ -243,12 +250,16 @@ def build_understanding_predictor(
         )
     if name in {"openai_vision", "openai-vision", "openai"}:
         return OpenAIVisionUnderstandingPredictor(
-            model_id=model_id or "openai/gpt-4o-mini",
+            model_id=_resolve_remote_model_id(
+                name, model_id, "openai/gpt-4o-mini"
+            ),
             **kwargs,
         )
     if name in {"hf_vlm", "hf-vlm", "huggingface"}:
         return HuggingFaceVLMUnderstandingPredictor(
-            model_id=model_id or "llava-hf/llava-1.5-7b-hf",
+            model_id=_resolve_remote_model_id(
+                name, model_id, "llava-hf/llava-1.5-7b-hf"
+            ),
             **kwargs,
         )
     raise ValueError(f"unsupported understanding adapter: {adapter!r}")

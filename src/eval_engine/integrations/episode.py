@@ -145,6 +145,76 @@ def verify_episode_state(episode: EvaluationEpisode) -> EpisodeVerification:
     )
 
 
+def attach_output_artifacts(
+    episode: EvaluationEpisode,
+    artifacts: list[Mapping[str, Any]] | tuple[Mapping[str, Any], ...],
+    *,
+    prompt: str | None = None,
+    automatic_metrics: Mapping[str, Any] | None = None,
+    safety_result: Mapping[str, Any] | None = None,
+) -> EvaluationEpisode:
+    """Attach validated multimodal artifacts onto episode metadata for eval cases.
+
+    Artifacts stay in metadata for MVP compatibility with the existing episode
+    schema; MultimodalEvaluator consumes them via episode_as_multimodal_case.
+    """
+    from eval_engine.multimodal.evaluator import ArtifactRef
+
+    refs = [ArtifactRef.from_dict(item) for item in artifacts]
+    serialized = [
+        {
+            "id": ref.id,
+            "media_type": ref.media_type,
+            "uri": ref.uri,
+            "mime_type": ref.mime_type,
+            "sha256": ref.sha256,
+            "width": ref.width,
+            "height": ref.height,
+            "duration_ms": ref.duration_ms,
+            "frame_count": ref.frame_count,
+            "metadata": copy.deepcopy(ref.metadata),
+        }
+        for ref in refs
+    ]
+    metadata = copy.deepcopy(episode.metadata)
+    metadata["output_artifacts"] = serialized
+    if prompt is not None:
+        metadata["prompt"] = str(prompt)
+    if automatic_metrics is not None:
+        metadata["automatic_metrics"] = copy.deepcopy(dict(automatic_metrics))
+    if safety_result is not None:
+        metadata["safety_result"] = copy.deepcopy(dict(safety_result))
+    episode.metadata = metadata
+    return episode
+
+
+def episode_as_multimodal_case(episode: EvaluationEpisode) -> dict[str, Any]:
+    """Project an EvaluationEpisode into a MultimodalEvaluator case dict."""
+    metadata = episode.metadata or {}
+    artifacts = metadata.get("output_artifacts") or metadata.get("artifacts") or []
+    if not isinstance(artifacts, list):
+        raise ValueError("episode metadata output_artifacts must be an array")
+    case: dict[str, Any] = {
+        "id": episode.episode_id,
+        "prompt": str(
+            metadata.get("prompt")
+            or episode.task
+            or episode.trajectory.get("query")
+            or ""
+        ),
+        "query": str(episode.trajectory.get("query") or episode.task or ""),
+        "split": episode.split,
+        "output_artifacts": copy.deepcopy(artifacts),
+    }
+    if isinstance(metadata.get("automatic_metrics"), Mapping):
+        case["automatic_metrics"] = copy.deepcopy(dict(metadata["automatic_metrics"]))
+    if isinstance(metadata.get("safety_result"), Mapping):
+        case["safety_result"] = copy.deepcopy(dict(metadata["safety_result"]))
+    if isinstance(metadata.get("human_ratings"), list):
+        case["human_ratings"] = copy.deepcopy(list(metadata["human_ratings"]))
+    return case
+
+
 def _episode_from_envelope(source: dict[str, Any]) -> EvaluationEpisode:
     required = ("episode_id", "task", "trajectory")
     missing = [name for name in required if name not in source]

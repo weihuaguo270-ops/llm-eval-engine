@@ -99,6 +99,9 @@ def test_artifact_ref_rejects_embedded_bytes():
 def test_metric_catalog_marks_heavy_metrics_as_adapters():
     catalog = {item["name"]: item["status"] for item in metric_catalog()}
     assert catalog["artifact_integrity"] == "built_in"
+    assert catalog["CLIPScore/SigLIP"] == "adapter_available"
+    assert catalog["safety classifier"] == "adapter_available"
+    assert catalog["video_thin_dimensions"] == "adapter_available"
     assert catalog["FVD/VBench"] == "adapter_required"
     assert catalog["VLM Judge"] == "calibrated_adapter_required"
 

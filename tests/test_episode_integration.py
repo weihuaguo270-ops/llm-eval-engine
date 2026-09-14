@@ -1,4 +1,15 @@
-from eval_engine.integrations.episode import import_episode, verify_episode_state
+from eval_engine.integrations.episode import (
+    attach_output_artifacts,
+    episode_as_multimodal_case,
+    import_episode,
+    verify_episode_state,
+)
+from eval_engine.multimodal import (
+    ArtifactIntegrityMetric,
+    ClipScoreMetric,
+    MultimodalEvaluator,
+    SafetyClassifierMetric,
+)
 
 
 def test_import_format_b_episode_and_verify_nested_state():
@@ -89,3 +100,44 @@ def test_import_openai_agents_trace():
     )
     assert episode.trajectory["steps"][0]["action"]["name"] == "refund_order"
     assert "refunded" in episode.trajectory["steps"][0]["observation"]
+
+
+def test_attach_output_artifacts_projects_multimodal_case():
+    episode = import_episode(
+        {
+            "schema_version": "evaluation-episode/v1",
+            "episode_id": "media-ep-1",
+            "task": "generate product shot",
+            "split": "held_out",
+            "expected_state": {"ok": True},
+            "final_state": {"ok": True},
+            "trajectory": {
+                "session_id": "s1",
+                "query": "generate product shot",
+                "steps": [{"step": 1, "thought": "done"}],
+                "final_answer": "done",
+            },
+        }
+    )
+    attach_output_artifacts(
+        episode,
+        [
+            {
+                "id": "image-1",
+                "media_type": "image",
+                "uri": "artifacts/product.png",
+                "width": 512,
+                "height": 512,
+            }
+        ],
+        prompt="a red mug on a table",
+        automatic_metrics={"clip_cosine": 0.37},
+        safety_result={"nsfw_probability": 0.01, "passed": True},
+    )
+    case = episode_as_multimodal_case(episode)
+    report = MultimodalEvaluator(
+        [ArtifactIntegrityMetric(), ClipScoreMetric(), SafetyClassifierMetric()]
+    ).evaluate(case)
+    assert case["split"] == "held_out"
+    assert report["passed"] is True
+    assert report["metrics"][1]["score"] == 0.37

@@ -265,6 +265,7 @@ class MultimodalEvaluator:
         return {
             "case_id": str(case.get("id", "")),
             "prompt": str(case.get("prompt", case.get("query", ""))),
+            "split": str(case.get("split", "")),
             "artifact_count": len(artifacts),
             "media_types": sorted({artifact.media_type for artifact in artifacts}),
             "overall_score": overall,
@@ -304,17 +305,33 @@ def aggregate_human_ratings(
 
 
 def metric_catalog() -> list[dict[str, str]]:
-    """返回内置指标和待接入适配器清单。"""
+    """返回内置指标、已产品化适配器和待接入清单。"""
     return [
         {"name": "artifact_integrity", "scope": "per-artifact metadata", "status": "built_in"},
         {"name": "human_ratings", "scope": "rubric aggregation", "status": "built_in"},
-        {"name": "CLIPScore/SigLIP", "scope": "prompt adherence", "status": "adapter_required"},
+        {
+            "name": "CLIPScore/SigLIP",
+            "scope": "prompt adherence",
+            "status": "adapter_available",
+            "adapter": "clip_score",
+        },
         {"name": "ImageReward/HPS", "scope": "image preference", "status": "adapter_required"},
         {"name": "FID/KID", "scope": "dataset distribution", "status": "adapter_required"},
         {"name": "LPIPS", "scope": "perceptual similarity", "status": "adapter_required"},
         {"name": "FVD/VBench", "scope": "video quality and consistency", "status": "adapter_required"},
+        {
+            "name": "video_thin_dimensions",
+            "scope": "prompt/temporal/motion/safety",
+            "status": "adapter_available",
+            "adapter": "build_video_dimension_scores",
+        },
         {"name": "VLM Judge", "scope": "semantic rubric", "status": "calibrated_adapter_required"},
-        {"name": "safety classifier", "scope": "content policy", "status": "adapter_required"},
+        {
+            "name": "safety classifier",
+            "scope": "content policy",
+            "status": "adapter_available",
+            "adapter": "safety_classifier",
+        },
     ]
 
 

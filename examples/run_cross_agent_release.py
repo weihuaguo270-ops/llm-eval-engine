@@ -26,6 +26,7 @@ def main() -> int:
     parser.add_argument("--dataset-audit")
     parser.add_argument("--version-comparison")
     parser.add_argument("--human-review")
+    parser.add_argument("--multimodal-evidence")
     parser.add_argument("--out")
     args = parser.parse_args()
 
@@ -45,6 +46,7 @@ def main() -> int:
         dataset_audit=_load_json(args.dataset_audit),
         version_comparison=_load_json(args.version_comparison),
         human_review=_load_json(args.human_review),
+        multimodal_evidence=_load_json(args.multimodal_evidence),
     )
     # Only an explicit pass is a zero exit code for release automation.
     rendered = json.dumps(report, ensure_ascii=False, indent=2)

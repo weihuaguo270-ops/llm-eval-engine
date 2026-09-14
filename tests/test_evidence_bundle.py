@@ -68,3 +68,27 @@ def test_bundle_enforces_dataset_version_and_human_review_evidence():
     assert "dataset audit failed" in held["hard_failures"]
     assert "business version comparison=hold" in held["hard_failures"]
     assert "human review rejected cases" in held["hard_failures"][-1]
+
+
+def test_bundle_reviews_incomplete_image_human_multimodal_evidence():
+    from eval_engine.multimodal.evidence import build_multimodal_evidence
+
+    evidence = build_multimodal_evidence(
+        media_type="image",
+        cases_evaluated=3,
+        integrity_passed=True,
+        automatic_metrics_complete=True,
+        safety_passed=True,
+        held_out_included=True,
+        human_review_complete=False,
+    )
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        process_quality={"overall_score": 4.0},
+        failure_gate={"decision": "pass"},
+        performance_evidence=_performance(),
+        multimodal_evidence=evidence,
+    )
+    assert result["decision"] == "review"
+    assert any("human blind review incomplete" in item for item in result["review_reasons"])
+

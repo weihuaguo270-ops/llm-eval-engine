@@ -14,6 +14,7 @@ def evaluate_evidence_bundle(
     dataset_audit: Mapping[str, Any] | None = None,
     version_comparison: Mapping[str, Any] | None = None,
     human_review: Mapping[str, Any] | None = None,
+    multimodal_evidence: Mapping[str, Any] | None = None,
     min_process_score: float = 3.5,
 ) -> dict[str, Any]:
     """Fail closed on business state and budgets; keep Judge quality separate."""
@@ -82,6 +83,30 @@ def evaluate_evidence_bundle(
         elif performance_evidence.get("passed") is not True:
             reasons.append("performance budget failed")
 
+    if multimodal_evidence is not None:
+        if multimodal_evidence.get("schema_version") != "multimodal-release-evidence/v1":
+            reasons.append("unsupported multimodal evidence schema")
+        else:
+            for item in multimodal_evidence.get("hard_failures") or []:
+                reasons.append(f"multimodal: {item}")
+            decision_value = str(
+                multimodal_evidence.get("gate_decision")
+                or ("pass" if multimodal_evidence.get("passed") is True else "")
+            )
+            if decision_value == "hold" and not multimodal_evidence.get("hard_failures"):
+                reasons.append("multimodal evidence gate=hold")
+            elif decision_value == "review":
+                for item in multimodal_evidence.get("review_reasons") or [
+                    "multimodal evidence gate=review"
+                ]:
+                    review_reasons.append(f"multimodal: {item}")
+            elif multimodal_evidence.get("passed") is not True and decision_value not in {
+                "hold",
+                "review",
+                "pass",
+            }:
+                reasons.append("multimodal evidence failed")
+
     decision = "hold" if reasons else "review" if review_reasons else "pass"
     return {
         "decision": decision,
@@ -98,5 +123,6 @@ def evaluate_evidence_bundle(
             "dataset_audit_present": dataset_audit is not None,
             "version_comparison_present": version_comparison is not None,
             "human_review_present": human_review is not None,
+            "multimodal_present": multimodal_evidence is not None,
         },
     }

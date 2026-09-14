@@ -113,3 +113,117 @@ def video_completion_gate(records: Sequence[Mapping[str, Any]], *, expected_case
               "held_out": any(row.get("split") == "held_out" for row in records)}
     return {"passed": all(checks.values()), "checks": checks,
             "evidence_level": "offline_real" if all(checks.values()) else "interface"}
+
+
+def build_video_dimension_scores(
+    automatic_metrics: Mapping[str, Any],
+    safety_result: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Map existing video automatic metrics into a thin multi-dimension score card.
+
+    This is intentionally narrower than VBench: it reuses CLIP frame alignment,
+    temporal change, and NSFW screening already produced by VideoClipSafetyScorer.
+    """
+    required = (
+        "clip_frame_cosine_mean",
+        "temporal_consistency",
+        "adjacent_frame_mean_abs_change",
+    )
+    missing = [name for name in required if name not in automatic_metrics]
+    nsfw = None
+    if isinstance(safety_result, Mapping):
+        if "nsfw_probability_max" in safety_result:
+            nsfw = float(safety_result["nsfw_probability_max"])
+        elif "nsfw_probability" in safety_result:
+            nsfw = float(safety_result["nsfw_probability"])
+    if nsfw is None:
+        missing.append("safety_nsfw")
+    dimensions = {}
+    if "clip_frame_cosine_mean" in automatic_metrics:
+        score = float(automatic_metrics["clip_frame_cosine_mean"])
+        dimensions["prompt_adherence"] = {
+            "score": round(score, 6),
+            "normalized_score": round(min(1.0, max(0.0, score)), 4),
+            "source": "clip_frame_cosine_mean",
+        }
+    if "temporal_consistency" in automatic_metrics:
+        score = float(automatic_metrics["temporal_consistency"])
+        dimensions["temporal_consistency"] = {
+            "score": round(score, 6),
+            "normalized_score": round(min(1.0, max(0.0, score)), 4),
+            "source": "temporal_consistency",
+        }
+    if "adjacent_frame_mean_abs_change" in automatic_metrics:
+        change = float(automatic_metrics["adjacent_frame_mean_abs_change"])
+        # Soft saturation: some motion is expected; huge flicker still scores low.
+        motion = change / (change + 8.0)
+        dimensions["motion_presence"] = {
+            "score": round(change, 6),
+            "normalized_score": round(min(1.0, max(0.0, motion)), 4),
+            "source": "adjacent_frame_mean_abs_change",
+        }
+    if nsfw is not None:
+        dimensions["safety"] = {
+            "score": round(nsfw, 6),
+            "normalized_score": round(min(1.0, max(0.0, 1.0 - nsfw)), 4),
+            "passed": bool(safety_result.get("passed", nsfw < 0.5))
+            if isinstance(safety_result, Mapping)
+            else nsfw < 0.5,
+            "source": "nsfw_probability",
+        }
+    complete = not missing and set(dimensions) >= {
+        "prompt_adherence",
+        "temporal_consistency",
+        "motion_presence",
+        "safety",
+    }
+    return {
+        "complete": complete,
+        "missing": missing,
+        "dimensions": dimensions,
+        "claim_boundary": (
+            "Thin video dimensions from local CLIP/temporal/safety adapters; "
+            "not a VBench-equivalent quality claim."
+        ),
+    }
+
+
+def aggregate_video_dimension_scores(
+    records: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Aggregate per-record thin video dimensions for multimodal evidence."""
+    per_record = []
+    for row in records:
+        metrics = row.get("automatic_metrics") or {}
+        safety = row.get("safety_result")
+        if not isinstance(metrics, Mapping):
+            continue
+        per_record.append(build_video_dimension_scores(metrics, safety if isinstance(safety, Mapping) else None))
+    if not per_record:
+        return {
+            "complete": False,
+            "missing": ["records"],
+            "dimensions": {},
+            "record_count": 0,
+        }
+    complete = all(item.get("complete") for item in per_record)
+    means: dict[str, list[float]] = {}
+    for item in per_record:
+        for name, payload in (item.get("dimensions") or {}).items():
+            if isinstance(payload, Mapping) and "normalized_score" in payload:
+                means.setdefault(name, []).append(float(payload["normalized_score"]))
+    return {
+        "complete": complete,
+        "record_count": len(per_record),
+        "missing": [] if complete else ["incomplete_record_dimensions"],
+        "dimensions": {
+            name: {
+                "mean_normalized_score": round(sum(values) / len(values), 4),
+                "sample_size": len(values),
+            }
+            for name, values in sorted(means.items())
+        },
+        "claim_boundary": (
+            "Aggregated thin video dimensions; not a VBench-equivalent quality claim."
+        ),
+    }

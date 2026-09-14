@@ -73,6 +73,10 @@ class OpenAIVisionUnderstandingPredictor:
     api_base: str = "https://api.openai.com/v1"
     api_key_env: str = "OPENAI_API_KEY"
     timeout_s: float = 60.0
+    claim_boundary: str = (
+        "OpenAI-compatible vision predictions are offline model evidence "
+        "for understanding QA, not a hosted MMMU leaderboard submission."
+    )
 
     def predict(self, case: Mapping[str, Any]) -> dict[str, Any]:
         api_key = os.environ.get(self.api_key_env, "").strip()
@@ -136,7 +140,7 @@ class OpenAIVisionUnderstandingPredictor:
                 payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"openai_vision HTTP {exc.code}: {detail}") from exc
+            raise RuntimeError(f"{self.adapter_name} HTTP {exc.code}: {detail}") from exc
         latency_ms = round((time.perf_counter() - started) * 1000, 3)
         prediction = (
             payload.get("choices", [{}])[0]
@@ -150,10 +154,7 @@ class OpenAIVisionUnderstandingPredictor:
             "adapter": self.adapter_name,
             "model_revision": str(payload.get("model") or self.model_id),
             "raw_response_id": payload.get("id"),
-            "claim_boundary": (
-                "OpenAI-compatible vision predictions are offline model evidence "
-                "for understanding QA, not a hosted MMMU leaderboard submission."
-            ),
+            "claim_boundary": self.claim_boundary,
         }
 
 
@@ -252,6 +253,29 @@ def build_understanding_predictor(
         return OpenAIVisionUnderstandingPredictor(
             model_id=_resolve_remote_model_id(
                 name, model_id, "openai/gpt-4o-mini"
+            ),
+            **kwargs,
+        )
+    if name in {
+        "deepseek_vision",
+        "deepseek-vision",
+        "deepseek_flash",
+        "deepseek-flash",
+        "deepseek-v4-flash",
+        "deepseek-v4.1-flash",
+        "deepseek_v4_flash",
+        "deepseek_v4_1_flash",
+        "deepseek",
+    }:
+        return OpenAIVisionUnderstandingPredictor(
+            model_id=_resolve_remote_model_id(name, model_id, "deepseek/deepseek-flash"),
+            adapter_name="deepseek_vision",
+            api_base=os.environ.get("DEEPSEEK_API_BASE", "https://api.deepseek.com").rstrip("/"),
+            api_key_env="DEEPSEEK_API_KEY",
+            claim_boundary=(
+                "DeepSeek-V4.1-Flash (deepseek-flash) vision predictions are offline "
+                "understanding evidence from a real multimodal model, not a hosted "
+                "MMMU/Video-MME leaderboard submission."
             ),
             **kwargs,
         )

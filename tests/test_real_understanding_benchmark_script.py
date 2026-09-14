@@ -82,3 +82,14 @@ def test_openai_vision_adapter_remaps_local_registry_model_id():
     assert predictor.model_id == "openai/gpt-4o-mini"
     assert not str(predictor.model_id).startswith("local/")
 
+
+
+def test_deepseek_vision_adapter_remaps_local_registry_model_id():
+    predictor = build_understanding_predictor(
+        adapter="deepseek_vision",
+        model_id="local/sidecar-reader",
+    )
+    assert predictor.adapter_name == "deepseek_vision"
+    assert predictor.model_id == "deepseek/deepseek-flash"
+    assert predictor.api_key_env == "DEEPSEEK_API_KEY"
+    assert "DeepSeek-V4.1-Flash" in predictor.claim_boundary

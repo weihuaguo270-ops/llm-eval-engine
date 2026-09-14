@@ -121,3 +121,18 @@ PYTHONPATH=src python examples/run_multimodal_offline_tracks.py \
 - 这是项目自建探针集，不是 MMMU / Video-MME 官方数据镜像。
 - Sidecar/oracle 满分只证明计分器与物化媒体接线；能力结论需要 `openai_vision` / `hf_vlm`（或自研 Video-LLM）预测。
 - 本地 synthetic 渲染可达到 track 级 `offline_real`；GPU diffusion / 校准 VLM 仍是独立证据。
+
+
+## DeepSeek-V4.1-Flash（推荐无 GPU 真模型路径）
+
+```bash
+export DEEPSEEK_API_KEY=...
+PYTHONPATH=src python examples/run_real_understanding_benchmark.py init --output /tmp/u-ds
+PYTHONPATH=src python examples/run_real_understanding_benchmark.py materialize --output /tmp/u-ds
+PYTHONPATH=src python examples/run_real_understanding_benchmark.py predict \
+  --output /tmp/u-ds --adapter sidecar-reader=deepseek_vision
+PYTHONPATH=src python examples/run_real_understanding_benchmark.py score --output /tmp/u-ds
+PYTHONPATH=src python examples/run_real_understanding_benchmark.py finalize --output /tmp/u-ds
+```
+
+记录中的 `primary_model` 应为 `deepseek/deepseek-flash`，`claim_boundary` 来自 DeepSeek 视觉适配器。

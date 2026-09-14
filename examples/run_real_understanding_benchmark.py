@@ -4,10 +4,11 @@ Mirrors generation-side ``run_real_image/video_benchmark.py`` for understanding
 (image VQA + video QA).
 
 Default predictors are local sidecar readers (offline wiring). Override to real VLMs via:
+  --adapter sidecar-reader=deepseek_vision   # DeepSeek-V4.1-Flash (deepseek-flash)
   --adapter sidecar-reader=openai_vision
   --adapter noisy-sidecar-reader=hf_vlm
 
-When openai_vision is selected, records use model id openai/gpt-4o-mini (not local/sidecar-reader).
+Real vision adapters remap local/sidecar-reader to deepseek/deepseek-flash or openai/gpt-4o-mini.
 
 Usage:
   PYTHONPATH=src python examples/run_real_understanding_benchmark.py init --output /tmp/u
@@ -28,6 +29,20 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+
+
+def load_project_env() -> None:
+    """Load KEY=VALUE pairs from repo .env without overriding existing env."""
+    for candidate in (ROOT / ".env", ROOT.parent / "react-agent" / ".env"):
+        if not candidate.is_file():
+            continue
+        for line in candidate.read_text(encoding="utf-8-sig").splitlines():
+            value = line.strip()
+            if not value or value.startswith("#") or "=" not in value:
+                continue
+            name, _, content = value.partition("=")
+            os.environ.setdefault(name.strip(), content.strip().strip("'\""))
+
 
 from eval_engine.multimodal.synthetic_media import materialize_understanding_case  # noqa: E402
 from eval_engine.multimodal.tracks import (  # noqa: E402
@@ -247,15 +262,29 @@ def finalize(output: Path, smoke: bool = False) -> dict:
         expected_image_cases=len(image_cases),
         expected_video_cases=len(video_cases),
     )
-    openai_models = sorted(
+    preferred_adapters = {
+        "deepseek_vision",
+        "deepseek-vision",
+        "deepseek_flash",
+        "deepseek-flash",
+        "openai_vision",
+        "openai-vision",
+        "openai",
+        "hf_vlm",
+        "hf-vlm",
+    }
+    preferred_models = sorted(
         {
             str(row["model"])
             for row in records
-            if str(row.get("adapter") or "") in {"openai_vision", "openai-vision", "openai"}
+            if str(row.get("adapter") or "") in preferred_adapters
+            and not str(row.get("model") or "").startswith("local/")
         }
     )
-    if openai_models:
-        primary_model = openai_models[0]
+    if preferred_models:
+        # Prefer DeepSeek when present.
+        deepseek = [m for m in preferred_models if m.startswith("deepseek/")]
+        primary_model = deepseek[0] if deepseek else preferred_models[0]
     else:
         primary_model = str(
             next(

@@ -11,3 +11,4 @@ build/
 .coverage
 src/eval_engine/gates/baselines/*
 !src/eval_engine/gates/baselines/benchmark_baseline.json
+reports/

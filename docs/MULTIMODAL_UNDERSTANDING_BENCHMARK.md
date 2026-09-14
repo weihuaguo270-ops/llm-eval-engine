@@ -38,8 +38,22 @@ report = evaluate_understanding_predictions(
 PYTHONPATH=src python examples/run_understanding_benchmark.py --out reports/understanding-benchmark
 ```
 
+## 与 generation 双轨、offline_real
+
+理解侧不再停在 `reference_only` 契约。请与生成侧分开跑：
+
+```bash
+PYTHONPATH=src python examples/run_multimodal_offline_tracks.py \
+  --out reports/multimodal-offline-tracks
+```
+
+| 轨道 | offline_level 条件 | 不含什么 |
+|------|-------------------|----------|
+| generation | 图像自动证据 + 视频 `video_completion_gate` 通过 | 图像双人盲评偏好结论 |
+| understanding | 物化 PNG/MP4 + 两路本地 reader + held_out | 托管 MMMU/Video-MME 官方榜 |
+
 ## 边界
 
 - 这是项目自建探针集，不是 MMMU / Video-MME 官方数据镜像。
-- Oracle 满分只证明计分器接线，不证明模型能力。
-- 发布门禁若要纳入理解列，需另接真实 VLM 预测与 held-out 报告。
+- Oracle/sidecar 满分只证明计分器与物化媒体接线，不证明前沿 VLM 能力。
+- 本地 synthetic 渲染可达到 track 级 `offline_real`；GPU diffusion / 校准 VLM 仍是独立证据。

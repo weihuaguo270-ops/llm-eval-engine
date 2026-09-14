@@ -123,8 +123,11 @@ class OpenAIVisionUnderstandingPredictor:
                 }
             ],
             "temperature": 0,
-            "max_tokens": 64,
+            "max_tokens": 256,
         }
+        # DeepSeek-V4.1-Flash may spend completion budget on reasoning_content.
+        if self.adapter_name == "deepseek_vision":
+            body["thinking"] = {"type": "disabled"}
         request = urllib.request.Request(
             url=f"{self.api_base.rstrip('/')}/chat/completions",
             data=json.dumps(body).encode("utf-8"),
@@ -142,11 +145,14 @@ class OpenAIVisionUnderstandingPredictor:
             detail = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"{self.adapter_name} HTTP {exc.code}: {detail}") from exc
         latency_ms = round((time.perf_counter() - started) * 1000, 3)
-        prediction = (
-            payload.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
+        message = payload.get("choices", [{}])[0].get("message", {}) or {}
+        prediction = message.get("content") or ""
+        if not str(prediction).strip():
+            # Some DeepSeek responses put the answer only in reasoning_content
+            # when thinking consumes the token budget.
+            reasoning = str(message.get("reasoning_content") or "").strip()
+            if reasoning:
+                prediction = reasoning.splitlines()[-1].strip()
         return {
             "prediction": str(prediction).strip(),
             "latency_ms": latency_ms,

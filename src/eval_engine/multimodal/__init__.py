@@ -21,7 +21,12 @@ from .image_benchmark import (
     dataset_manifest,
     panel_review_progress,
 )
-from .generation import ClipSafetyScorer, DEFAULT_MODELS, LocalDiffusersGenerator
+from .generation import (
+    ClipSafetyScorer,
+    DEFAULT_MODELS,
+    LocalDiffusersGenerator,
+    require_cuda_for_generation,
+)
 from .video_benchmark import (
     build_video_prompt_dataset,
     video_artifact_record,
@@ -76,6 +81,7 @@ __all__ = [
     "dataset_manifest",
     "panel_review_progress",
     "ClipSafetyScorer",
+    "require_cuda_for_generation",
     "DEFAULT_MODELS",
     "LocalDiffusersGenerator",
     "build_video_prompt_dataset",

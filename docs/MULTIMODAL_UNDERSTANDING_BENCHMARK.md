@@ -136,3 +136,8 @@ PYTHONPATH=src python examples/run_real_understanding_benchmark.py finalize --ou
 ```
 
 记录中的 `primary_model` 应为 `deepseek/deepseek-flash`，`claim_boundary` 来自 DeepSeek 视觉适配器。
+
+
+## 生成侧（需 GPU）
+
+正式 Diffusers 出图/出视频见 [`GENERATION_GPU_RUNBOOK.md`](GENERATION_GPU_RUNBOOK.md)。本 Cloud Agent 为 NO_GPU，不能替代 GPU 机上的 `run_real_image_benchmark.py` / `run_real_video_benchmark.py`。

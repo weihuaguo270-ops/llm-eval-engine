@@ -16,6 +16,7 @@ from eval_engine.multimodal.video_benchmark import (  # noqa: E402
     video_completion_gate,
     video_dataset_manifest,
 )
+from eval_engine.multimodal.generation import require_cuda_for_generation  # noqa: E402
 from eval_engine.multimodal.video_generation import (  # noqa: E402
     LocalVideoGenerator, VIDEO_MODELS, VideoClipSafetyScorer,
 )
@@ -90,6 +91,8 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
+    if args.command in {"generate", "score"}:
+        require_cuda_for_generation(purpose="run_real_video_benchmark.py")
     result = {"init": lambda: initialize(args.output),
               "generate": lambda: generate(args.output, args.smoke),
               "score": lambda: score(args.output, args.smoke),

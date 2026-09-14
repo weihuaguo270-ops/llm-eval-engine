@@ -17,16 +17,39 @@ DEFAULT_MODELS = (
 )
 
 
+def require_cuda_for_generation(*, purpose: str = "Diffusers generation") -> str:
+    """Fail closed on CPU / NO_GPU hosts before loading heavy weights.
+
+    Formal image/video generation (`run_real_image_benchmark.py` /
+    `run_real_video_benchmark.py`) requires CUDA + torch + diffusers. Cloud
+    agents without a GPU must not pretend synthetic media is Diffusers output.
+    """
+    try:
+        import torch
+    except ImportError as exc:  # pragma: no cover - depends on optional stack
+        raise RuntimeError(
+            f"{purpose} requires torch+CUDA. This host has no torch installed "
+            "(NO_GPU / CPU-only). Run on a CUDA machine with: "
+            "pip install '.[multimodal]' && nvidia-smi"
+        ) from exc
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            f"{purpose} requires CUDA. torch={torch.__version__} reports "
+            "cuda.is_available()=False (NO_GPU). Move generate/score to a GPU host; "
+            "understanding-side DeepSeek vision does not need GPU."
+        )
+    return torch.cuda.get_device_name(0)
+
+
 class LocalDiffusersGenerator:
     """Load one frozen model at a time and emit verifiable artifact records."""
 
     def __init__(self, model: Mapping[str, Any]):
+        require_cuda_for_generation(purpose="LocalDiffusersGenerator")
         import torch
         from diffusers import AutoPipelineForText2Image
         from huggingface_hub import model_info
 
-        if not torch.cuda.is_available():
-            raise RuntimeError("CUDA is required for the local image benchmark")
         self.torch = torch
         self.model = dict(model)
         resolved_revision = model_info(self.model["id"], revision=self.model["revision"]).sha
@@ -72,6 +95,7 @@ class ClipSafetyScorer:
     safety_id = "Falconsai/nsfw_image_detection"
 
     def __init__(self):
+        require_cuda_for_generation(purpose="ClipSafetyScorer")
         import torch
         from transformers import CLIPModel, CLIPProcessor, pipeline
 

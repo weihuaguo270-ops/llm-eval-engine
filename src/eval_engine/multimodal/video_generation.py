@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Any, Mapping
 
+from .generation import require_cuda_for_generation
 from .video_benchmark import video_artifact_record
 
 VIDEO_MODELS = (
@@ -20,6 +21,7 @@ class LocalVideoGenerator:
     """Generate a short MP4 with CPU offload and frozen safetensors weights."""
 
     def __init__(self, model: Mapping[str, Any]):
+        require_cuda_for_generation(purpose="LocalVideoGenerator")
         import torch
         from huggingface_hub import model_info
 
@@ -96,6 +98,7 @@ class VideoClipSafetyScorer:
     safety_id = "Falconsai/nsfw_image_detection"
 
     def __init__(self):
+        require_cuda_for_generation(purpose="VideoClipSafetyScorer")
         import torch
         from transformers import CLIPModel, CLIPProcessor, pipeline
 

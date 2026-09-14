@@ -86,14 +86,15 @@ def artifact_record(path: str | Path, *, case: Mapping[str, Any], model: Mapping
     from PIL import Image
 
     with Image.open(target) as image:
-        width, height, image_format = image.width, image.height, image.format
+        width, height = image.width, image.height
+        image_format = (image.format or "png").lower()
         image.verify()
     return {"case_id": str(case["id"]), "split": str(case["split"]),
             "task_type": str(case["task_type"]), "prompt": str(case["prompt"]),
             "model": str(model["id"]), "model_version": str(model["revision"]),
             "seed": int(seed), "generation_config": dict(generation_config),
             "artifacts": [{"id": f"{case['id']}::{model['alias']}", "media_type": "image",
-                           "uri": target.resolve().as_posix(), "mime_type": f"image/{image_format.lower()}",
+                           "uri": target.resolve().as_posix(), "mime_type": f"image/{image_format}",
                            "sha256": _sha256_file(target), "width": width, "height": height,
                            "bytes": target.stat().st_size}],
             "latency_ms": round(float(latency_ms), 3), "cost": 0.0,

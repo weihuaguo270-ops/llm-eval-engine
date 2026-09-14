@@ -313,6 +313,16 @@ def metric_catalog() -> list[dict[str, str]]:
         {"name": "FID/KID", "scope": "dataset distribution", "status": "adapter_required"},
         {"name": "LPIPS", "scope": "perceptual similarity", "status": "adapter_required"},
         {"name": "FVD/VBench", "scope": "video quality and consistency", "status": "adapter_required"},
+        {
+            "name": "image_vqa_accuracy",
+            "scope": "image understanding / VQA",
+            "status": "built_in",
+        },
+        {
+            "name": "video_qa_accuracy",
+            "scope": "video understanding / temporal QA",
+            "status": "built_in",
+        },
         {"name": "VLM Judge", "scope": "semantic rubric", "status": "calibrated_adapter_required"},
         {"name": "safety classifier", "scope": "content policy", "status": "adapter_required"},
     ]

@@ -28,6 +28,17 @@ from .video_benchmark import (
     video_completion_gate,
     video_dataset_manifest,
 )
+from .understanding import (
+    IMAGE_VQA_CASE_COUNT,
+    VIDEO_QA_CASE_COUNT,
+    build_image_vqa_dataset,
+    build_video_qa_dataset,
+    evaluate_understanding_predictions,
+    image_vqa_dataset_manifest,
+    score_understanding_answer,
+    understanding_case_to_eval_input,
+    video_qa_dataset_manifest,
+)
 
 __all__ = [
     "ArtifactIntegrityMetric",
@@ -54,4 +65,13 @@ __all__ = [
     "video_artifact_record",
     "video_completion_gate",
     "video_dataset_manifest",
+    "IMAGE_VQA_CASE_COUNT",
+    "VIDEO_QA_CASE_COUNT",
+    "build_image_vqa_dataset",
+    "build_video_qa_dataset",
+    "evaluate_understanding_predictions",
+    "image_vqa_dataset_manifest",
+    "score_understanding_answer",
+    "understanding_case_to_eval_input",
+    "video_qa_dataset_manifest",
 ]

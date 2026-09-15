@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from eval_engine.multimodal import (  # noqa: E402
+    require_cuda_for_generation,
     ClipSafetyScorer,
     DEFAULT_MODELS,
     LocalDiffusersGenerator,
@@ -162,6 +163,8 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
+    if args.command in {"generate", "score"}:
+        require_cuda_for_generation(purpose="run_real_image_benchmark.py")
     actions = {"init": lambda: initialize(args.output), "generate": lambda: generate(args.output, args.smoke),
                "score": lambda: score(args.output, args.smoke),
                "prepare-review": lambda: prepare_review(args.output, args.smoke),

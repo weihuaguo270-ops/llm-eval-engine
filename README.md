@@ -18,7 +18,8 @@ Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步�
 | 风险验收 | 安全对抗集、多模态 Artifact 指标适配 | 分开核验质量、安全和内容产物 |
 | 发布治理 | baseline、业务切片漂移、质量/时延/成本硬门禁 | 输出 pass/review/hold 依据 |
 
-**当前阶段：** 文本/工具、图像、视频和安全评测已经有真实离线运行证据，可用于离线发布决策。真实业务负责人签字、
+**当前阶段（2026-09-15）：** 文本/工具、图像（含分块盲评面板）、视频（CogVideoX-2b INT8 × ModelScope）、
+理解侧 DeepSeek 视觉与安全评测均有 `offline_real` 离线证据，可用于离线发布决策。真实业务负责人签字、
 Shadow 流量、在线告警和回滚演练尚未接入，不能将离线结果表述为线上 SLA。
 
 ## 范围
@@ -265,7 +266,8 @@ python examples/run_expense_release_pipeline.py --out reports/expense-release/la
 真实双模型图像生成与评测入口见 [`docs/REAL_IMAGE_BENCHMARK.md`](docs/REAL_IMAGE_BENCHMARK.md)；
 真实双模型视频生成与评测入口见 [`docs/REAL_VIDEO_BENCHMARK.md`](docs/REAL_VIDEO_BENCHMARK.md)。
 真实模型安全红队评测与版本化多模态榜单见 [`docs/REAL_SAFETY_AND_LEADERBOARDS.md`](docs/REAL_SAFETY_AND_LEADERBOARDS.md)。
-当前已完成 200 张图像生成与自动指标、60 条视频生成与自动门禁；图像双人盲评仍未完成。跨 Agent
+当前已完成 200 张图像生成与自动指标及 v2 分块人工面板（`offline_real`）、60 条视频生成与自动门禁
+（CogVideoX-2b × ModelScope，`offline_real`）。跨 Agent
 发布判断已经可由 CLI 调用，但当前 GitHub Actions 尚未将其配置为目标仓库的强制发布阻断。
 实现边界见 [docs/BUSINESS_CLOSED_LOOP.md](docs/BUSINESS_CLOSED_LOOP.md)，后续里程碑见
 [docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md](docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md)。

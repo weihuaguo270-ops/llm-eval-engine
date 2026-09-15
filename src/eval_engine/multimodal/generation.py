@@ -17,26 +17,101 @@ DEFAULT_MODELS = (
 )
 
 
+def require_cuda_for_generation(*, purpose: str = "Diffusers generation") -> str:
+    """Fail closed on CPU / NO_GPU hosts before loading heavy weights.
+
+    Formal image/video generation (`run_real_image_benchmark.py` /
+    `run_real_video_benchmark.py`) requires CUDA + torch + diffusers. Cloud
+    agents without a GPU must not pretend synthetic media is Diffusers output.
+    """
+    try:
+        import torch
+    except ImportError as exc:  # pragma: no cover - depends on optional stack
+        raise RuntimeError(
+            f"{purpose} requires torch+CUDA. This host has no torch installed "
+            "(NO_GPU / CPU-only). Run on a CUDA machine with: "
+            "pip install '.[multimodal]' && nvidia-smi"
+        ) from exc
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            f"{purpose} requires CUDA. torch={torch.__version__} reports "
+            "cuda.is_available()=False (NO_GPU). Move generate/score to a GPU host; "
+            "understanding-side DeepSeek vision does not need GPU."
+        )
+    return torch.cuda.get_device_name(0)
+
+
+def resolve_model_revision(model_id: str, revision: str = "main") -> str:
+    """Resolve a commit SHA online, falling back to a local HF hub cache."""
+    try:
+        from huggingface_hub import model_info
+
+        resolved = model_info(model_id, revision=revision).sha
+        if resolved:
+            return str(resolved)
+    except Exception:
+        resolved = None
+
+    import os
+
+    cache_root = Path(
+        os.environ.get("HF_HUB_CACHE")
+        or (Path(os.environ["HF_HOME"]) / "hub" if os.environ.get("HF_HOME") else Path.home() / ".cache" / "huggingface" / "hub")
+    )
+    repo_dir = cache_root / ("models--" + model_id.replace("/", "--"))
+    ref_file = repo_dir / "refs" / revision
+    if ref_file.is_file():
+        return ref_file.read_text(encoding="utf-8").strip()
+    snapshots = sorted((repo_dir / "snapshots").glob("*")) if (repo_dir / "snapshots").is_dir() else []
+    if snapshots:
+        return snapshots[-1].name
+    raise RuntimeError(
+        f"unable to resolve model revision for {model_id}@{revision} "
+        "(Hugging Face unreachable and no local hub cache entry)"
+    )
+
+
+def local_model_snapshot(model_id: str, revision: str) -> Path | None:
+    """Return a local HF snapshot directory when present."""
+    import os
+
+    cache_root = Path(
+        os.environ.get("HF_HUB_CACHE")
+        or (Path(os.environ["HF_HOME"]) / "hub" if os.environ.get("HF_HOME") else Path.home() / ".cache" / "huggingface" / "hub")
+    )
+    snapshot = cache_root / ("models--" + model_id.replace("/", "--")) / "snapshots" / revision
+    return snapshot if snapshot.is_dir() else None
+
+
 class LocalDiffusersGenerator:
     """Load one frozen model at a time and emit verifiable artifact records."""
 
     def __init__(self, model: Mapping[str, Any]):
+        require_cuda_for_generation(purpose="LocalDiffusersGenerator")
         import torch
         from diffusers import AutoPipelineForText2Image
-        from huggingface_hub import model_info
 
-        if not torch.cuda.is_available():
-            raise RuntimeError("CUDA is required for the local image benchmark")
         self.torch = torch
         self.model = dict(model)
-        resolved_revision = model_info(self.model["id"], revision=self.model["revision"]).sha
-        if not resolved_revision:
-            raise RuntimeError(f"unable to resolve model revision: {self.model['id']}")
+        resolved_revision = resolve_model_revision(
+            self.model["id"], str(self.model.get("revision") or "main")
+        )
         self.model["revision"] = resolved_revision
+        source = local_model_snapshot(self.model["id"], resolved_revision) or self.model["id"]
+        load_kwargs: dict[str, Any] = {
+            "torch_dtype": torch.float16,
+            "safety_checker": None,
+            "requires_safety_checker": False,
+            "use_safetensors": True,
+        }
+        if isinstance(source, Path):
+            load_kwargs["local_files_only"] = True
+            pretrained = str(source)
+        else:
+            load_kwargs["revision"] = resolved_revision
+            pretrained = source
         self.pipeline = AutoPipelineForText2Image.from_pretrained(
-            self.model["id"], revision=resolved_revision,
-            torch_dtype=torch.float16, safety_checker=None,
-            requires_safety_checker=False, use_safetensors=True,
+            pretrained, **load_kwargs
         ).to("cuda")
         self.pipeline.set_progress_bar_config(disable=True)
 
@@ -72,13 +147,18 @@ class ClipSafetyScorer:
     safety_id = "Falconsai/nsfw_image_detection"
 
     def __init__(self):
+        require_cuda_for_generation(purpose="ClipSafetyScorer")
         import torch
         from transformers import CLIPModel, CLIPProcessor, pipeline
 
         self.torch = torch
-        self.clip = CLIPModel.from_pretrained(self.clip_id).to("cuda")
-        self.processor = CLIPProcessor.from_pretrained(self.clip_id)
-        self.safety = pipeline("image-classification", model=self.safety_id, device=0)
+        self.clip = CLIPModel.from_pretrained(self.clip_id, local_files_only=True).to("cuda")
+        self.processor = CLIPProcessor.from_pretrained(self.clip_id, local_files_only=True)
+        self.safety = pipeline(
+            "image-classification",
+            model=self.safety_id,
+            device=0,
+        )
 
     def score(self, record: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
         """Return CLIP prompt alignment and NSFW screening evidence."""

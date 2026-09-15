@@ -14,6 +14,7 @@ def evaluate_evidence_bundle(
     dataset_audit: Mapping[str, Any] | None = None,
     version_comparison: Mapping[str, Any] | None = None,
     human_review: Mapping[str, Any] | None = None,
+    multimodal_understanding: Mapping[str, Any] | None = None,
     min_process_score: float = 3.5,
 ) -> dict[str, Any]:
     """Fail closed on business state and budgets; keep Judge quality separate."""
@@ -82,6 +83,29 @@ def evaluate_evidence_bundle(
         elif performance_evidence.get("passed") is not True:
             reasons.append("performance budget failed")
 
+    if multimodal_understanding is not None:
+        if multimodal_understanding.get("schema_version") != "multimodal-understanding-evidence/v1":
+            reasons.append("unsupported multimodal understanding evidence schema")
+        else:
+            for item in multimodal_understanding.get("hard_failures") or []:
+                reasons.append(f"multimodal understanding: {item}")
+            decision_value = str(
+                multimodal_understanding.get("gate_decision")
+                or ("pass" if multimodal_understanding.get("passed") is True else "")
+            )
+            if decision_value == "hold" and not multimodal_understanding.get("hard_failures"):
+                reasons.append("multimodal understanding gate=hold")
+            elif decision_value == "review":
+                for item in multimodal_understanding.get("review_reasons") or [
+                    "multimodal understanding gate=review"
+                ]:
+                    review_reasons.append(f"multimodal understanding: {item}")
+            elif (
+                multimodal_understanding.get("passed") is not True
+                and decision_value not in {"hold", "review", "pass"}
+            ):
+                reasons.append("multimodal understanding evidence failed")
+
     decision = "hold" if reasons else "review" if review_reasons else "pass"
     return {
         "decision": decision,
@@ -98,5 +122,6 @@ def evaluate_evidence_bundle(
             "dataset_audit_present": dataset_audit is not None,
             "version_comparison_present": version_comparison is not None,
             "human_review_present": human_review is not None,
+            "multimodal_understanding_present": multimodal_understanding is not None,
         },
     }

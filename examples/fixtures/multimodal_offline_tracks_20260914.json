@@ -1,0 +1,96 @@
+{
+  "schema_version": "multimodal-offline-tracks-fixture/v1",
+  "source_run": "reports/multimodal-offline-tracks",
+  "summary": {
+    "generation": {
+      "passed": true,
+      "evidence_level": "offline_real"
+    },
+    "understanding": {
+      "passed": true,
+      "evidence_level": "offline_real"
+    }
+  },
+  "all_tracks_offline_real": true,
+  "claim_boundary": "Track offline_real certifies local artifact + metric wiring for generation and understanding. GPU diffusion and frontier VLM leaderboard claims remain separate evidence.",
+  "generation": {
+    "image_records": 200,
+    "video_records": 60,
+    "track_gate": {
+      "track": "generation",
+      "passed": true,
+      "evidence_level": "offline_real",
+      "image_gate": {
+        "passed": false,
+        "checks": {
+          "case_count": true,
+          "model_count": true,
+          "record_count": true,
+          "real_artifacts": true,
+          "automatic_metrics": true,
+          "safety_results": true,
+          "held_out": true,
+          "human_blind_review": false
+        },
+        "evidence_level": "interface",
+        "claim_boundary": "A failed gate must not upgrade portfolio readiness."
+      },
+      "image_auto_passed": true,
+      "image_preference_claim": "interface",
+      "video_gate": {
+        "passed": true,
+        "checks": {
+          "case_count": true,
+          "model_count": true,
+          "record_count": true,
+          "real_videos": true,
+          "automatic_metrics": true,
+          "safety_results": true,
+          "held_out": true
+        },
+        "evidence_level": "offline_real"
+      },
+      "claim_boundary": "Generation track offline_real requires real artifacts, automatic metrics, safety and held-out for image+video. Image human preference still needs dual/panel blind review to upgrade the preference claim."
+    }
+  },
+  "understanding": {
+    "image_records": 80,
+    "video_records": 60,
+    "track_gate": {
+      "track": "understanding",
+      "passed": true,
+      "evidence_level": "offline_real",
+      "image_vqa_gate": {
+        "passed": true,
+        "checks": {
+          "case_count": true,
+          "model_count": true,
+          "record_count": true,
+          "real_media": true,
+          "predictions": true,
+          "automatic_metrics": true,
+          "held_out": true
+        },
+        "evidence_level": "offline_real",
+        "claim_boundary": "Understanding offline_real means materialized media + local readers + scored predictions. It is not a hosted MMMU/Video-MME leaderboard run."
+      },
+      "video_qa_gate": {
+        "passed": true,
+        "checks": {
+          "case_count": true,
+          "model_count": true,
+          "record_count": true,
+          "real_media": true,
+          "predictions": true,
+          "automatic_metrics": true,
+          "held_out": true
+        },
+        "evidence_level": "offline_real",
+        "claim_boundary": "Understanding offline_real means materialized media + local readers + scored predictions. It is not a hosted MMMU/Video-MME leaderboard run."
+      },
+      "claim_boundary": "Understanding track offline_real requires materialized image and video media, two local readers, automatic accuracy and held-out."
+    },
+    "primary_image_accuracy": 1.0,
+    "primary_video_accuracy": 1.0
+  }
+}

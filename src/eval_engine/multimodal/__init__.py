@@ -21,12 +21,45 @@ from .image_benchmark import (
     dataset_manifest,
     panel_review_progress,
 )
-from .generation import ClipSafetyScorer, DEFAULT_MODELS, LocalDiffusersGenerator
+from .generation import (
+    ClipSafetyScorer,
+    DEFAULT_MODELS,
+    LocalDiffusersGenerator,
+    require_cuda_for_generation,
+)
 from .video_benchmark import (
     build_video_prompt_dataset,
     video_artifact_record,
     video_completion_gate,
     video_dataset_manifest,
+)
+from .understanding import (
+    IMAGE_VQA_CASE_COUNT,
+    VIDEO_QA_CASE_COUNT,
+    build_held_out_understanding_report,
+    build_image_vqa_dataset,
+    build_video_qa_dataset,
+    evaluate_understanding_predictions,
+    image_vqa_dataset_manifest,
+    score_understanding_answer,
+    understanding_case_to_eval_input,
+    understanding_evidence_from_finalize,
+    video_qa_dataset_manifest,
+)
+from .understanding_predictors import (
+    DEFAULT_UNDERSTANDING_BENCHMARK_MODELS,
+    HuggingFaceVLMUnderstandingPredictor,
+    OpenAIVisionUnderstandingPredictor,
+    SidecarUnderstandingPredictor,
+    build_understanding_predictor,
+)
+from .tracks import (
+    generation_track_gate,
+    run_generation_track,
+    run_multimodal_offline_tracks,
+    run_understanding_track,
+    understanding_completion_gate,
+    understanding_track_gate,
 )
 
 __all__ = [
@@ -48,10 +81,33 @@ __all__ = [
     "dataset_manifest",
     "panel_review_progress",
     "ClipSafetyScorer",
+    "require_cuda_for_generation",
     "DEFAULT_MODELS",
     "LocalDiffusersGenerator",
     "build_video_prompt_dataset",
     "video_artifact_record",
     "video_completion_gate",
     "video_dataset_manifest",
+    "IMAGE_VQA_CASE_COUNT",
+    "VIDEO_QA_CASE_COUNT",
+    "build_held_out_understanding_report",
+    "build_image_vqa_dataset",
+    "build_video_qa_dataset",
+    "evaluate_understanding_predictions",
+    "image_vqa_dataset_manifest",
+    "score_understanding_answer",
+    "understanding_case_to_eval_input",
+    "understanding_evidence_from_finalize",
+    "video_qa_dataset_manifest",
+    "DEFAULT_UNDERSTANDING_BENCHMARK_MODELS",
+    "HuggingFaceVLMUnderstandingPredictor",
+    "OpenAIVisionUnderstandingPredictor",
+    "SidecarUnderstandingPredictor",
+    "build_understanding_predictor",
+    "generation_track_gate",
+    "run_generation_track",
+    "run_multimodal_offline_tracks",
+    "run_understanding_track",
+    "understanding_completion_gate",
+    "understanding_track_gate",
 ]

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Evidence (2026-09-14 / 2026-09-15)
+
+- Image v2 block-panel blind review completed → `offline_real` (SD v1.5 human preference leader)
+- Video evidence track: CogVideoX-2B (torchao INT8 + CPU offload) × ModelScope 1.7B, 60 MP4 → `offline_real`
+- Understanding track: DeepSeek-V4.1-Flash vision already at `offline_real` (no GPU)
+- Wan2.1-1.3B demoted to optional smoke; CogVideoX preferred per `docs/REAL_VIDEO_MODEL_SELECTION.md`
+- Cancelled unused `real-image-local-full` blind review (canonical image evidence remains v2)
+
+### Changed
+
+- `LocalVideoGenerator` CogVideoX adapter with INT8 quantization, peak VRAM logging, optional `local_dir`
+
+### Documentation
+
+- Updated image/video/GPU runbook, business status, safety/leaderboard notes for 2026-09 evidence
+
 ## 0.5.0 (2026-08-14)
 
 ### Added

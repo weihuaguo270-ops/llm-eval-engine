@@ -111,10 +111,10 @@ PYTHONPATH=src python examples/run_multimodal_offline_tracks.py \
   --out reports/multimodal-offline-tracks
 ```
 
-| 轨道 | evidence_level 条件 | 不含什么 |
-|------|-------------------|----------|
-| generation | 图像自动证据 + 视频 `video_completion_gate` 通过 | 图像双人盲评偏好结论 |
-| understanding | 物化 PNG/MP4 + 预测器 + held_out | 托管 MMMU/Video-MME 官方榜 |
+| 轨道 | evidence_level 条件 | 备注 |
+|------|-------------------|------|
+| generation | 图像自动+盲评协议（或视频 `video_completion_gate`）通过 | 图像 v2 面板与视频全量均已本机 `offline_real`（2026-09） |
+| understanding | 物化 PNG/MP4 + 预测器 + held_out | DeepSeek-V4.1-Flash 已跑通；非托管 MMMU/Video-MME 官方榜 |
 
 ## 边界
 

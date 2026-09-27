@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -146,8 +147,14 @@ def test_cli_matches_library_on_image_and_video():
             cwd=ROOT,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
+            env={**os.environ, "PYTHONPATH": str(ROOT / "src")},
             check=False,
         )
-        report = json.loads(completed.stdout)
+        stdout = (completed.stdout or "").strip()
+        assert stdout, completed.stderr
+        # CLI may print a summary line to stderr; stdout is the JSON report.
+        report = json.loads(stdout)
         assert report["decision"] == expected, completed.stderr
         assert completed.returncode == (0 if expected == "pass" else 1)

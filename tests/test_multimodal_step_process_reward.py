@@ -108,7 +108,9 @@ def test_ok_episode_passes_process_quality_gate():
     dag = parse_trajectory(episode["trajectory"])
     findings = analyze_multimodal_steps(dag, require_vision=True)
     assert findings == []
-    scorer = ProcessRewardScorer(judge_fn=_mock_judge)
+    scorer = ProcessRewardScorer(
+        judge_fn=_mock_judge, enable_trace_findings=False
+    )
     report = scorer.score_trajectory(
         dag, trajectory=episode["trajectory"], extra_findings=findings
     )
@@ -132,7 +134,9 @@ def test_bad_episode_attributes_multimodal_failures_and_reviews():
     assert "unnecessary_generation" in codes
     assert "wrong_media_args" in codes
 
-    scorer = ProcessRewardScorer(judge_fn=_mock_judge)
+    scorer = ProcessRewardScorer(
+        judge_fn=_mock_judge, enable_trace_findings=False
+    )
     report = scorer.score_trajectory(
         dag, trajectory=episode["trajectory"], extra_findings=findings
     )

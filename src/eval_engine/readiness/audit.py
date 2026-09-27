@@ -27,8 +27,8 @@ _ROLE_CATALOG = {
     }),
     "agent_evaluation": ("Agent 评测", {
         "agent_task_evaluation": 1, "trajectory_evaluation": 1,
-        "judge_human_calibration": 1, "multimodal_generation_evaluation": 1,
-        "safety_evaluation": 1, "leaderboard_statistics": 1, "online_evaluation": 0,
+        "judge_human_calibration": 1, "multimodal_understanding_evaluation": 1,
+        "safety_evaluation": 1, "online_evaluation": 0,
     }),
     "ai_quality_engineering": ("AI 应用测试/质量工程", {
         "deterministic_regression": 1, "non_deterministic_testing": 1,

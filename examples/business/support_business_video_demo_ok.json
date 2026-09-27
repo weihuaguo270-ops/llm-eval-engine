@@ -1,0 +1,85 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "support_business_video_demo_ok",
+  "task": "客服演示：生成登录按钮点击演示视频，并在答复中引用产物哈希",
+  "framework": "react-agent-support",
+  "agent_version": "support-agent-v1+video",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "需要演示时才 generate_video",
+    "artifacts 保留真实 uri 与 sha256",
+    "终态引用视频 sha256"
+  ],
+  "expected_state": {
+    "status": "answered",
+    "ticket": {"resolution": "demo_sent"}
+  },
+  "final_state": {
+    "status": "answered",
+    "ticket": {
+      "resolution": "demo_sent",
+      "video_sha256": "742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+    }
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "path": "$.status",
+        "expected": "answered",
+        "actual": "answered",
+        "passed": true
+      },
+      {
+        "path": "$.ticket.resolution",
+        "expected": "demo_sent",
+        "actual": "demo_sent",
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "support-business-video-demo-ok-v1",
+    "query": "请生成一段登录页蓝色按钮被点击的演示视频，并在答复里给出产物 sha256。",
+    "model": "support-agent-v1+video",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "用户要演示视频，应出片并引用哈希。"
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "step_kind": "generate_video",
+        "action": {
+          "name": "generate_video",
+          "args": {
+            "prompt": "login page blue button being clicked"
+          }
+        },
+        "artifacts": [
+          {
+            "uri": "examples/business/artifacts/demo_login_button.mp4",
+            "sha256": "742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+          }
+        ],
+        "observation": {
+          "summary": "generated examples/business/artifacts/demo_login_button.mp4 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+        }
+      },
+      {
+        "step": 3,
+        "type": "final",
+        "content": "演示视频已发送。产物 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+      }
+    ],
+    "final_answer": "演示视频已发送。产物 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+  },
+  "metadata": {
+    "domain": "support",
+    "evidence_role": "multimodal_step_process",
+    "source": "business_non_fixture",
+    "require_vision": true
+  }
+}

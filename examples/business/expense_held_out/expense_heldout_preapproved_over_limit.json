@@ -1,0 +1,92 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "expense_heldout_preapproved_over_limit",
+  "task": "Review claim C-H02 and persist the policy decision.",
+  "framework": "react-agent-expense",
+  "agent_version": "expense-agent-v1",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "pre-approval honored",
+    "claim finalized once"
+  ],
+  "expected_state": {
+    "claim": {
+      "status": "approved",
+      "decision": "approve_finance"
+    },
+    "audit": {
+      "decision_events": 1
+    }
+  },
+  "final_state": {
+    "claim": {
+      "category": "住宿",
+      "amount": 800,
+      "has_receipt": true,
+      "pre_approved": true,
+      "status": "approved",
+      "decision": "approve_finance"
+    },
+    "audit": {
+      "decision_events": 1
+    }
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "path": "$.claim.status",
+        "expected": "approved",
+        "actual": "approved",
+        "passed": true
+      },
+      {
+        "path": "$.claim.decision",
+        "expected": "approve_finance",
+        "actual": "approve_finance",
+        "passed": true
+      },
+      {
+        "path": "$.audit.decision_events",
+        "expected": 1,
+        "actual": 1,
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "expense-expense_heldout_preapproved_over_limit-expense-agent-v1",
+    "task_episode_id": "expense_heldout_preapproved_over_limit",
+    "acceptance_criteria": [
+      "pre-approval honored",
+      "claim finalized once"
+    ],
+    "query": "Review claim C-H02 and persist the policy decision.",
+    "model": "expense-agent-v1",
+    "steps": [
+      {
+        "step": 1,
+        "thought": "Inspect the claim before applying policy.",
+        "action": {
+          "name": "inspect_expense_claim",
+          "arguments": "{\"claim_id\": \"C-H02\"}"
+        },
+        "observation": "{\"amount\": 800, \"category\": \"住宿\", \"decision\": \"\", \"has_receipt\": true, \"pre_approved\": true, \"status\": \"pending\"}"
+      },
+      {
+        "step": 2,
+        "thought": "Apply the policy once with an idempotency key.",
+        "action": {
+          "name": "decide_expense_claim",
+          "arguments": "{\"claim_id\": \"C-H02\", \"idempotency_key\": \"expense_heldout_preapproved_over_limit:decision\"}"
+        },
+        "observation": "{\"claim_id\": \"C-H02\", \"decision\": \"approve_finance\", \"status\": \"approved\"}"
+      }
+    ],
+    "final_answer": "C-H02: approve_finance"
+  },
+  "metadata": {
+    "domain": "expense",
+    "verifier": "business_state_subset"
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "mm-step-video-ok-001",
+  "task": "需要一段登录按钮演示视频，出片后读视频并在终态引用产物",
+  "framework": "tool_agent_fixture",
+  "agent_version": "fixture-0.1",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "需要视频时才调用 generate_video",
+    "MP4 只保留 uri 与 sha256",
+    "终态引用该 sha256"
+  ],
+  "expected_state": {
+    "status": "answered"
+  },
+  "final_state": {
+    "status": "answered"
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "answered",
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "mm-step-video-ok-001",
+    "query": "请生成一段蓝色按钮被点击的演示视频，并确认按钮是否出现",
+    "final_answer": "读视频确认有蓝色按钮。产物 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "任务需要视频证据，应先出视频再读片确认。",
+        "judge_scores": {
+          "context": 4
+        }
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "step_kind": "generate_video",
+        "action": {
+          "name": "generate_video",
+          "args": {
+            "prompt": "a blue button being clicked on a login page"
+          }
+        },
+        "artifacts": [
+          {
+            "uri": "examples/fixtures/artifacts/login_button_clip.mp4",
+            "sha256": "742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+          }
+        ],
+        "observation": {
+          "summary": "generated examples/fixtures/artifacts/login_button_clip.mp4 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+        },
+        "judge_scores": {
+          "media_timing": 5,
+          "media_arg_fidelity": 4,
+          "artifact_attachment": 5,
+          "media_safety": 5
+        }
+      },
+      {
+        "step": 3,
+        "type": "action",
+        "step_kind": "describe_video",
+        "action": {
+          "name": "describe_video",
+          "args": {
+            "path": "examples/fixtures/artifacts/login_button_clip.mp4",
+            "sha256": "742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73",
+            "question": "是否出现蓝色按钮？"
+          }
+        },
+        "artifacts": [
+          {
+            "uri": "examples/fixtures/artifacts/login_button_clip.mp4",
+            "sha256": "742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+          }
+        ],
+        "observation": {
+          "summary": "片中有蓝色按钮 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+        },
+        "judge_scores": {
+          "media_timing": 5,
+          "media_arg_fidelity": 4,
+          "artifact_attachment": 5,
+          "media_safety": 5
+        }
+      },
+      {
+        "step": 4,
+        "type": "final",
+        "content": "读视频确认有蓝色按钮。产物 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73",
+        "judge_scores": {
+          "media_timing": 5,
+          "media_arg_fidelity": 4,
+          "artifact_attachment": 5,
+          "media_safety": 5
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "evidence_role": "multimodal_step_process",
+    "require_vision": true
+  }
+}

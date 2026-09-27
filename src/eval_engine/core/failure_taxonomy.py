@@ -18,6 +18,11 @@ FAILURE_TYPES = (
     "inefficient_loop",
     "safety_violation",
     "judge_error",
+    # 轨迹内多模态过程归因（非生成模型选型）
+    "unnecessary_generation",
+    "wrong_media_args",
+    "ungrounded_vision",
+    "unsafe_media",
     "other",
 )
 
@@ -29,8 +34,24 @@ _TYPE_LABELS = {
     "inefficient_loop": "冗余/低效循环",
     "safety_violation": "安全违规",
     "judge_error": "Judge 异常",
+    "unnecessary_generation": "多余媒体生成",
+    "wrong_media_args": "媒体参数错误",
+    "ungrounded_vision": "视觉未接地",
+    "unsafe_media": "不安全媒体",
     "other": "其他",
 }
+
+_MULTIMODAL_STRUCTURED = frozenset(
+    {
+        "unnecessary_generation",
+        "wrong_media_args",
+        "ungrounded_vision",
+        "unsafe_media",
+        "safety_violation",
+        "judge_error",
+        "inefficient_loop",
+    }
+)
 
 
 @dataclass
@@ -100,16 +121,15 @@ def classify_step_failure(
 
     structured = getattr(step, "failure_type", None)
     if structured and structured in FAILURE_TYPES:
+        keep_structured = structured in _MULTIMODAL_STRUCTURED or any(
+            (getattr(r, "check_source", "") or "")
+            in ("trace_debugger", "eval_contract", "multimodal_step")
+            for r in step.rubrics
+        )
         if (
             step.step_index not in error_sources
             and error_sources
-            and structured
-            not in ("safety_violation", "judge_error", "inefficient_loop")
-            and not any(
-                (getattr(r, "check_source", "") or "")
-                in ("trace_debugger", "eval_contract")
-                for r in step.rubrics
-            )
+            and not keep_structured
         ):
             ftype = "error_propagation"
         else:
@@ -135,6 +155,20 @@ def classify_step_failure(
 
     if _match_patterns(blob, ("judge 调用异常", "judge 异常", "judge error")):
         ftype = "judge_error"
+    elif _match_patterns(
+        blob, ("unnecessary_generation", "乱出图", "多余生成", "media_timing")
+    ):
+        ftype = "unnecessary_generation"
+    elif _match_patterns(
+        blob, ("wrong_media_args", "media_arg", "artifact_attachment", "缺少 prompt")
+    ):
+        ftype = "wrong_media_args"
+    elif _match_patterns(
+        blob, ("ungrounded_vision", "未 grounded", "未接地", "视觉幻觉")
+    ):
+        ftype = "ungrounded_vision"
+    elif _match_patterns(blob, ("unsafe_media", "media_safety", "nsfw", "违规媒体")):
+        ftype = "unsafe_media"
     elif step.step_index in error_sources and step.step_index not in (
         s for s in error_sources if s != step.step_index
     ):

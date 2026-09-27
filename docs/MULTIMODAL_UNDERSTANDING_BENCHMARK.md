@@ -2,7 +2,7 @@
 
 ## 定位
 
-补充生成侧（文生图 / 文生视频）之外的 **理解侧** 评测：
+本仓多模态主线为 **Agent 轨迹过程评测**；理解侧补充 Image VQA / Video QA（与已删除的生成选型无关）：
 
 | 套件 | 规模 | 任务 | 对标风格 |
 |------|------|------|----------|
@@ -11,14 +11,7 @@
 
 数据集契约以 `media_uri` + `media_description` 入库；正式跑分前必须 **物化真实 PNG/MP4**，再用预测器产出答案。
 
-## 正式流水线（对齐生成侧）
-
-生成侧正式脚本：
-
-- `examples/run_real_image_benchmark.py` — init → generate → score →（人工盲评）→ finalize
-- `examples/run_real_video_benchmark.py` — init → generate → score → finalize
-
-理解侧正式脚本：
+## 正式流水线
 
 ```bash
 PYTHONPATH=src python examples/run_real_understanding_benchmark.py init --output /tmp/u
@@ -104,7 +97,7 @@ report = evaluate_understanding_predictions(
 )
 ```
 
-## 双轨 offline_real 快捷入口
+## offline_real 快捷入口（理解侧）
 
 ```bash
 PYTHONPATH=src python examples/run_multimodal_offline_tracks.py \
@@ -113,14 +106,15 @@ PYTHONPATH=src python examples/run_multimodal_offline_tracks.py \
 
 | 轨道 | evidence_level 条件 | 备注 |
 |------|-------------------|------|
-| generation | 图像自动+盲评协议（或视频 `video_completion_gate`）通过 | 图像 v2 面板与视频全量均已本机 `offline_real`（2026-09） |
 | understanding | 物化 PNG/MP4 + 预测器 + held_out | DeepSeek-V4.1-Flash 已跑通；非托管 MMMU/Video-MME 官方榜 |
+
+生成侧选型轨道已删除，勿再传 `--track generation`。
 
 ## 边界
 
 - 这是项目自建探针集，不是 MMMU / Video-MME 官方数据镜像。
 - Sidecar/oracle 满分只证明计分器与物化媒体接线；能力结论需要 `openai_vision` / `hf_vlm`（或自研 Video-LLM）预测。
-- 本地 synthetic 渲染可达到 track 级 `offline_real`；GPU diffusion / 校准 VLM 仍是独立证据。
+- 本地 synthetic 渲染可达到 understanding track 级 `offline_real`；校准 VLM 仍是独立证据。
 
 
 ## DeepSeek-V4.1-Flash（推荐无 GPU 真模型路径）
@@ -136,8 +130,3 @@ PYTHONPATH=src python examples/run_real_understanding_benchmark.py finalize --ou
 ```
 
 记录中的 `primary_model` 应为 `deepseek/deepseek-flash`，`claim_boundary` 来自 DeepSeek 视觉适配器。
-
-
-## 生成侧（需 GPU）
-
-正式 Diffusers 出图/出视频见 [`GENERATION_GPU_RUNBOOK.md`](GENERATION_GPU_RUNBOOK.md)。本 Cloud Agent 为 NO_GPU，不能替代 GPU 机上的 `run_real_image_benchmark.py` / `run_real_video_benchmark.py`。

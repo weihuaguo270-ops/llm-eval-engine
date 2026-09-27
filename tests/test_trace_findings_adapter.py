@@ -121,6 +121,7 @@ def test_process_reward_consumes_trace_findings_without_local_debugger_rules():
     bad = next(s for s in report.per_step if s.step_index == 0)
     assert bad.needs_revision is True
     assert bad.failure_type == "wrong_params"
+    assert bad.step_score == 4.5
     assert "trace_debugger" in bad.check_sources
 
 

@@ -228,18 +228,21 @@ class ProcessRewardScorer:
             for finding in step_findings:
                 if finding.severity != "fail":
                     continue
-                step.rubrics.append(
-                    RubricResult(
-                        dimension=f"check:{finding.code}",
-                        criteria=finding.message,
-                        score=float(finding.score),
-                        reason=finding.message,
-                        needs_revision=True,
-                        check_source=finding.source,
-                    )
-                )
                 step.needs_revision = True
-                step.step_score = min(step.step_score, float(finding.score))
+                # trace-debugger failures stay on the finding record. They do not
+                # replace the step score with the finding's minimum.
+                if finding.source != "trace_debugger":
+                    step.rubrics.append(
+                        RubricResult(
+                            dimension=f"check:{finding.code}",
+                            criteria=finding.message,
+                            score=float(finding.score),
+                            reason=finding.message,
+                            needs_revision=True,
+                            check_source=finding.source,
+                        )
+                    )
+                    step.step_score = min(step.step_score, float(finding.score))
                 if finding.source not in step.check_sources:
                     step.check_sources.append(finding.source)
                 if step.failure_type is None:

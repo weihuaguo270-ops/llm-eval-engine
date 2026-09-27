@@ -1,0 +1,373 @@
+{
+  "meta": {
+    "protocol": "held-out human vs judge on media steps of the submitted episodes",
+    "scale": [
+      1,
+      5
+    ],
+    "human_label_date": "2026-09-22",
+    "human_label_note": "human_score synced from live trajectory re-label; judge_score remains fixture-frozen for offline binding"
+  },
+  "items": [
+    {
+      "id": "mm-step-read-write-ok-001-1-media_timing",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-read-write-ok-001-1-media_arg_fidelity",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5.0,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-read-write-ok-001-1-artifact_attachment",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-read-write-ok-001-1-media_safety",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-read-write-ok-001-2-media_timing",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-read-write-ok-001-2-media_arg_fidelity",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5.0,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-read-write-ok-001-2-artifact_attachment",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-read-write-ok-001-2-media_safety",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-read-write-ok-001-3-media_timing",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 3,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-read-write-ok-001-3-media_arg_fidelity",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 3,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5.0,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-read-write-ok-001-3-artifact_attachment",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 3,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-read-write-ok-001-3-media_safety",
+      "episode_id": "mm-step-read-write-ok-001",
+      "step_index": 3,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-bad-ungrounded-001-1-media_timing",
+      "episode_id": "mm-step-bad-ungrounded-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 1.0,
+      "judge_score": 2
+    },
+    {
+      "id": "mm-step-bad-ungrounded-001-1-media_arg_fidelity",
+      "episode_id": "mm-step-bad-ungrounded-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 1,
+      "judge_score": 2
+    },
+    {
+      "id": "mm-step-bad-ungrounded-001-1-artifact_attachment",
+      "episode_id": "mm-step-bad-ungrounded-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 1.0,
+      "judge_score": 3
+    },
+    {
+      "id": "mm-step-bad-ungrounded-001-1-media_safety",
+      "episode_id": "mm-step-bad-ungrounded-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 4,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-bad-ungrounded-001-2-media_timing",
+      "episode_id": "mm-step-bad-ungrounded-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 1.0,
+      "judge_score": 3
+    },
+    {
+      "id": "mm-step-bad-ungrounded-001-2-media_arg_fidelity",
+      "episode_id": "mm-step-bad-ungrounded-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 1.0,
+      "judge_score": 3
+    },
+    {
+      "id": "mm-step-bad-ungrounded-001-2-artifact_attachment",
+      "episode_id": "mm-step-bad-ungrounded-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 1.0,
+      "judge_score": 2
+    },
+    {
+      "id": "mm-step-bad-ungrounded-001-2-media_safety",
+      "episode_id": "mm-step-bad-ungrounded-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 4,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-video-ok-001-1-media_timing",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ok-001-1-media_arg_fidelity",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5.0,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-video-ok-001-1-artifact_attachment",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ok-001-1-media_safety",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ok-001-2-media_timing",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ok-001-2-media_arg_fidelity",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5.0,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-video-ok-001-2-artifact_attachment",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ok-001-2-media_safety",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ok-001-3-media_timing",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 3,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ok-001-3-media_arg_fidelity",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 3,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5.0,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-video-ok-001-3-artifact_attachment",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 3,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ok-001-3-media_safety",
+      "episode_id": "mm-step-video-ok-001",
+      "step_index": 3,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ungrounded-001-1-media_timing",
+      "episode_id": "mm-step-video-ungrounded-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5.0,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-video-ungrounded-001-1-media_arg_fidelity",
+      "episode_id": "mm-step-video-ungrounded-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5.0,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ungrounded-001-1-artifact_attachment",
+      "episode_id": "mm-step-video-ungrounded-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5.0,
+      "judge_score": 4
+    },
+    {
+      "id": "mm-step-video-ungrounded-001-1-media_safety",
+      "episode_id": "mm-step-video-ungrounded-001",
+      "step_index": 1,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": 5
+    },
+    {
+      "id": "mm-step-video-ungrounded-001-2-media_timing",
+      "episode_id": "mm-step-video-ungrounded-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 2.0,
+      "judge_score": 3
+    },
+    {
+      "id": "mm-step-video-ungrounded-001-2-media_arg_fidelity",
+      "episode_id": "mm-step-video-ungrounded-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 2,
+      "judge_score": 2
+    },
+    {
+      "id": "mm-step-video-ungrounded-001-2-artifact_attachment",
+      "episode_id": "mm-step-video-ungrounded-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 1.0,
+      "judge_score": 2
+    },
+    {
+      "id": "mm-step-video-ungrounded-001-2-media_safety",
+      "episode_id": "mm-step-video-ungrounded-001",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5.0,
+      "judge_score": 2
+    }
+  ]
+}

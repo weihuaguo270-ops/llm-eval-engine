@@ -1,4 +1,8 @@
-"""面向图片、视频、音频和文档产物的可插拔评测接口。"""
+"""面向图片、视频、音频和文档产物的可插拔评测接口。
+
+生成侧选型（文生图/文生视频横向榜、CLIP 成对选型、图像 v2 offline_real、视频选型流水线）
+已从本包移除；多模态主线为轨迹过程评测（含 generate_video / describe_video）+ 理解侧 VQA。
+"""
 
 from .evaluator import (
     ArtifactIntegrityMetric,
@@ -8,30 +12,6 @@ from .evaluator import (
     MultimodalEvaluator,
     aggregate_human_ratings,
     metric_catalog,
-)
-from .image_benchmark import (
-    analyze_panel_ratings,
-    analyze_blind_ratings,
-    artifact_record,
-    build_blind_review,
-    build_prompt_dataset,
-    build_panel_batches,
-    completion_gate,
-    compare_model_records,
-    dataset_manifest,
-    panel_review_progress,
-)
-from .generation import (
-    ClipSafetyScorer,
-    DEFAULT_MODELS,
-    LocalDiffusersGenerator,
-    require_cuda_for_generation,
-)
-from .video_benchmark import (
-    build_video_prompt_dataset,
-    video_artifact_record,
-    video_completion_gate,
-    video_dataset_manifest,
 )
 from .understanding import (
     IMAGE_VQA_CASE_COUNT,
@@ -54,8 +34,6 @@ from .understanding_predictors import (
     build_understanding_predictor,
 )
 from .tracks import (
-    generation_track_gate,
-    run_generation_track,
     run_multimodal_offline_tracks,
     run_understanding_track,
     understanding_completion_gate,
@@ -70,24 +48,6 @@ __all__ = [
     "MultimodalEvaluator",
     "aggregate_human_ratings",
     "metric_catalog",
-    "analyze_blind_ratings",
-    "analyze_panel_ratings",
-    "artifact_record",
-    "build_blind_review",
-    "build_prompt_dataset",
-    "build_panel_batches",
-    "completion_gate",
-    "compare_model_records",
-    "dataset_manifest",
-    "panel_review_progress",
-    "ClipSafetyScorer",
-    "require_cuda_for_generation",
-    "DEFAULT_MODELS",
-    "LocalDiffusersGenerator",
-    "build_video_prompt_dataset",
-    "video_artifact_record",
-    "video_completion_gate",
-    "video_dataset_manifest",
     "IMAGE_VQA_CASE_COUNT",
     "VIDEO_QA_CASE_COUNT",
     "build_held_out_understanding_report",
@@ -104,8 +64,6 @@ __all__ = [
     "OpenAIVisionUnderstandingPredictor",
     "SidecarUnderstandingPredictor",
     "build_understanding_predictor",
-    "generation_track_gate",
-    "run_generation_track",
     "run_multimodal_offline_tracks",
     "run_understanding_track",
     "understanding_completion_gate",

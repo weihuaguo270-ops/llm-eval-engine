@@ -38,10 +38,6 @@ judge = [
 multimodal = [
     "Pillow>=10,<13",
     "numpy>=1.24,<3",
-    "diffusers>=0.35,<1",
-    "transformers>=4.45,<6",
-    "accelerate>=1,<2",
-    "safetensors>=0.4,<1",
     "imageio>=2.34,<3",
     "imageio-ffmpeg>=0.5,<1",
 ]

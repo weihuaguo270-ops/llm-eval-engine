@@ -5,6 +5,7 @@
   - trajectory_parser.py:   轨迹 → DAG 步骤结构
   - dynamic_rubric.py:      动态评分标准生成（核心创新）
   - process_reward.py:      步骤级 Process Reward 评分（核心创新）
+  - multimodal_step.py:     轨迹内多模态工具步过程检查（非选型榜）
   - eval_contracts.py:      评测用例契约（期望/禁止工具、终态）
   - failure_taxonomy.py:    失败类型归类
   - error_propagation.py:   错误传播追踪 + 根因定位

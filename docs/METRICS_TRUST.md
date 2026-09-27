@@ -11,7 +11,7 @@
 | **live** | 真实模型当次跑批 | 趋势证据；须绑定模型与日期 |
 | **held_out**（Judge） | 协议冻结后的独立样本栏 | 对外引用优先于全量 offline |
 
-## Judge κ（本仓）
+## Judge κ（本仓 · 文本）
 
 ```bash
 python examples/run_calibration.py          # offline + held_out 分栏 + bootstrap CI
@@ -19,7 +19,8 @@ python examples/run_calibration.py --live --split held_out   # 真实 Judge
 ```
 
 - 金标准 **v5**：`dev`（协议调参）与 `held_out`（独立评估，n=53）分开；pending 不进 κ。
-- 报告含 **bootstrap 95% CI**（seed 见 `meta.reproducibility`）。
+- **κ 单位（文本）**：按校准 **item**（一条 prompt 的 overall `human_score`↔`judge_score`）。
+- 报告含 **agreement_table + bootstrap 95% CI**（seed 见 `meta.reproducibility`）。
 - **第二标注者**：v5 已写入 `human_score_r2`（n=53）；协议见 `SECOND_RATER_PROTOCOL.md`。
 - **双视角**：Likert κ / 精确一致看档位；**MSE / RMSE / 连续 MAE** 看 1.0–5.0 幅度（`EVAL_DESIGN.md` §3.1）。
 
@@ -35,6 +36,41 @@ python examples/run_calibration.py --live --split held_out   # 真实 Judge
 快照：[`calibration_snapshot_20260807_live_held_out.md`](calibration_snapshot_20260807_live_held_out.md)
 
 **废止口径：** n=15、κ≈0.47；held_out live n=20/κ≈0.69（v4）；held_out live κ≈0.67（2026-07-27）；或「offline κ 当线上 SLA」。
+
+## 多模态过程审计（release-audit · κ 单位钉死）
+
+与上表文本 Judge 金标准**分栏**，勿合成同一 SLA。完整口径：[`CITATION_MULTIMODAL_PROCESS.md`](CITATION_MULTIMODAL_PROCESS.md)。
+
+### κ 单位（钉死 · 不可改口径）
+
+| 项 | 规定 |
+|----|------|
+| **主单位** | **`dimension_cell`**：`episode × media/final step × dimension` |
+| **不是** | 按轨迹聚合的过程分（min media step）——该分只进 **发布门禁**，不进 κ |
+| **并列报告** | `sample_size` = cell n；`episode_count` = 独立轨迹数（样本广度，非 κ 分母） |
+| **统计形态** | 与 `run_calibration.py` 相同：`agreement_table` + `bootstrap_ci` + `by_split.held_out` |
+| **CLI** | `run_release_audit.py --calibration-md …` 写出同形态 markdown 快照 |
+
+```bash
+python examples/run_release_audit.py examples/fixtures/episodes/held_out_expand \
+  --live --calibration … --rebuild-calibration … \
+  --out reports/release_audit_held_out_expand_live.json \
+  --calibration-md docs/calibration_snapshot_YYYYMMDD_live_held_out_multimodal_expand.md
+```
+
+### 当前分栏数字（2026-09-22）
+
+| 栏 | 轨迹 | cell n | κ | bootstrap 95% CI | 说明 |
+|----|------|--------|---|------------------|------|
+| 基线 fixture | 4 | 40 | ≈**0.70** | — | 对外主钉 |
+| held_out_expand | **36** | **312** | ≈**0.62** | **[0.54, 0.69]** | 更大 n 仍 ≥0.6 |
+| 业务（非 fixture） | **12** | 分批 | 分条 gate | — | ok→pass / 坏→review |
+
+独立轨迹合计 ≈**48**（近文本 held_out ≈53）。
+
+**过渡数（不当 SLA）：** κ≈0.22 = 旧 human × 首轮 live Judge。
+
+**r2 / 加码口径：** κ 在更大 n 已 ≥0.6 → 可谈可选 `human_score_r2` 与加码「Judge 可信」；**尚未执行**（无第二人则跳过；主钉仍分栏引用基线 0.70）。
 
 ## 姊妹仓：Execution 通过率（react-agent）
 

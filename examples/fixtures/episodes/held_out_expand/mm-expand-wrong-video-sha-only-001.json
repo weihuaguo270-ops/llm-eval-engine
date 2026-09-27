@@ -1,0 +1,68 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "mm-expand-wrong-video-sha-only-001",
+  "task": "读视频 sha256 错误",
+  "framework": "tool_agent_fixture",
+  "agent_version": "fixture-0.1",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "media process dimensions"
+  ],
+  "expected_state": {
+    "status": "answered"
+  },
+  "final_state": {
+    "status": "answered"
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "answered",
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "mm-expand-wrong-video-sha-only-001",
+    "query": "请读取 examples/fixtures/artifacts/login_button_clip.mp4 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73 确认蓝色按钮",
+    "final_answer": "用了错误哈希仍声称有蓝色按钮。",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "sha 必须正确。"
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "step_kind": "describe_video",
+        "action": {
+          "name": "describe_video",
+          "args": {
+            "path": "examples/fixtures/artifacts/login_button_clip.mp4",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "question": "是否出现蓝色按钮？"
+          }
+        },
+        "observation": {
+          "summary": "sha mismatch"
+        }
+      },
+      {
+        "step": 3,
+        "type": "final",
+        "content": "用了错误哈希仍声称有蓝色按钮。"
+      }
+    ]
+  },
+  "metadata": {
+    "evidence_role": "multimodal_step_process",
+    "require_vision": true,
+    "held_out_expand": true,
+    "expected_failure_types": [
+      "wrong_media_args",
+      "ungrounded_vision"
+    ]
+  }
+}

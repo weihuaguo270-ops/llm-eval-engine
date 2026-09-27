@@ -1,0 +1,101 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "mm-step-bad-ungrounded-001",
+  "task": "纯文本数学问答，不应出图；对照样本含错误媒体参数与未接地答复",
+  "framework": "tool_agent_fixture",
+  "agent_version": "fixture-0.1",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "不需要视觉时不应 generate_image",
+    "媒体参数完整",
+    "不得幻觉描述未挂接产物"
+  ],
+  "expected_state": {
+    "status": "answered"
+  },
+  "final_state": {
+    "status": "answered"
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "answered",
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "mm-step-bad-001",
+    "query": "1+1等于几？请直接回答数字",
+    "final_answer": "根据生成的图片可以看出答案是2，图中还有红色按钮。",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "这是算术题，无需图片。",
+        "judge_scores": {
+          "context": 5
+        }
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "step_kind": "generate_image",
+        "action": {
+          "name": "generate_image",
+          "args": {
+            "prompt": ""
+          }
+        },
+        "observation": {
+          "summary": "generated without artifact ref"
+        },
+        "judge_scores": {
+          "media_timing": 2,
+          "media_arg_fidelity": 2,
+          "artifact_attachment": 3,
+          "media_safety": 4
+        }
+      },
+      {
+        "step": 3,
+        "type": "final",
+        "content": "根据生成的图片可以看出答案是2，图中还有红色按钮。",
+        "judge_scores": {
+          "media_timing": 3,
+          "media_arg_fidelity": 3,
+          "artifact_attachment": 2,
+          "media_safety": 4
+        }
+      }
+    ]
+  },
+  "metadata": {
+    "evidence_role": "multimodal_step_process",
+    "require_vision": false,
+    "expected_failure_types": [
+      "unnecessary_generation",
+      "wrong_media_args"
+    ],
+    "trace_analysis": {
+      "session_id": "mm-step-bad-001",
+      "needs_fix": true,
+      "paths": [
+        {
+          "failures": [
+            "unnecessary_generation"
+          ],
+          "steps": [
+            {
+              "failure_type": "unnecessary_generation",
+              "step_index": 2,
+              "action": "generate_image",
+              "failure_detail": "trace-debugger media rule"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

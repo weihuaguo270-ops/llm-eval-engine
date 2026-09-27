@@ -2,21 +2,28 @@
 
 ## Unreleased
 
-### Evidence (2026-09-14 / 2026-09-15)
+### Removed (2026-09-22)
 
-- Image v2 block-panel blind review completed → `offline_real` (SD v1.5 human preference leader)
-- Video evidence track: CogVideoX-2B (torchao INT8 + CPU offload) × ModelScope 1.7B, 60 MP4 → `offline_real`
-- Understanding track: DeepSeek-V4.1-Flash vision already at `offline_real` (no GPU)
-- Wan2.1-1.3B demoted to optional smoke; CogVideoX preferred per `docs/REAL_VIDEO_MODEL_SELECTION.md`
-- Cancelled unused `real-image-local-full` blind review (canonical image evidence remains v2)
+- Deleted generation-side model selection stack: image/video horizontal benches,
+  CLIP pairwise leaderboards, blind-review servers, `legacy_generation_bench` docs,
+  and **image v2 `offline_real`** evidence claims
+- Modules removed: `image_benchmark`, `generation`, `video_benchmark`, `video_generation`,
+  `benchmark/leaderboard`; runners `run_real_image/video_benchmark`,
+  `run_real_multimodal_leaderboards`, blind-review servers
+- Multimodal offline tracks are **understanding-only**
 
-### Changed
+### Added (2026-09-21)
 
-- `LocalVideoGenerator` CogVideoX adapter with INT8 quantization, peak VRAM logging, optional `local_dir`
+- Soft dimension scores (mean, not min) drive release review below 3.5; held-out κ required before they count
+- `examples/run_release_audit.py`: episode → process score → pass/review/hold
+- Multimodal-as-trajectory-step vertical slice: `multimodal_step` checks, episode fixtures,
+  failure tags (`unnecessary_generation` / `wrong_media_args` / `ungrounded_vision` / `unsafe_media`),
+  and process_quality release evidence
 
-### Documentation
+### Documentation / Product boundary (2026-09-21 → 2026-09-22)
 
-- Updated image/video/GPU runbook, business status, safety/leaderboard notes for 2026-09 evidence
+- Converged product positioning: Agent process eval + release gate is mainline
+- Generation-side selection removed (not merely frozen)
 
 ## 0.5.0 (2026-08-14)
 

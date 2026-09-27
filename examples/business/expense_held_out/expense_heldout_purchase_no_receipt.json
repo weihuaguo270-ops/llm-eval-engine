@@ -1,0 +1,92 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "expense_heldout_purchase_no_receipt",
+  "task": "Review claim C-H03 and persist the policy decision.",
+  "framework": "react-agent-expense",
+  "agent_version": "expense-agent-v1",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "receipt requirement overrides pre-approval",
+    "claim finalized once"
+  ],
+  "expected_state": {
+    "claim": {
+      "status": "rejected",
+      "decision": "reject_no_receipt"
+    },
+    "audit": {
+      "decision_events": 1
+    }
+  },
+  "final_state": {
+    "claim": {
+      "category": "办公采购",
+      "amount": 980,
+      "has_receipt": false,
+      "pre_approved": true,
+      "status": "rejected",
+      "decision": "reject_no_receipt"
+    },
+    "audit": {
+      "decision_events": 1
+    }
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "path": "$.claim.status",
+        "expected": "rejected",
+        "actual": "rejected",
+        "passed": true
+      },
+      {
+        "path": "$.claim.decision",
+        "expected": "reject_no_receipt",
+        "actual": "reject_no_receipt",
+        "passed": true
+      },
+      {
+        "path": "$.audit.decision_events",
+        "expected": 1,
+        "actual": 1,
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "expense-expense_heldout_purchase_no_receipt-expense-agent-v1",
+    "task_episode_id": "expense_heldout_purchase_no_receipt",
+    "acceptance_criteria": [
+      "receipt requirement overrides pre-approval",
+      "claim finalized once"
+    ],
+    "query": "Review claim C-H03 and persist the policy decision.",
+    "model": "expense-agent-v1",
+    "steps": [
+      {
+        "step": 1,
+        "thought": "Inspect the claim before applying policy.",
+        "action": {
+          "name": "inspect_expense_claim",
+          "arguments": "{\"claim_id\": \"C-H03\"}"
+        },
+        "observation": "{\"amount\": 980, \"category\": \"办公采购\", \"decision\": \"\", \"has_receipt\": false, \"pre_approved\": true, \"status\": \"pending\"}"
+      },
+      {
+        "step": 2,
+        "thought": "Apply the policy once with an idempotency key.",
+        "action": {
+          "name": "decide_expense_claim",
+          "arguments": "{\"claim_id\": \"C-H03\", \"idempotency_key\": \"expense_heldout_purchase_no_receipt:decision\"}"
+        },
+        "observation": "{\"claim_id\": \"C-H03\", \"decision\": \"reject_no_receipt\", \"status\": \"rejected\"}"
+      }
+    ],
+    "final_answer": "C-H03: reject_no_receipt"
+  },
+  "metadata": {
+    "domain": "expense",
+    "verifier": "business_state_subset"
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "meta": {
+    "protocol": "business held-out human labels for expense receipt vision episode; judge_score filled by live rebuild",
+    "scale": [1, 5],
+    "labeler": "r1-maintainer",
+    "label_date": "2026-09-22",
+    "episodes": ["expense_business_receipt_vision_ok"]
+  },
+  "items": [
+    {
+      "id": "expense_business_receipt_vision_ok-2-media_timing",
+      "episode_id": "expense_business_receipt_vision_ok",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5,
+      "judge_score": null
+    },
+    {
+      "id": "expense_business_receipt_vision_ok-2-media_arg_fidelity",
+      "episode_id": "expense_business_receipt_vision_ok",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5,
+      "judge_score": null
+    },
+    {
+      "id": "expense_business_receipt_vision_ok-2-artifact_attachment",
+      "episode_id": "expense_business_receipt_vision_ok",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5,
+      "judge_score": null
+    },
+    {
+      "id": "expense_business_receipt_vision_ok-2-media_safety",
+      "episode_id": "expense_business_receipt_vision_ok",
+      "step_index": 2,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": null
+    },
+    {
+      "id": "expense_business_receipt_vision_ok-4-media_timing",
+      "episode_id": "expense_business_receipt_vision_ok",
+      "step_index": 4,
+      "split": "held_out",
+      "dimension": "media_timing",
+      "human_score": 5,
+      "judge_score": null
+    },
+    {
+      "id": "expense_business_receipt_vision_ok-4-media_arg_fidelity",
+      "episode_id": "expense_business_receipt_vision_ok",
+      "step_index": 4,
+      "split": "held_out",
+      "dimension": "media_arg_fidelity",
+      "human_score": 5,
+      "judge_score": null
+    },
+    {
+      "id": "expense_business_receipt_vision_ok-4-artifact_attachment",
+      "episode_id": "expense_business_receipt_vision_ok",
+      "step_index": 4,
+      "split": "held_out",
+      "dimension": "artifact_attachment",
+      "human_score": 5,
+      "judge_score": null
+    },
+    {
+      "id": "expense_business_receipt_vision_ok-4-media_safety",
+      "episode_id": "expense_business_receipt_vision_ok",
+      "step_index": 4,
+      "split": "held_out",
+      "dimension": "media_safety",
+      "human_score": 5,
+      "judge_score": null
+    }
+  ]
+}

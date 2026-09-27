@@ -1,0 +1,12 @@
+{
+  "valid": true,
+  "sample_count": 4,
+  "modalities": [
+    "audio",
+    "image",
+    "text",
+    "video"
+  ],
+  "path": "D:\\agent_learning\\llm-eval-engine\\examples\\fixtures\\evidence_manifest\\multimodal.json",
+  "sha256": "a71068c6ce802a831e7b29066537e3a5ea0788e103e4bdcab68d331c1f644b91"
+}

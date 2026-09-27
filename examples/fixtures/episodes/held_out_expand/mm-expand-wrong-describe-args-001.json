@@ -1,0 +1,68 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "mm-expand-wrong-describe-args-001",
+  "task": "读图参数必须忠实",
+  "framework": "tool_agent_fixture",
+  "agent_version": "fixture-0.1",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "media process dimensions"
+  ],
+  "expected_state": {
+    "status": "answered"
+  },
+  "final_state": {
+    "status": "answered"
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "answered",
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "mm-expand-wrong-describe-args-001",
+    "query": "请读取 sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad 的登录页图并确认蓝色按钮",
+    "final_answer": "读图失败但仍声称有蓝色按钮。",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "应使用给定哈希读图。"
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "step_kind": "describe_image",
+        "action": {
+          "name": "describe_image",
+          "args": {
+            "path": "/tmp/wrong.png",
+            "sha256": "deadbeef",
+            "question": "是否有蓝色按钮？"
+          }
+        },
+        "observation": {
+          "summary": "file not found"
+        }
+      },
+      {
+        "step": 3,
+        "type": "final",
+        "content": "读图失败但仍声称有蓝色按钮。"
+      }
+    ]
+  },
+  "metadata": {
+    "evidence_role": "multimodal_step_process",
+    "require_vision": true,
+    "held_out_expand": true,
+    "expected_failure_types": [
+      "wrong_media_args",
+      "ungrounded_vision"
+    ]
+  }
+}

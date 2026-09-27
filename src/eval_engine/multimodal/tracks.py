@@ -1,4 +1,4 @@
-"""Dual multimodal tracks: generation vs understanding, up to offline_real."""
+"""Understanding-track offline_real wiring (generation selection removed)."""
 
 from __future__ import annotations
 
@@ -7,12 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from .image_benchmark import build_prompt_dataset, completion_gate as image_completion_gate
-from .synthetic_media import (
-    materialize_understanding_case,
-    render_generation_image,
-    render_generation_video,
-)
+from .synthetic_media import materialize_understanding_case
 from .understanding import (
     build_image_vqa_dataset,
     build_video_qa_dataset,
@@ -21,20 +16,7 @@ from .understanding import (
     score_understanding_answer,
     video_qa_dataset_manifest,
 )
-from .video_benchmark import (
-    build_video_prompt_dataset,
-    video_completion_gate,
-    video_dataset_manifest,
-)
 
-GENERATION_IMAGE_MODELS = (
-    {"id": "local/synth-image-a", "alias": "synth-image-a", "license": "CC0-1.0"},
-    {"id": "local/synth-image-b", "alias": "synth-image-b", "license": "CC0-1.0"},
-)
-GENERATION_VIDEO_MODELS = (
-    {"id": "local/synth-video-a", "alias": "synth-video-a", "license": "CC0-1.0"},
-    {"id": "local/synth-video-b", "alias": "synth-video-b", "license": "CC0-1.0"},
-)
 UNDERSTANDING_MODELS = (
     {"id": "local/sidecar-reader", "alias": "sidecar-reader"},
     {"id": "local/noisy-sidecar-reader", "alias": "noisy-sidecar-reader"},
@@ -77,52 +59,6 @@ def understanding_completion_gate(
     }
 
 
-def generation_track_gate(
-    *,
-    image_records: Sequence[Mapping[str, Any]],
-    video_records: Sequence[Mapping[str, Any]],
-    image_review: Mapping[str, Any] | None = None,
-    expected_image_cases: int | None = None,
-    expected_video_cases: int | None = None,
-) -> dict[str, Any]:
-    """Combine image/video generation gates into one generation-track verdict.
-
-    Track-level ``offline_real`` follows the portfolio rule already used for
-    multimodal generation: video offline_real plus image automatic evidence is
-    enough for the generation track. Image dual-blind preference remains a
-    separate claim.
-    """
-    image_kwargs = {}
-    video_kwargs = {}
-    if expected_image_cases is not None:
-        image_kwargs["expected_cases"] = expected_image_cases
-    if expected_video_cases is not None:
-        video_kwargs["expected_cases"] = expected_video_cases
-    image_gate = image_completion_gate(image_records, image_review, **image_kwargs)
-    video_gate = video_completion_gate(video_records, **video_kwargs)
-    image_auto_checks = {
-        key: value
-        for key, value in (image_gate.get("checks") or {}).items()
-        if key != "human_blind_review"
-    }
-    image_auto_passed = bool(image_auto_checks) and all(image_auto_checks.values())
-    track_passed = bool(video_gate.get("passed")) and image_auto_passed
-    return {
-        "track": "generation",
-        "passed": track_passed,
-        "evidence_level": "offline_real" if track_passed else "interface",
-        "image_gate": image_gate,
-        "image_auto_passed": image_auto_passed,
-        "image_preference_claim": image_gate.get("evidence_level"),
-        "video_gate": video_gate,
-        "claim_boundary": (
-            "Generation track offline_real requires real artifacts, automatic "
-            "metrics, safety and held-out for image+video. Image human preference "
-            "still needs dual/panel blind review to upgrade the preference claim."
-        ),
-    }
-
-
 def understanding_track_gate(
     *,
     image_records: Sequence[Mapping[str, Any]],
@@ -149,121 +85,6 @@ def understanding_track_gate(
             "video media, predictors, automatic accuracy and held-out."
         ),
     }
-
-
-def run_generation_track(output_dir: str | Path, *, smoke: bool = False) -> dict[str, Any]:
-    """Materialize synthetic generation artifacts and evaluate both modalities."""
-    root = Path(output_dir)
-    root.mkdir(parents=True, exist_ok=True)
-    image_cases = build_prompt_dataset()
-    video_cases = build_video_prompt_dataset()
-    if smoke:
-        # Keep held_out representation in the smoke slice.
-        image_cases = [
-            *image_cases[:1],
-            next(case for case in image_cases if case["split"] == "held_out"),
-        ]
-        video_cases = [
-            *video_cases[:1],
-            next(case for case in video_cases if case["split"] == "held_out"),
-        ]
-    image_records: list[dict[str, Any]] = []
-    for model in GENERATION_IMAGE_MODELS:
-        for index, case in enumerate(image_cases):
-            path = root / "generation" / "image" / model["alias"] / f"{case['id']}.png"
-            artifact = render_generation_image(
-                str(case["prompt"]), path, model_alias=model["alias"]
-            )
-            clip = 0.42 + (0.01 if model["alias"].endswith("a") else -0.01)
-            image_records.append(
-                {
-                    "case_id": case["id"],
-                    "split": case["split"],
-                    "model": model["id"],
-                    "prompt": case["prompt"],
-                    "artifacts": [
-                        {"uri": artifact["uri"], "sha256": artifact["sha256"]}
-                    ],
-                    "automatic_metrics": {
-                        "clip_cosine": clip,
-                        "model": "deterministic-synth-clip",
-                    },
-                    "safety_result": {
-                        "nsfw_probability": 0.01,
-                        "passed": True,
-                        "model": "deterministic-synth-safety",
-                    },
-                    "latency_ms": 12.0 + index,
-                    "seed": 20260914 + index,
-                }
-            )
-    video_records: list[dict[str, Any]] = []
-    for model in GENERATION_VIDEO_MODELS:
-        for index, case in enumerate(video_cases):
-            path = root / "generation" / "video" / model["alias"] / f"{case['id']}.mp4"
-            artifact = render_generation_video(
-                str(case["prompt"]), path, model_alias=model["alias"]
-            )
-            video_records.append(
-                {
-                    "case_id": case["id"],
-                    "split": case["split"],
-                    "model": model["id"],
-                    "prompt": case["prompt"],
-                    "artifacts": [
-                        {
-                            "uri": artifact["uri"],
-                            "sha256": artifact["sha256"],
-                            "frame_count": artifact["frame_count"],
-                            "duration_ms": artifact["duration_ms"],
-                        }
-                    ],
-                    "automatic_metrics": {
-                        "clip_frame_cosine_mean": 0.40
-                        + (0.02 if model["alias"].endswith("a") else 0.0),
-                        "temporal_consistency": 0.75,
-                    },
-                    "safety_result": {
-                        "nsfw_probability_max": 0.02,
-                        "passed": True,
-                    },
-                    "latency_ms": 30.0 + index,
-                    "seed": 20260914 + index,
-                }
-            )
-    track = generation_track_gate(
-        image_records=image_records,
-        video_records=video_records,
-        expected_image_cases=len(image_cases),
-        expected_video_cases=len(video_cases),
-    )
-    report = {
-        "schema_version": "multimodal-generation-track/v1",
-        "track": "generation",
-        "smoke": smoke,
-        "image_case_count": len(image_cases),
-        "video_dataset": (
-            video_dataset_manifest(video_cases)
-            if not smoke
-            else {"case_count": len(video_cases), "smoke": True}
-        ),
-        "image_records": len(image_records),
-        "video_records": len(video_records),
-        "models": {
-            "image": [dict(model) for model in GENERATION_IMAGE_MODELS],
-            "video": [dict(model) for model in GENERATION_VIDEO_MODELS],
-        },
-        "track_gate": track,
-        "claim_boundary": (
-            "Synthetic local renders produce real files and automatic metrics for "
-            "offline_real track wiring. Not a substitute for GPU diffusion "
-            "leaderboard claims."
-        ),
-    }
-    _write_json(root / "generation_track_report.json", report)
-    _write_json(root / "generation_image_records.json", image_records)
-    _write_json(root / "generation_video_records.json", video_records)
-    return report
 
 
 def run_understanding_track(
@@ -347,21 +168,24 @@ def run_understanding_track(
 def run_multimodal_offline_tracks(
     output_dir: str | Path,
     *,
-    tracks: Sequence[str] = ("generation", "understanding"),
+    tracks: Sequence[str] = ("understanding",),
     smoke: bool = False,
 ) -> dict[str, Any]:
-    """Run selected multimodal tracks and summarize evidence levels."""
+    """Run understanding offline_real track (generation selection removed)."""
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
     selected = [str(item) for item in tracks]
+    if any(name == "generation" for name in selected):
+        raise ValueError(
+            "generation track removed; use understanding only "
+            "(legacy_generation_bench deleted)"
+        )
     payload: dict[str, Any] = {
         "schema_version": "multimodal-offline-tracks/v1",
         "tracks_requested": selected,
         "smoke": smoke,
         "results": {},
     }
-    if "generation" in selected:
-        payload["results"]["generation"] = run_generation_track(root, smoke=smoke)
     if "understanding" in selected:
         payload["results"]["understanding"] = run_understanding_track(root, smoke=smoke)
     summary = {}
@@ -377,9 +201,9 @@ def run_multimodal_offline_tracks(
         for item in summary.values()
     )
     payload["claim_boundary"] = (
-        "Track offline_real certifies local artifact + metric wiring for generation "
-        "and understanding. GPU diffusion and frontier VLM leaderboard claims remain "
-        "separate evidence."
+        "Track offline_real certifies local artifact + metric wiring for "
+        "understanding. Generation-side model selection / image v2 offline_real "
+        "has been removed from this repository."
     )
     _write_json(root / "multimodal_offline_tracks_report.json", payload)
     return payload

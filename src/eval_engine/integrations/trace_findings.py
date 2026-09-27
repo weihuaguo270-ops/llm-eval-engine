@@ -22,6 +22,10 @@ _TRACE_TO_TAXONOMY: dict[str, str] = {
     "context_overflow": "other",
     "duplicate": "inefficient_loop",
     "no_answer": "other",
+    "unsafe_media": "unsafe_media",
+    "unnecessary_generation": "unnecessary_generation",
+    "wrong_media_args": "wrong_media_args",
+    "ungrounded_vision": "ungrounded_vision",
     "unknown": "other",
 }
 
@@ -136,6 +140,41 @@ def normalize_analysis_dict(
     )
 
 
+def adapt_media_rule_findings(analysis: Mapping[str, Any]) -> list[CheckFinding]:
+    """Map trace-debugger analysis rows for media rules.
+
+    This repo does not score those rules. Findings stay attached to the step
+    and do not change Process Reward. trace-debugger does not yet emit the
+    media rule ids, so callers pass analysis in its existing shape.
+    """
+    report = normalize_analysis_dict(analysis)
+    media = {
+        "unnecessary_generation",
+        "wrong_media_args",
+        "ungrounded_vision",
+        "unsafe_media",
+    }
+    adapted: list[CheckFinding] = []
+    for finding in report.findings:
+        raw = finding.raw_failure_type or finding.failure_type
+        if raw not in media and finding.failure_type not in media:
+            continue
+        adapted.append(
+            CheckFinding(
+                code=finding.code,
+                failure_type=finding.failure_type if finding.failure_type in media else raw,
+                message=finding.message,
+                step_index=finding.step_index,
+                severity="warn",
+                score=finding.score,
+                source="trace_debugger",
+                tool_name=finding.tool_name,
+                raw_failure_type=raw,
+            )
+        )
+    return adapted
+
+
 def analyze_trajectory_findings(
     trajectory: Mapping[str, Any],
     *,
@@ -158,8 +197,40 @@ def analyze_trajectory_findings(
             "pip install the sibling package or pass analysis=..."
         ) from exc
 
-    payload = analysis_to_dict(analyze_trajectory_dict(dict(trajectory)))
+    payload = analysis_to_dict(
+        analyze_trajectory_dict(_trajectory_for_trace_debugger(trajectory))
+    )
     return normalize_analysis_dict(payload, zero_based_steps=zero_based_steps)
+
+
+def _trajectory_for_trace_debugger(trajectory: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize step observations to strings for trace-debugger Format B.
+
+    Episode steps may use observation={summary, artifact_ids} for multimodal
+    process evidence; the sibling parser expects a string.
+    """
+    data = dict(trajectory)
+    steps = data.get("steps")
+    if not isinstance(steps, list):
+        return data
+    normalized: list[Any] = []
+    for step in steps:
+        if not isinstance(step, Mapping):
+            normalized.append(step)
+            continue
+        step_copy = dict(step)
+        obs = step_copy.get("observation")
+        if isinstance(obs, Mapping):
+            summary = str(
+                obs.get("summary") or obs.get("text") or obs.get("content") or ""
+            )
+            ids = obs.get("artifact_ids") or obs.get("artifacts") or []
+            if ids:
+                summary = f"{summary} artifacts={ids}".strip()
+            step_copy["observation"] = summary
+        normalized.append(step_copy)
+    data["steps"] = normalized
+    return data
 
 
 def snapshot_episode_failures(

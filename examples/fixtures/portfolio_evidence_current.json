@@ -65,16 +65,8 @@
       "level": "offline_real"
     },
     "multimodal_generation_evaluation": {
-      "level": "offline_real",
-      "artifacts": [
-        "llm-eval-engine/examples/fixtures/real_video_benchmark_20260813.json",
-        "llm-eval-engine/docs/REAL_VIDEO_BENCHMARK.md",
-        "llm-eval-engine/examples/run_real_video_benchmark.py",
-        "llm-eval-engine/docs/REAL_IMAGE_BENCHMARK.md",
-        "llm-eval-engine/examples/run_multimodal_offline_tracks.py",
-        "llm-eval-engine/examples/fixtures/multimodal_offline_tracks_20260914.json"
-      ],
-      "gap": "Video passed the 30-case, two-model offline gate. Image generation and automatic scoring are complete, but its human-preference claim remains blocked until two independent raters finish the frozen 100-pair review."
+      "level": "missing",
+      "gap": "Generation-side model selection (image/video horizontal bench, CLIP pairwise, image v2 offline_real) was removed from llm-eval-engine. Use multimodal_understanding_evaluation + trajectory process release-audit instead."
     },
     "safety_evaluation": {
       "level": "offline_real",
@@ -85,12 +77,8 @@
       ]
     },
     "leaderboard_statistics": {
-      "level": "offline_real",
-      "artifacts": [
-        "llm-eval-engine/examples/fixtures/real_multimodal_leaderboards_20260813.json",
-        "llm-eval-engine/examples/run_real_multimodal_leaderboards.py",
-        "llm-eval-engine/docs/REAL_SAFETY_AND_LEADERBOARDS.md"
-      ]
+      "level": "missing",
+      "gap": "Paired generation leaderboards removed with legacy_generation_bench."
     },
     "online_evaluation": {
       "level": "missing",

@@ -29,6 +29,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+# Windows CI may run without PYTHONIOENCODING; keep stdout/stderr UTF-8 capable.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
 from eval_engine.core.multimodal_process_judge import (  # noqa: E402
     make_judge_executor_call,
     make_live_dimension_judge,

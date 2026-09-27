@@ -380,8 +380,8 @@ def _calibration_report(rows: Optional[Sequence[Mapping[str, Any]]]) -> Optional
         "gate_split": "held_out",
         "kappa_unit": "dimension_cell",
         "kappa_unit_note": (
-            "Cohen's κ over held-out dimension cells "
-            "(episode × media/final step × dimension); "
+            "Cohen's kappa over held-out dimension cells "
+            "(episode x media/final step x dimension); "
             "not trajectory-aggregated process scores"
         ),
         "dimensions": list(DIMENSIONS),
@@ -394,7 +394,7 @@ def _calibration_report(rows: Optional[Sequence[Mapping[str, Any]]]) -> Optional
         "notes": (
             "Multimodal process held_out uses agreement_table + bootstrap CI "
             "(same helpers as run_calibration.py). Cite cell n and episode_count "
-            "separately; do not synthesize a total with text Judge κ."
+            "separately; do not synthesize a total with text Judge kappa."
         ),
     }
 

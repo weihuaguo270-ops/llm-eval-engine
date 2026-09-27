@@ -1,0 +1,136 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "expense_business_receipt_vision_ok",
+  "task": "审核带收据图片的报销单：读图确认收据后落库审批决策",
+  "framework": "react-agent-expense",
+  "agent_version": "expense-agent-v1+vision",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "需要收据视觉证据时调用 describe_image",
+    "artifacts 保留真实 uri 与 sha256",
+    "终态引用收据 sha256 并给出审批决策"
+  ],
+  "expected_state": {
+    "claim": {
+      "status": "approved",
+      "decision": "approve_manager"
+    },
+    "audit": {
+      "decision_events": 1
+    }
+  },
+  "final_state": {
+    "claim": {
+      "category": "餐饮",
+      "amount": 200,
+      "has_receipt": true,
+      "pre_approved": false,
+      "status": "approved",
+      "decision": "approve_manager",
+      "receipt_sha256": "0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+    },
+    "audit": {
+      "decision_events": 1
+    }
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "path": "$.claim.status",
+        "expected": "approved",
+        "actual": "approved",
+        "passed": true
+      },
+      {
+        "path": "$.claim.decision",
+        "expected": "approve_manager",
+        "actual": "approve_manager",
+        "passed": true
+      },
+      {
+        "path": "$.audit.decision_events",
+        "expected": 1,
+        "actual": 1,
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "expense-business-receipt-vision-ok-v1",
+    "task_episode_id": "expense_business_receipt_vision_ok",
+    "query": "Review claim C-H01 with receipt image examples/business/artifacts/receipt_claim_h01.png and persist the policy decision. Cite the receipt sha256 in the answer.",
+    "model": "expense-agent-v1+vision",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "Claim has a receipt image; inspect ledger then read the receipt before deciding."
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "action": {
+          "name": "inspect_expense_claim",
+          "args": {
+            "claim_id": "C-H01"
+          }
+        },
+        "observation": {
+          "summary": "{\"amount\": 200, \"category\": \"餐饮\", \"has_receipt\": true, \"receipt_uri\": \"examples/business/artifacts/receipt_claim_h01.png\", \"status\": \"pending\"}"
+        }
+      },
+      {
+        "step": 3,
+        "type": "action",
+        "step_kind": "describe_image",
+        "action": {
+          "name": "describe_image",
+          "args": {
+            "path": "examples/business/artifacts/receipt_claim_h01.png",
+            "sha256": "0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad",
+            "question": "是否为餐饮收据且金额约 200？"
+          }
+        },
+        "artifacts": [
+          {
+            "uri": "examples/business/artifacts/receipt_claim_h01.png",
+            "sha256": "0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+          }
+        ],
+        "observation": {
+          "summary": "收据可读，餐饮类，金额约 200。sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+        }
+      },
+      {
+        "step": 4,
+        "type": "action",
+        "action": {
+          "name": "decide_expense_claim",
+          "args": {
+            "claim_id": "C-H01",
+            "idempotency_key": "expense_business_receipt_vision_ok:decision",
+            "receipt_sha256": "0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+          }
+        },
+        "observation": {
+          "summary": "{\"claim_id\": \"C-H01\", \"decision\": \"approve_manager\", \"status\": \"approved\"}"
+        }
+      },
+      {
+        "step": 5,
+        "type": "final",
+        "content": "C-H01: approve_manager。收据已核验 sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+      }
+    ],
+    "final_answer": "C-H01: approve_manager。收据已核验 sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+  },
+  "metadata": {
+    "domain": "expense",
+    "verifier": "business_state_subset",
+    "evidence_role": "multimodal_step_process",
+    "source": "business_non_fixture",
+    "require_vision": true,
+    "artifact_note": "receipt_claim_h01.png is a real on-disk artifact (sha256 bound); not under fixtures/episodes"
+  }
+}

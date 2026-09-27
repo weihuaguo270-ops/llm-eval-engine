@@ -1,0 +1,63 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "expense_business_wrong_generate_args",
+  "task": "若必须出图，prompt 不得为空",
+  "framework": "react-agent-expense",
+  "agent_version": "expense-agent-v1+vision",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "generate_image prompt 不得为空"
+  ],
+  "expected_state": {
+    "status": "answered"
+  },
+  "final_state": {
+    "status": "answered",
+    "policy": {"answered": true}
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {"path": "$.status", "expected": "answered", "actual": "answered", "passed": true}
+    ]
+  },
+  "trajectory": {
+    "session_id": "expense-business-wrong-generate-args-v1",
+    "query": "请生成一张报销流程示意图并在答复中给出 sha256。",
+    "model": "expense-agent-v1+vision",
+    "steps": [
+      {"step": 1, "type": "thought", "thought": "出图需要有效 prompt。"},
+      {
+        "step": 2,
+        "type": "action",
+        "step_kind": "generate_image",
+        "action": {
+          "name": "generate_image",
+          "args": {"prompt": ""}
+        },
+        "artifacts": [
+          {
+            "uri": "examples/business/artifacts/receipt_claim_h01.png",
+            "sha256": "0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+          }
+        ],
+        "observation": {
+          "summary": "generated sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+        }
+      },
+      {
+        "step": 3,
+        "type": "final",
+        "content": "流程图已生成。sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+      }
+    ],
+    "final_answer": "流程图已生成。sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+  },
+  "metadata": {
+    "domain": "expense",
+    "evidence_role": "multimodal_step_process",
+    "source": "business_non_fixture",
+    "require_vision": true,
+    "expected_failure_types": ["wrong_media_args"]
+  }
+}

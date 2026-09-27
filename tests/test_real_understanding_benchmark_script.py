@@ -3,6 +3,12 @@
 import importlib.util
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("PIL")
+pytest.importorskip("imageio")
+pytest.importorskip("numpy")
+
 from eval_engine.gates.evidence_bundle import evaluate_evidence_bundle
 from eval_engine.multimodal import build_understanding_predictor
 

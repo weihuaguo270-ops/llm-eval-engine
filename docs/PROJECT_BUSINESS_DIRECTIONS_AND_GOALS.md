@@ -1,34 +1,30 @@
 # 项目交付计划
 
-> 2026-09-15 状态更新：下文 M1-M4 保留为最初计划记录。图像（含分块人工面板）、视频（CogVideoX-2B
-> INT8+offload × ModelScope）、理解侧 DeepSeek 视觉与安全/榜单均已达到 `offline_real`。线上可观测、
-> Shadow/A/B 和生产事故回流必须等待真实业务流量，不能用本地 fixture 代替。工程 Agent 已另在公开
-> GitHub 合成任务沙箱完成 Shadow、受控 PR 和回滚，证据等级为 `external_real_sandbox`，不等同生产。
+> **2026-09-22：** 主定位为 Agent **过程评测与发布门禁**。生成侧选型（文生图/文生视频横向榜、图像 v2 `offline_real`、CLIP 成对选型）已从仓库**删除**，不再作为验收或引用项。P0 为轨迹过程证据 + 单一 `release-audit`。  
+> 线上可观测、Shadow/A/B 与事故回流仍须真实业务流量。工程 Agent 沙箱证据为 `external_real_sandbox`，不等同生产。
 
 ## 当前阶段验收
 
 | 交付 | 状态 | 当前证据 |
 |---|---|---|
 | GitHub 真实只读任务 | 已完成 | 50 条，dev/golden/held-out=15/20/15，认证复测 50/50 通过 |
-| 图像自动评测 | 已完成 | 100 Prompt × 2 模型，200 张图片，含 CLIP、安全、延迟和 bootstrap |
-| 图像分块盲评面板 | 已完成 | v2：`offline_real`；人工偏好 leader=SD v1.5（win rate 0.6937）；local-full 盲评已取消 |
-| 视频自动评测 | 已完成 | 30×2=60 MP4；CogVideoX-2b（INT8）+ ModelScope；门禁 `offline_real`（2026-09-15） |
 | 理解侧 VQA / Video QA | 已完成 | DeepSeek-V4.1-Flash 视觉；held-out + release evidence `offline_real` |
+| 多模态过程 release-audit | 已完成 | held-out live κ 分栏（基线 / expand / 业务）；见 STATUS |
 | 安全策略决策 | 已完成 | 20 条攻击、10 条良性；真实模型调用；危险工具未执行 |
-| 多模态版本榜单 | 已完成 | 成对 bootstrap 95% CI、held-out、P95 延迟和安全通过率（历史 Wan 行见安全/榜单文档备注） |
+| 生成侧选型 / 图像 v2 / 视频选型流水线 | **已删除** | 不再保留横向对比或自动门禁 `offline_real`；轨迹内 `generate_video`/`describe_video` 仍走过程评测 |
 | 工程 Agent 受控交付 | 沙箱阶段已完成 | 24 条 Shadow；4 条 Draft PR；选定发布集 pass，全量实验因拒绝案例 hold |
 | 线上评测/Shadow/事故回流 | 等待外部资源 | 需要真实流量、负责人、告警、回滚或事故记录 |
 
-当前简历证据摘要见 [`RESUME_EVIDENCE_20260813.md`](RESUME_EVIDENCE_20260813.md)（历史快照；多模态以本表与专项文档为准）。
+当前简历证据摘要见 [`RESUME_EVIDENCE_20260813.md`](RESUME_EVIDENCE_20260813.md)（历史快照；生成选型相关条目作废）。
 
 | 项目字段 | 当前值 |
 |---|---|
 | DRI | 郭伟华 |
 | 外部协作负责人 | 未指定 |
-| 最近更新 | 2026-09-15 |
+| 最近更新 | 2026-09-22 |
 | 下次评审 | 真实业务接入或线上 Shadow 证据就绪后 |
-| 当前阶段 | 离线多模态双轨（生成+理解）与外部工程沙箱均已有 `offline_real` / sandbox 证据；生产接入未开始 |
-| 当前主线 | 争取真实业务任务、人工基线和线上责任人；可选补齐 CogVideoX-5B / 更新榜单聚合 |
+| 当前阶段 | 过程评测主线；生成选型已删除；生产接入未开始 |
+| 当前主线 | 步骤级评测 → 失败归因 → 跨 Agent 发布 → 单一 release-audit；争取真实业务任务与线上责任人 |
 
 岗位覆盖和简历前证据门槛统一维护在
 [`ROLE_COVERAGE_ROADMAP.md`](ROLE_COVERAGE_ROADMAP.md)。后续里程碑完成不再只按功能验收，

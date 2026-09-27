@@ -1,5 +1,18 @@
 # LLM Eval Engine
 
+## 项目定位
+
+面向 LLM/Agent 发布前的**过程评测与发布门禁**原型：步骤分、Eval Loop、失败归因、Judge 校准、跨 Agent 发布判断。不负责 Agent 运行时，**也不是**生成模型选型台。
+
+## 对外口径
+
+可以表述为离线过程评测与发布治理工具；不能表述为线上 SLA、生产监控或训练型 PRM。  
+图像/视频「多模型生成横向榜」与视频选型流水线已从仓库**删除**，不是核心能力。当前状态与 P0 见 [`docs/STATUS.md`](docs/STATUS.md)、[`docs/ROADMAP.md`](docs/ROADMAP.md)。
+
+## 结构入口
+
+核心代码在 `src/eval_engine/`，可复现实验在 `examples/`，回归测试在 `tests/`，设计与证据在 `docs/`。
+
 [![CI](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml/badge.svg)](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步打分（Process Reward），低分步可触发修正并重跑（Eval Loop）；另含固定 Benchmark、失败归因与人机校准。
@@ -15,12 +28,11 @@ Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步�
 | 评测设计 | 固定 Benchmark、动态 rubric、步骤级 Process Reward | 区分最终结果失败与过程失败 |
 | 数据治理 | 数据集指纹、切分泄漏检查、双人标注与仲裁 | 保证版本可追溯，避免测试集污染 |
 | 评测器治理 | 人机一致性、κ/MAE/MSE/RMSE、held-out 校准 | 判断 Judge 能否进入门禁 |
-| 风险验收 | 安全对抗集、多模态 Artifact 指标适配 | 分开核验质量、安全和内容产物 |
+| 风险验收 | 安全对抗集、**轨迹内 Artifact 过程验收** | 核验读图/出图步骤质量与安全；非多模态选型榜 |
 | 发布治理 | baseline、业务切片漂移、质量/时延/成本硬门禁 | 输出 pass/review/hold 依据 |
 
-**当前阶段（2026-09-15）：** 文本/工具、图像（含分块盲评面板）、视频（CogVideoX-2b INT8 × ModelScope）、
-理解侧 DeepSeek 视觉与安全评测均有 `offline_real` 离线证据，可用于离线发布决策。真实业务负责人签字、
-Shadow 流量、在线告警和回滚演练尚未接入，不能将离线结果表述为线上 SLA。
+**当前阶段（2026-09-22）：** 主线为过程评测发布审计（步骤级 → 失败归因 → 跨 Agent 发布 → 单一 `release-audit`）。  
+多模态只评轨迹内 `generate_*` / `describe_*`（含视频工具步）；图像/视频选型横向对比与图像 v2 `offline_real` **已删除**。仍保留理解侧 VQA 与安全对抗。真实业务负责人签字、Shadow、在线告警和回滚演练尚未接入，不能将离线结果表述为线上 SLA。
 
 ## 范围
 
@@ -30,7 +42,7 @@ Shadow 流量、在线告警和回滚演练尚未接入，不能将离线结果�
 | 按上下文生成 rubric（`dynamic_rubric.py`） | 替代 react-agent 的 capability 主评测集 |
 | Eval Loop：低分 → 修正 → 重跑（`eval_loop.py`） | Agent 运行时本身 |
 | 人机校准：κ、MAE、MSE/RMSE、混淆矩阵 | 把 offline κ 当线上 SLA |
-| 固定 Benchmark 跑批 + 多模型对比 | 端到端生产级 Agent 平台 |
+| 固定 Benchmark 跑批 + Agent 发布对比 | 端到端生产级 Agent 平台；生成模型选型台 |
 | 失败类型 taxonomy + 分布统计 | 只报总分不做归因 |
 | 回归门禁 + shipped baseline | 把 offline 对比当线上 SLA |
 
@@ -252,6 +264,26 @@ python examples/audit_portfolio_readiness.py examples/fixtures/portfolio_evidenc
 [`docs/ROLE_COVERAGE_ROADMAP.md`](docs/ROLE_COVERAGE_ROADMAP.md)。
 审计按广义岗位的完整核心职责判定；接口、fixture 和未完成的外部运行不会被平均分掩盖。
 
+轨迹发布审计（含多模态步骤）从 episode 直接出结论，不读取生成榜：
+
+~~~bash
+python examples/run_release_audit.py examples/fixtures/episodes/multimodal_step_ok.json \
+  --calibration examples/fixtures/calibration/multimodal_dimension_held_out.json
+python examples/run_release_audit.py examples/fixtures/episodes/multimodal_step_bad.json \
+  --calibration examples/fixtures/calibration/multimodal_dimension_held_out.json
+# 真实 Judge（需 API Key）：媒体步重打四维，并用本轮分重写 held-out judge_score
+python examples/run_release_audit.py examples/fixtures/episodes/multimodal_step_ok.json \
+  --live --calibration examples/fixtures/calibration/multimodal_dimension_held_out.json \
+  --rebuild-calibration reports/multimodal_held_out_live.json
+~~~
+
+默认读 fixture `judge_scores`；`--live` 走 `JudgeExecutor`。好轨迹为 `pass`（退出码 0），坏轨迹为 `review`（退出码 1）。
+`--generation-appendix` 只写入报告附录。签字 / shadow / 回滚仍属 P1。
+
+**可引用（钉死，2026-09-22）：** held-out live κ≈**0.70**（n=40，deepseek-chat）；门禁 `process_reward_media_steps_min`；
+产物 `reports/release_audit_live_four.json` + `reports/multimodal_held_out_live.json`。
+**κ≈0.22 不当 SLA。** 扩样见 [`docs/HELD_OUT_EXPAND.md`](docs/HELD_OUT_EXPAND.md)、口径见 [`docs/CITATION_MULTIMODAL_PROCESS.md`](docs/CITATION_MULTIMODAL_PROCESS.md)。
+
 跨仓业务发布演练已提供统一入口：
 
 ~~~bash
@@ -262,14 +294,12 @@ python examples/run_expense_release_pipeline.py --out reports/expense-release/la
 人工抽检、轨迹失败、性能证据和反馈排队。运行方式、门禁及证据边界见
 [`docs/EXPENSE_AGENT_RELEASE.md`](docs/EXPENSE_AGENT_RELEASE.md)。
 
-上述闭环示例使用固定 fixture 验证离线编排，本身不构成真实图片/视频或线上样本证据。
-真实双模型图像生成与评测入口见 [`docs/REAL_IMAGE_BENCHMARK.md`](docs/REAL_IMAGE_BENCHMARK.md)；
-真实双模型视频生成与评测入口见 [`docs/REAL_VIDEO_BENCHMARK.md`](docs/REAL_VIDEO_BENCHMARK.md)。
-真实模型安全红队评测与版本化多模态榜单见 [`docs/REAL_SAFETY_AND_LEADERBOARDS.md`](docs/REAL_SAFETY_AND_LEADERBOARDS.md)。
-当前已完成 200 张图像生成与自动指标及 v2 分块人工面板（`offline_real`）、60 条视频生成与自动门禁
-（CogVideoX-2b × ModelScope，`offline_real`）。跨 Agent
-发布判断已经可由 CLI 调用，但当前 GitHub Actions 尚未将其配置为目标仓库的强制发布阻断。
-实现边界见 [docs/BUSINESS_CLOSED_LOOP.md](docs/BUSINESS_CLOSED_LOOP.md)，后续里程碑见
+上述闭环示例使用固定 fixture 验证离线编排，本身不构成线上样本证据。
+主线交付与 P0 见 [`docs/STATUS.md`](docs/STATUS.md)、[`docs/ROADMAP.md`](docs/ROADMAP.md)。
+生成侧选型（图像/视频横向榜、图像 v2 `offline_real`）与**视频选型流水线**已从仓库删除；安全评测见
+[`docs/REAL_SAFETY_AND_LEADERBOARDS.md`](docs/REAL_SAFETY_AND_LEADERBOARDS.md)。
+跨 Agent 发布判断已可由 CLI 调用，但 GitHub Actions 尚未配置为目标仓库强制发布阻断。
+实现边界见 [docs/BUSINESS_CLOSED_LOOP.md](docs/BUSINESS_CLOSED_LOOP.md)，业务计划见
 [docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md](docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md)。
 
 ## License / 贡献 / 安全

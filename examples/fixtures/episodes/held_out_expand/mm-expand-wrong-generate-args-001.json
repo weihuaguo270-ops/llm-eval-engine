@@ -1,0 +1,71 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "mm-expand-wrong-generate-args-001",
+  "task": "出图参数必须忠实",
+  "framework": "tool_agent_fixture",
+  "agent_version": "fixture-0.1",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "media process dimensions"
+  ],
+  "expected_state": {
+    "status": "answered"
+  },
+  "final_state": {
+    "status": "answered"
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "answered",
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "mm-expand-wrong-generate-args-001",
+    "query": "请生成登录页蓝色按钮示意图",
+    "final_answer": "已生成。sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "需要出图。"
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "step_kind": "generate_image",
+        "action": {
+          "name": "generate_image",
+          "args": {
+            "prompt": ""
+          }
+        },
+        "artifacts": [
+          {
+            "uri": "examples/fixtures/artifacts/login_blue_button.png",
+            "sha256": "0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+          }
+        ],
+        "observation": {
+          "summary": "generated sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+        }
+      },
+      {
+        "step": 3,
+        "type": "final",
+        "content": "已生成。sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+      }
+    ]
+  },
+  "metadata": {
+    "evidence_role": "multimodal_step_process",
+    "require_vision": true,
+    "held_out_expand": true,
+    "expected_failure_types": [
+      "wrong_media_args"
+    ]
+  }
+}

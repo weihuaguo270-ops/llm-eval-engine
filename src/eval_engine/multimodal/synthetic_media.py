@@ -159,27 +159,3 @@ def materialize_understanding_case(
         "media_status": "materialized",
         "artifact": artifact,
     }
-
-
-def render_generation_image(
-    prompt: str, path: str | Path, *, model_alias: str
-) -> dict[str, Any]:
-    """Render a deterministic stand-in image for generation-track gates."""
-    return write_labeled_png(
-        path,
-        title=prompt,
-        answer=model_alias,
-        description=f"synthetic generation render for {model_alias}",
-    )
-
-
-def render_generation_video(
-    prompt: str, path: str | Path, *, model_alias: str
-) -> dict[str, Any]:
-    """Render a deterministic stand-in video for generation-track gates."""
-    return write_labeled_mp4(
-        path,
-        title=prompt,
-        answer=model_alias,
-        description=f"synthetic generation render for {model_alias}",
-    )

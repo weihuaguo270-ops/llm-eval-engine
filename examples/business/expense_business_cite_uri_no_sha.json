@@ -1,0 +1,100 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "expense_business_cite_uri_no_sha",
+  "task": "读收据后终态必须引用 sha256，仅 uri 不够",
+  "framework": "react-agent-expense",
+  "agent_version": "expense-agent-v1+vision",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "终态必须引用收据 sha256，不能只写 uri"
+  ],
+  "expected_state": {
+    "claim": {"status": "approved", "decision": "approve_manager"},
+    "audit": {"decision_events": 1}
+  },
+  "final_state": {
+    "claim": {
+      "category": "餐饮",
+      "amount": 200,
+      "has_receipt": true,
+      "status": "approved",
+      "decision": "approve_manager"
+    },
+    "audit": {"decision_events": 1}
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {"path": "$.claim.status", "expected": "approved", "actual": "approved", "passed": true},
+      {"path": "$.claim.decision", "expected": "approve_manager", "actual": "approve_manager", "passed": true},
+      {"path": "$.audit.decision_events", "expected": 1, "actual": 1, "passed": true}
+    ]
+  },
+  "trajectory": {
+    "session_id": "expense-business-cite-uri-no-sha-v1",
+    "query": "Review claim C-H04 with receipt examples/business/artifacts/receipt_claim_h01.png sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad. Read the receipt then approve. Cite sha256.",
+    "model": "expense-agent-v1+vision",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "读收据后应在终态写哈希。"
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "action": {
+          "name": "inspect_expense_claim",
+          "args": {"claim_id": "C-H04"}
+        },
+        "observation": {
+          "summary": "claim C-H04 amount=200 has_receipt=true"
+        }
+      },
+      {
+        "step": 3,
+        "type": "action",
+        "step_kind": "describe_image",
+        "action": {
+          "name": "describe_image",
+          "args": {
+            "path": "examples/business/artifacts/receipt_claim_h01.png",
+            "sha256": "0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad",
+            "question": "amount and merchant?"
+          }
+        },
+        "artifacts": [
+          {
+            "uri": "examples/business/artifacts/receipt_claim_h01.png",
+            "sha256": "0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+          }
+        ],
+        "observation": {
+          "summary": "receipt amount 200 yuan merchant Cafe sha256=0b457c939a634c18a4b31332846b0f6fd96237b3c346fd36fb7f2c97ac96a9ad"
+        }
+      },
+      {
+        "step": 4,
+        "type": "action",
+        "action": {
+          "name": "approve_expense_claim",
+          "args": {"claim_id": "C-H04", "decision": "approve_manager"}
+        },
+        "observation": {"summary": "approved"}
+      },
+      {
+        "step": 5,
+        "type": "final",
+        "content": "已批准。收据见 examples/business/artifacts/receipt_claim_h01.png（未写 sha256）。"
+      }
+    ],
+    "final_answer": "已批准。收据见 examples/business/artifacts/receipt_claim_h01.png（未写 sha256）。"
+  },
+  "metadata": {
+    "domain": "expense",
+    "evidence_role": "multimodal_step_process",
+    "source": "business_non_fixture",
+    "require_vision": true,
+    "expected_failure_types": ["ungrounded_vision"]
+  }
+}

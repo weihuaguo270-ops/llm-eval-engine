@@ -1,0 +1,90 @@
+{
+  "schema_version": "evaluation-episode/v1",
+  "episode_id": "mm-expand-ok-video-generate-describe-001",
+  "task": "出视频→读视频→终态引用",
+  "framework": "tool_agent_fixture",
+  "agent_version": "fixture-0.1",
+  "split": "held_out",
+  "acceptance_criteria": [
+    "media process dimensions"
+  ],
+  "expected_state": {
+    "status": "answered"
+  },
+  "final_state": {
+    "status": "answered"
+  },
+  "state_verification": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "answered",
+        "passed": true
+      }
+    ]
+  },
+  "trajectory": {
+    "session_id": "mm-expand-ok-video-generate-describe-001",
+    "query": "请生成登录按钮演示视频，读片确认后引用 sha256",
+    "final_answer": "读片确认有蓝色按钮。sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73",
+    "steps": [
+      {
+        "step": 1,
+        "type": "thought",
+        "thought": "出片后读片再引用。"
+      },
+      {
+        "step": 2,
+        "type": "action",
+        "step_kind": "generate_video",
+        "action": {
+          "name": "generate_video",
+          "args": {
+            "prompt": "login button demo"
+          }
+        },
+        "artifacts": [
+          {
+            "uri": "examples/fixtures/artifacts/login_button_clip.mp4",
+            "sha256": "742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+          }
+        ],
+        "observation": {
+          "summary": "generated sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+        }
+      },
+      {
+        "step": 3,
+        "type": "action",
+        "step_kind": "describe_video",
+        "action": {
+          "name": "describe_video",
+          "args": {
+            "path": "examples/fixtures/artifacts/login_button_clip.mp4",
+            "sha256": "742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73",
+            "question": "有蓝色按钮吗？"
+          }
+        },
+        "artifacts": [
+          {
+            "uri": "examples/fixtures/artifacts/login_button_clip.mp4",
+            "sha256": "742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+          }
+        ],
+        "observation": {
+          "summary": "有蓝色按钮 sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+        }
+      },
+      {
+        "step": 4,
+        "type": "final",
+        "content": "读片确认有蓝色按钮。sha256=742bb37209598fde51cd6c548ac5fcdfeae75b6bf545937b0a7bb55ef8599a73"
+      }
+    ]
+  },
+  "metadata": {
+    "evidence_role": "multimodal_step_process",
+    "require_vision": true,
+    "held_out_expand": true
+  }
+}

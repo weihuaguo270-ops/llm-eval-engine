@@ -1,9 +1,10 @@
-"""Run multimodal offline_real tracks: generation and/or understanding.
+"""Run multimodal understanding offline_real track.
+
+Generation-side model selection has been removed from this repository.
 
 Examples:
   PYTHONPATH=src python examples/run_multimodal_offline_tracks.py --out reports/mm-tracks
-  PYTHONPATH=src python examples/run_multimodal_offline_tracks.py --track generation --smoke
-  PYTHONPATH=src python examples/run_multimodal_offline_tracks.py --track understanding
+  PYTHONPATH=src python examples/run_multimodal_offline_tracks.py --smoke
 """
 
 from __future__ import annotations
@@ -27,20 +28,13 @@ def main() -> int:
         default=Path("reports/multimodal-offline-tracks"),
     )
     parser.add_argument(
-        "--track",
-        action="append",
-        choices=("generation", "understanding"),
-        help="Repeatable. Default: both tracks.",
-    )
-    parser.add_argument(
         "--smoke",
         action="store_true",
         help="Tiny held-out-preserving slice for CI wiring checks.",
     )
     args = parser.parse_args()
-    tracks = tuple(args.track) if args.track else ("generation", "understanding")
     report = run_multimodal_offline_tracks(
-        args.out, tracks=tracks, smoke=args.smoke
+        args.out, tracks=("understanding",), smoke=args.smoke
     )
     print(
         json.dumps(

@@ -236,16 +236,38 @@ def parse_trajectory(trajectory: dict) -> StepsDAG:
             tool_name = None
             tool_args = None
 
-        # 内容提取
+        # 内容提取（observation 可为 dict：摘要 + artifact id）
+        raw_observation = raw_step.get("observation")
+        if isinstance(raw_observation, dict):
+            observation_text = str(
+                raw_observation.get("summary")
+                or raw_observation.get("text")
+                or raw_observation.get("content")
+                or ""
+            )
+            obs_artifact_ids = raw_observation.get("artifact_ids") or raw_observation.get(
+                "artifacts"
+            )
+        elif raw_observation is None:
+            observation_text = str(raw_step.get("tool_result", "") or "")
+            obs_artifact_ids = None
+        else:
+            observation_text = (
+                raw_observation if isinstance(raw_observation, str) else str(raw_observation)
+            )
+            obs_artifact_ids = None
+
         content = (
             raw_step.get("content")
-            or raw_step.get("observation")
+            or observation_text
             or raw_step.get("thought", "")
             or str(action_data)
         )
 
-        # 观察结果
-        observation = raw_step.get("observation") or raw_step.get("tool_result", "")
+        # 步骤附件：ArtifactRef 列表（uri/sha256/media_type）；不下沉整图进轨迹
+        artifacts = raw_step.get("artifacts")
+        if not isinstance(artifacts, list):
+            artifacts = []
 
         node = StepNode(
             step_index=step_index,
@@ -253,12 +275,16 @@ def parse_trajectory(trajectory: dict) -> StepsDAG:
             content=content,
             tool_name=tool_name,
             tool_args=tool_args,
-            tool_result=observation or content,
+            tool_result=observation_text or content,
             metadata={
                 "timestamp": raw_step.get("timestamp", 0),
                 "duration_seconds": raw_step.get("duration_seconds", 0),
                 "tokens_estimated": raw_step.get("tokens_estimated", 0),
                 "actions": all_actions if isinstance(all_actions, list) else None,
+                "step_kind": raw_step.get("step_kind") or raw_step.get("kind") or "",
+                "artifacts": artifacts,
+                "observation_artifact_ids": obs_artifact_ids,
+                "judge_scores": raw_step.get("judge_scores") or {},
             },
         )
         dag.nodes.append(node)

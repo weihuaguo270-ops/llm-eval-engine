@@ -1,7 +1,6 @@
 """Staged real understanding benchmark: init → materialize → predict → score → finalize.
 
-Mirrors generation-side ``run_real_image/video_benchmark.py`` for understanding
-(image VQA + video QA).
+Image VQA + video QA (generation-side model selection has been removed from this repo).
 
 Default predictors are local sidecar readers (offline wiring). Override to real VLMs via:
   --adapter sidecar-reader=deepseek_vision   # DeepSeek-V4.1-Flash (deepseek-flash)

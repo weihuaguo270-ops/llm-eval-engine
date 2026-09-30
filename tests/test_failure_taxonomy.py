@@ -82,3 +82,21 @@ def test_not_applicable_step_is_not_a_failure():
         applicable=False,
     )
     assert classify_step_failure(step, error_sources=[1], case_id="c1") is None
+
+
+def test_scoreless_step_with_judge_exception_stays_judge_error():
+    """Judge 崩了要保留 judge_error，不能被「未评估」吞掉。"""
+    from eval_engine.core.failure_taxonomy import classify_step_failure
+
+    step = StepScore(
+        step_index=0,
+        step_type="fast_eval",
+        tool_name=None,
+        rubrics=[RubricResult("error", "Judge 异常", 0.0, "boom", True)],
+        step_score=0.0,
+        needs_revision=True,
+        role_understanding="Judge 调用异常: boom",
+    )
+    rec = classify_step_failure(step, error_sources=[], case_id="c1")
+    assert rec is not None
+    assert rec.failure_type == "judge_error"

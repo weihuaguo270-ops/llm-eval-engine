@@ -124,12 +124,19 @@ def classify_step_failure(
     if step.step_score <= 0:
         # 未评估：有 needs_revision 但没有分数。不得归类为下游错误传播——
         # 一个没被评过的步骤既不是根因，也不是"受影响的下游"。
+        # 但 Judge 自身异常要保留 judge_error：那不是"没评"，是"评崩了"。
+        reasons = " ".join(r.reason for r in step.rubrics if r.reason)
+        dims = " ".join(r.dimension for r in step.rubrics)
+        blob = f"{reasons} {dims} {step.role_understanding}".lower()
+        judge_failed = _match_patterns(
+            blob, ("judge 调用异常", "judge 异常", "judge error")
+        )
         return FailureRecord(
             case_id=case_id,
             step_index=step.step_index,
-            failure_type="unscored",
+            failure_type="judge_error" if judge_failed else "unscored",
             step_score=0.0,
-            reason="该步没有评分证据（未评估）",
+            reason="Judge 异常" if judge_failed else "该步没有评分结果（未评估）",
             is_root_cause=False,
             tool_name=step.tool_name,
         )

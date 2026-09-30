@@ -34,6 +34,17 @@ def _audit(path: Path, **kwargs):
     return audit_release([_load(path)], calibration=CALIBRATION_DOC, **kwargs)
 
 
+def test_audit_report_carries_attribution_anchor_block():
+    """锚点交叉校验必须出现在审计报告里；trace-debugger 缺失时记 skipped 而非失败。"""
+    report = _audit(OK)
+    block = report["attribution_anchors"]
+    assert "anchor_consistency" in block
+    assert "anchor_total" in block
+    assert "note" in block
+    assert isinstance(block["skipped"], list)
+    assert isinstance(block["per_episode"], list)
+
+
 def test_calibrated_image_and_video_good_paths_pass():
     image = _audit(OK)
     video = _audit(VIDEO_OK, generation_appendix={"note": "optional aux only; not a gate"})

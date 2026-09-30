@@ -261,6 +261,72 @@ def test_not_applicable_step_is_excluded_from_score_and_revision():
     assert report.error_sources == [0], "低分步仍是根因"
 
 
+def test_fast_mode_averages_present_dimensions():
+    """fast 模式：只对真正给出的维度取均值。"""
+
+    def _judge(prompt: str) -> dict:
+        return {"overall_score": 4.0, "efficiency_score": 3.0,
+                "tool_usage_score": 5.0, "needs_revision": False}
+
+    dag = parse_trajectory(_threshold_trajectory())
+    report = ProcessRewardScorer(judge_fn=_judge).score_trajectory(dag, fast_mode=True)
+
+    assert report.scored is True
+    assert report.num_scored == 1
+    assert report.overall_score == 4.0          # (4 + 3 + 5) / 3
+    assert report.needs_revision is False
+    assert report.per_step[0].rubrics[0].score == 4.0
+
+
+def test_fast_mode_without_overall_keys_is_unscored():
+    """逐步型 Judge 在 fast 模式下不产出整体分 → 未评估，而不是被压成 0 分。"""
+
+    def _judge(prompt: str) -> dict:
+        return {"role_understanding": "step-0", "rubrics": [],
+                "step_score": 1.0, "needs_revision": True}
+
+    dag = parse_trajectory(_threshold_trajectory())
+    report = ProcessRewardScorer(judge_fn=_judge).score_trajectory(dag, fast_mode=True)
+
+    assert report.scored is False
+    assert report.num_scored == 0
+    assert report.per_step[0].step_score == 0.0
+    assert report.per_step[0].rubrics == [], "没有整体分就不该伪造 overall rubric"
+    assert report.needs_revision is True
+
+
+def test_fast_mode_judge_exception_is_unscored():
+    """fast 模式 Judge 崩溃 → 未评估（保留异常文本供归类），不是 0 分。"""
+
+    def _judge(prompt: str) -> dict:
+        raise RuntimeError("judge boom")
+
+    dag = parse_trajectory(_threshold_trajectory())
+    report = ProcessRewardScorer(judge_fn=_judge).score_trajectory(dag, fast_mode=True)
+
+    assert report.scored is False
+    assert report.num_scored == 0
+    assert report.needs_revision is True
+    assert "Judge" in report.per_step[0].role_understanding
+
+
+def test_rubric_without_score_is_not_fabricated():
+    """没有分数的 rubric 不得伪造 3 分（会低于阈值而误判）。"""
+
+    def _judge(prompt: str) -> dict:
+        return {"role_understanding": "", "step_score": 3.0, "needs_revision": False,
+                "rubrics": [{"dimension": "tool_selection", "criteria": "x",
+                             "reason": "无分数"}]}
+
+    dag = parse_trajectory(_threshold_trajectory())
+    report = ProcessRewardScorer(judge_fn=_judge, min_step_score=3.5).score_trajectory(
+        dag, fast_mode=False
+    )
+
+    assert report.per_step[0].rubrics == []
+    assert report.per_step[0].step_score == 3.0
+
+
 if __name__ == "__main__":
     print("=" * 50)
     print("Process Reward + 错误分析 测试")

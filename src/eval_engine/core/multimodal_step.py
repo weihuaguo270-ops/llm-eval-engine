@@ -352,6 +352,9 @@ def process_quality_from_report(
     return {
         "metric": "process_reward_multimodal_steps",
         "overall_score": scored_overall,
+        # 口径标注（D2）：这里是「全部已评分步的加权均值」，与门禁用的
+        # 「媒体步 min」不是同一个数，勿混用。
+        "overall_score_scope": "all_scored_steps_weighted",
         "cases": cases,
         "multimodal_step_findings": findings,
     }

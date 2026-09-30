@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Fixed (2026-09-30) — attribution chain audit
+
+- Root-cause threshold follows `min_step_score` (was a hard-coded 3.0), so steps scoring
+  in [3.0, 3.5) can no longer be "must fix but never a root cause"
+- Unscored steps and judge crashes are no longer counted as failures, root causes, or
+  downstream propagation; `unscored` became its own failure type
+- Missing process scores are reported as unscored instead of being coerced to 0.0
+- Fast mode and scoreless rubrics no longer fabricate zeros or a neutral 3
+- Live Judge dimensions stay all-or-nothing: a short payload degrades that step to
+  unscored + `judge_error` rather than earning partial credit
+
+### Added (2026-09-30) — attribution chain audit
+
+- Release audit reports `attribution_anchors` (a deterministic failure step should appear
+  in `error_sources`), `process_metrics` (gate min vs weighted report score, with explicit
+  scopes) and deterministic media `rule_findings` (`source` distinguishes live rules from
+  archived `trace_analysis`) — all report-only, none of them change a decision
+- `StepScore.applicable` marks steps that are out of process-scoring scope
+- `docs/ATTRIBUTION_AUDIT.md`: what was fixed, what is undecided, what is still unverified
+
 ### Removed (2026-09-22)
 
 - Deleted generation-side model selection stack: image/video horizontal benches,

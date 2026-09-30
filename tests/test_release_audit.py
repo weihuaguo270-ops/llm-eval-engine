@@ -100,9 +100,43 @@ def test_defective_paths_review_on_soft_score_not_hold():
     )
     assert [item["score"] for item in image_generate["rubrics"]] == [2.0, 2.0, 3.0, 4.0]
     assert [item["score"] for item in video_final["rubrics"]] != [2.0, 2.0, 3.0, 4.0]
-    assert {item["failure_type"] for item in image["rule_findings"]} == {"unnecessary_generation"}
-    assert {item["failure_type"] for item in video["rule_findings"]} == {"ungrounded_vision"}
+    # D1：确定性媒体规则并入 rule_findings（只报告、不参与判定）；同一 (step, type)
+    # 去重时确定性规则优先，归档 trace_analysis 的同类项被吸收。
+    image_rules = {(item["step_index"], item["failure_type"]) for item in image["rule_findings"]}
+    video_rules = {(item["step_index"], item["failure_type"]) for item in video["rule_findings"]}
+    assert image_rules == {(1, "unnecessary_generation"), (1, "wrong_media_args")}
+    assert video_rules == {(2, "ungrounded_vision")}
+    assert {item["source"] for item in image["rule_findings"]} == {"multimodal_step"}
+    assert {item["source"] for item in video["rule_findings"]} == {"trace_debugger"}
     assert all(step["tool_name"] != "thought" for step in image["process_quality"]["steps"])
+
+
+def test_report_labels_the_two_different_process_numbers():
+    """D2：门禁值（媒体步 min）与报告总分（已评分步加权均值）必须各自标注口径。"""
+    image = _audit(BAD)
+    metrics = image["process_metrics"]
+    assert metrics["gate_scope"] == "min of media/final step scores"
+    assert metrics["report_scope"] == "weighted mean over scored steps (root cause x1.5)"
+    assert metrics["gate_applied"] is True
+    assert metrics["gate_media_min"] == 2.75
+    assert metrics["report_weighted"] == 2.85
+    assert metrics["num_scored"] == 2
+    assert metrics["num_steps"] == 3
+    # 两个数确实不同：媒体步最弱的一项比加权均值更低，不能被互相替代。
+    assert metrics["gate_media_min"] != metrics["report_weighted"]
+    assert image["process_quality"]["overall_score"] == metrics["gate_media_min"]
+
+
+def test_uncalibrated_episode_reports_the_number_without_gating_on_it():
+    """未标定时不把算出来的门禁值当作门禁，但报告总分口径仍要标注清楚。"""
+    report = audit_release([_load(BAD)])
+    episode = report["episodes"][0]
+    metrics = episode["process_metrics"]
+    assert episode["process_quality"] is None
+    assert metrics["gate_applied"] is False
+    assert metrics["gate_media_min"] is None
+    assert metrics["report_weighted"] == 2.85
+    assert metrics["gate_scope"] != metrics["report_scope"]
 
 
 def test_episodes_are_gated_separately():

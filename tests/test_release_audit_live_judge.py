@@ -7,11 +7,14 @@ from pathlib import Path
 
 import pytest
 
+from eval_engine.core.failure_taxonomy import classify_step_failure
 from eval_engine.core.multimodal_process_judge import (
     DIMENSIONS,
     extract_dimension_scores,
     make_live_dimension_judge,
 )
+from eval_engine.core.multimodal_step import process_quality_from_report
+from eval_engine.core.process_reward import ProcessRewardScorer
 from eval_engine.gates.release_audit import (
     audit_release,
     rebuild_held_out_calibration,
@@ -91,6 +94,45 @@ def test_live_judge_scores_media_steps_and_skips_thought():
         "artifact_attachment": 4.0,
         "media_safety": 5.0,
     }
+
+
+def test_incomplete_live_dimensions_degrade_to_unscored_not_a_crash():
+    """D3：live Judge 少给维度时按步降级为「未评估 + judge_error」。
+
+    拒绝的方案是「缺维度就给部分学分」：那会把判分器的输入错误伪装成低分证据，
+    进而污染 error_sources 归因。这里钉住的是：整条不崩、不伪造分数、总分标记为不可用。
+    """
+    raw = _load(OK)
+    dag = parse_trajectory(import_episode(raw).trajectory)
+
+    def partial_llm(_prompt: str) -> dict:
+        return {
+            "role_understanding": "media step",
+            "rubrics": [{"dimension": "media_timing", "score": 4}],
+            "step_score": 4.0,
+            "needs_revision": False,
+        }
+
+    report = ProcessRewardScorer(
+        judge_fn=make_live_dimension_judge(dag, partial_llm),
+        enable_trace_findings=False,
+    ).score_trajectory(dag)
+
+    assert report.num_scored == 0
+    assert report.scored is False
+    assert report.needs_revision is True
+    assert report.error_sources == []
+    affected = [step for step in report.per_step if step.applicable]
+    assert affected and all(step.step_score == 0.0 for step in affected)
+    assert all("missing dimensions" in (step.role_understanding or "") for step in affected)
+    records = [
+        classify_step_failure(step, error_sources=report.error_sources, case_id="mm-ok")
+        for step in report.per_step
+    ]
+    assert [record.failure_type for record in records if record] == ["judge_error"] * len(affected)
+    quality = process_quality_from_report(report, case_id="mm-ok")
+    assert quality["overall_score"] is None
+    assert quality["overall_score_scope"] == "all_scored_steps_weighted"
 
 
 def test_live_scores_against_fixture_calibration_stay_uncalibrated():

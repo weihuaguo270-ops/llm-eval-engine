@@ -51,11 +51,16 @@ def evaluate_evidence_bundle(
         review_reasons.append("no held_out episodes")
 
     if process_quality is not None:
-        score = float(process_quality.get("overall_score") or 0.0)
-        if score < min_process_score:
-            review_reasons.append(
-                f"process score {score:.3f} below {min_process_score:.3f}"
-            )
+        # None 表示「没有任何步骤被评分」，不能强转成 0.0 —— 那会把"未评分"读成"最差"。
+        raw_score = process_quality.get("overall_score")
+        if raw_score is None:
+            review_reasons.append("process score missing (no scored steps)")
+        else:
+            score = float(raw_score)
+            if score < min_process_score:
+                review_reasons.append(
+                    f"process score {score:.3f} below {min_process_score:.3f}"
+                )
 
     if human_review is not None:
         reviewed = int(human_review.get("reviewed_cases") or 0)

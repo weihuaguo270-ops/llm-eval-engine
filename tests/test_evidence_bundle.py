@@ -94,3 +94,23 @@ def test_bundle_accepts_multimodal_understanding_evidence():
     )
     assert held["decision"] == "hold"
     assert "multimodal understanding: understanding track gate" in held["hard_failures"][0]
+
+
+def test_bundle_treats_missing_process_score_as_unscored_not_zero():
+    """未评分（overall_score=None）不得被读成 0.0 低分；真实的 0 分仍按低分处理。"""
+    missing = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        process_quality={
+            "metric": "process_reward_media_steps_min",
+            "overall_score": None,
+        },
+    )
+    assert missing["decision"] == "review"
+    assert any("missing" in reason for reason in missing["review_reasons"])
+    assert not any("0.000" in reason for reason in missing["review_reasons"])
+
+    zero = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        process_quality={"overall_score": 0.0},
+    )
+    assert any("below" in reason for reason in zero["review_reasons"])

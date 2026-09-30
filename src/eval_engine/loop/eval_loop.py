@@ -161,7 +161,8 @@ class EvalLoopEngine:
             report = ProcessRewardReport(
                 query=query,
                 per_step=[],
-                overall_score=0,
+                # 未评估：轨迹解析/评分整体失败时没有任何分数，不能伪造 0 分
+                overall_score=None,
                 num_steps=0,
                 num_scored=0,
                 num_failed_steps=0,
@@ -186,7 +187,7 @@ class EvalLoopEngine:
         """Generative task: adaptive Eval Loop with revision"""
         scorer = ProcessRewardScorer(judge_fn=self.judge_fn)
         healing_log: list[dict] = []
-        prev_overall_score = 0.0
+        prev_overall_score: Optional[float] = None
         oscillation_count = 0
         dag = None
         report = None
@@ -225,8 +226,13 @@ class EvalLoopEngine:
             }
             healing_log.append(log_entry)
 
+            score_text = (
+                f"{report.overall_score:.3f}"
+                if report.overall_score is not None
+                else "未评估"
+            )
             self._log(
-                f"  Score: {report.overall_score:.3f}, "
+                f"  Score: {score_text}, "
                 f"Failed steps: {report.num_failed_steps}, "
                 f"Needs revision: {report.needs_revision}"
             )
@@ -246,8 +252,17 @@ class EvalLoopEngine:
                 )
 
             # g. Oscillation detection: score not improving
-            improvement = report.overall_score - prev_overall_score
-            if iteration > 1 and improvement < self.config.min_improvement:
+            # 任一轮未评估（None）就无法比较，跳过振荡判定，而不是把 None 当 0 分
+            improvement = (
+                report.overall_score - prev_overall_score
+                if report.overall_score is not None and prev_overall_score is not None
+                else None
+            )
+            if (
+                iteration > 1
+                and improvement is not None
+                and improvement < self.config.min_improvement
+            ):
                 oscillation_count += 1
                 if oscillation_count >= 2:
                     self._log(

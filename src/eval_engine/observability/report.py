@@ -42,7 +42,8 @@ def format_report(
 
     # 评分概览
     r = result.report
-    lines.append(f"  综合评分:   {r.overall_score:.3f} / 5.0")
+    score_text = f"{r.overall_score:.3f}" if r.overall_score is not None else "未评估"
+    lines.append(f"  综合评分:   {score_text} / 5.0")
     lines.append(f"  步骤总数:   {r.num_steps}")
     lines.append(f"  已评分:     {r.num_scored}")
     lines.append(f"  失败步骤:   {r.num_failed_steps}")
@@ -64,9 +65,11 @@ def format_report(
         lines.append(f"  ── 自愈过程 ──")
         for entry in result.healing_log:
             icon = "✅" if not entry["needs_revision"] else "🔄"
+            entry_score = entry["overall_score"]
+            entry_text = f"{entry_score:.3f}" if entry_score is not None else "未评估"
             lines.append(
                 f"  {icon} 迭代 {entry['iteration']}: "
-                f"得分 {entry['overall_score']:.3f}, "
+                f"得分 {entry_text}, "
                 f"失败 {entry['num_failed_steps']} 步"
             )
         lines.append("")

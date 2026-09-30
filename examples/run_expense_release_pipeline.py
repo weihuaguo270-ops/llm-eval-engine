@@ -181,7 +181,13 @@ def _process_quality(episodes: list[dict[str, Any]]) -> dict[str, Any]:
         dag = parse_trajectory(trajectory)
         report = scorer.score_trajectory(dag, trajectory=trajectory)
         # 业务终态仍是硬门槛；过程分与规则 findings 一并记账
-        score = min(rubric_score, report.overall_score if report.check_findings else rubric_score)
+        # 过程分未评估（None）时不参与 min，而不是当成 0 分把总分压到底
+        process_score = report.overall_score
+        score = (
+            min(rubric_score, process_score)
+            if report.check_findings and process_score is not None
+            else rubric_score
+        )
         if report.needs_revision and report.check_findings:
             score = min(score, 2.0)
         scores.append(score)

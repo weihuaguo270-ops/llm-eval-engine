@@ -13,6 +13,7 @@ from eval_engine.core.process_reward import (
     analyze_error_propagation,
     pack_revision_instructions,
 )
+from eval_engine.integrations.trace_findings import CheckFinding
 
 
 def _mock_judge(prompt: str) -> dict:
@@ -290,6 +291,7 @@ def test_fast_mode_without_overall_keys_is_unscored():
 
     assert report.scored is False
     assert report.num_scored == 0
+    assert report.overall_score is None, "未评估必须是 None，不是 0 分"
     assert report.per_step[0].step_score == 0.0
     assert report.per_step[0].rubrics == [], "没有整体分就不该伪造 overall rubric"
     assert report.needs_revision is True
@@ -306,6 +308,7 @@ def test_fast_mode_judge_exception_is_unscored():
 
     assert report.scored is False
     assert report.num_scored == 0
+    assert report.overall_score is None, "Judge 崩了就是没有分数，不是 0 分"
     assert report.needs_revision is True
     assert "Judge" in report.per_step[0].role_understanding
 
@@ -325,6 +328,60 @@ def test_rubric_without_score_is_not_fabricated():
 
     assert report.per_step[0].rubrics == []
     assert report.per_step[0].step_score == 3.0
+
+
+def test_all_steps_unscored_has_no_overall_score():
+    """逐步模式：一个步都没评上时 overall_score 是 None，不是 0 分。
+
+    0 分 = 最差证据，会污染下游均值与阈值比较；"没评过"必须能与"评了 0 分"区分开。
+    """
+
+    def _judge(prompt: str) -> dict:
+        raise RuntimeError("judge boom")
+
+    dag = parse_trajectory(_threshold_trajectory())
+    report = ProcessRewardScorer(judge_fn=_judge, min_step_score=3.5).score_trajectory(
+        dag, fast_mode=False
+    )
+
+    assert report.scored is False
+    assert report.num_scored == 0
+    assert report.overall_score is None
+    assert report.needs_revision is True
+
+
+def test_findings_that_zero_every_step_leave_no_stale_overall_score():
+    """规则把唯一步压到 0 分后，报告不得留着旧总分。
+
+    不变量：num_scored == 0 ⟺ overall_score is None。
+    """
+
+    def _judge(prompt: str) -> dict:
+        if "类型: action" in prompt:
+            return {"role_understanding": "", "rubrics": [],
+                    "step_score": 4.0, "needs_revision": False}
+        return {"role_understanding": "", "rubrics": [], "applicable": False}
+
+    dag = parse_trajectory(_threshold_trajectory())
+    report = ProcessRewardScorer(judge_fn=_judge, min_step_score=3.5).score_trajectory(
+        dag,
+        fast_mode=False,
+        extra_findings=[
+            CheckFinding(
+                code="contract_violation",
+                failure_type="contract_violation",
+                message="把该步压到 0 分",
+                step_index=0,
+                severity="fail",
+                score=0.0,
+                source="eval_contract",
+            )
+        ],
+    )
+
+    assert report.per_step[0].step_score == 0.0
+    assert report.num_scored == 0, "唯一步被压到 0 分后就不再是已评分步"
+    assert report.overall_score is None, "不能留着压分前的 4.0"
 
 
 if __name__ == "__main__":

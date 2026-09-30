@@ -86,7 +86,9 @@ def main() -> int:
 
     print(f"[e2e] trajectory: {traj_path}")
     print(f"[e2e] report: {out_md}")
-    print(f"[e2e] score={report.overall_score:.2f} passed={loop_result.passed}")
+    e2e_score = report.overall_score
+    score_text = f"{e2e_score:.2f}" if e2e_score is not None else "n/a"
+    print(f"[e2e] score={score_text} passed={loop_result.passed}")
     if report.needs_revision:
         fix = pack_revision_instructions(report, dag)
         print(f"[e2e] revision preview:\n{fix[:400]}...")

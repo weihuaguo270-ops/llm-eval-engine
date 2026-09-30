@@ -27,6 +27,8 @@
 | 11 | **（跨仓）盲表 provenance 泄漏**：trace-debugger 的 `build_sheet` 带 `source_file`，`case_id` 取自文件名 | 夹具文件名即失败类型名（`search_empty.json`）→ 标注者直接读到答案，破坏盲评前提 | 盲表用不透明 `case_id`、不含来源；provenance 只在 key（trace-debugger #8 `27db844`） |
 | 12 | **（跨仓）媒体规则孤岛**：trace-debugger 的 `analyze_multimodal_steps`（精确规则：空 prompt / 缺 path / sha 不匹配 / 终态未引用 / NSFW）**只被测试调用**；审计走 `adapt_media_rule_findings(metadata.trace_analysis)`，而该上游当前**不产出**那 4 个媒体类型 | 报告里"媒体规则证据"几乎恒空——**覆盖假象** | **已修（原 D1）**：审计报告接线确定性规则，与归档 analysis 按 `(step_index, failure_type)` 去重合并，**只报告、不参与决策** |
 
+| 13 | **`overall_score` 二态**：一个步都没评上时也报 `0.0`——与"评了 0 分"（最差证据）无法区分，会污染均值与阈值比较 | `avg_score`、Eval Loop 振荡判定、CLI/报告都把这个 `0.0` 当真实分数读 | **已修（原 D4）**：`overall_score: Optional[float]`（`None` = 未评估），逐处消费点显式判 `None`；`_apply_findings` 维持 `num_scored == 0 ⟺ overall_score is None`；`EVAL_API_VERSION` 0.2 → 0.3（**需 react-agent 配套 PR**） |
+
 ### 修复后的实测（42 个 episode 夹具，夹具模式）
 
 | 指标 | 修复前 | 修复后 |
@@ -38,7 +40,7 @@
 | `mm-step-bad-ungrounded-001` 报告总分 | 3.464 | **2.85**（门禁值仍 2.75） |
 | `anchor_consistency` | — | **1.0（2/2 锚点）** |
 
-测试：`pytest tests/` → **146 passed, 6 skipped**。
+测试：`pytest tests/` → **150 passed, 6 skipped**。
 
 ### 1.1 P2 三项（原 D1–D3，已落地）
 
@@ -72,9 +74,7 @@
 
 ### 2.2 待决策
 
-| # | 事项 | 选项 / 建议 |
-|---|------|-------------|
-| D4 | `ProcessRewardReport.overall_score` 改 `Optional[float]` | 完整修法，但有 **13 处消费点**（4 处 `sum()`/`:.2f`/`>=` 会在 `None` 上抛错），且 `overall_score` 会随 `report` 被下游（react-agent）读取。**已单开 stacked PR（见 PR #10）并 bump `EVAL_API_VERSION`**。当前已提供 `scored` / `num_scored` 作权威判据 |
+当前无待决策项。原 D4 已在本 PR 落地（见 §1 第 13 项），但**必须与 react-agent 的配套 PR 同时合并**：react-agent 从本仓 master 装机，并在 `tests/test_eval_engine_contract.py` 断言两边 `EVAL_API_VERSION` 相等。
 
 ---
 

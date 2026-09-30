@@ -132,7 +132,7 @@ src/eval_engine/
 
 ### Process Reward
 
-对每一步单独打分，并标错误传播（根因步权重大于下游受影响步）。`overall_score` 为步骤加权均分（根因步权 1.5），刻度 1–5。
+对每一步单独打分，并标错误传播（根因步权重大于下游受影响步）。`overall_score` 为步骤加权均分（根因步权 1.5），刻度 1–5；**没有任何步被评分时为 `None`（未评估）**，读之前先判 `report.scored` / `num_scored`，不要把 `None` 当 0 分（0 分 = 最差证据）。
 
 ### Eval Loop
 

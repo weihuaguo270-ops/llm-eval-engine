@@ -228,7 +228,11 @@ class BenchmarkRunner:
                 report = scorer.score_trajectory(dag, fast_mode=False)
                 elapsed = int((time.perf_counter() - t0) * 1000)
                 err = analyze_error_propagation(report, dag)
-                passed = not report.needs_revision and report.overall_score >= self.min_step_score
+                passed = (
+                    report.num_scored > 0
+                    and not report.needs_revision
+                    and report.overall_score >= self.min_step_score
+                )
 
                 cr = CaseResult(
                     case_id=case["id"],

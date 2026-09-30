@@ -134,10 +134,31 @@ def make_judge_executor_call(
 
 
 def judge_multimodal_step(node: StepNode, dag: StepsDAG) -> dict[str, Any]:
-    """Turn stored dimension scores into Process Reward rubrics."""
+    """Turn stored dimension scores into Process Reward rubrics.
+
+    三态：非媒体步为「不适用」（不给分、不触发修订）；媒体/终态步无评分证据为
+    「未评估」（不给分，但 needs_revision=True）；有证据则正常评分。
+    """
     del dag
     raw = node.metadata.get("judge_scores") or {}
-    scores = _dimension_scores(raw, _is_media_step(node) or node.step_type == "final")
+    media = _is_media_step(node) or node.step_type == "final"
+    if not media:
+        # 思考步等不属于媒体过程评分范围（方案 C）：夹具里遗留的 context 值不再进入总分。
+        return {
+            "role_understanding": node.tool_name or node.step_type,
+            "rubrics": [],
+            "applicable": False,
+        }
+    has_evidence = any(name in raw and raw[name] is not None for name in DIMENSIONS)
+    if not has_evidence:
+        # 媒体/终态步没有评分证据：保持保守门禁（不得据此通过），但不提供 step_score
+        # → 该步为「未评估」，不得被当成 3.0 低分并归因为根因。
+        return {
+            "role_understanding": node.tool_name or node.step_type,
+            "rubrics": [],
+            "needs_revision": True,
+        }
+    scores = _dimension_scores(raw, media)
     return _result_from_scores(
         node,
         scores,

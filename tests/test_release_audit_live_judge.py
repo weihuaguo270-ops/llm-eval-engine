@@ -75,7 +75,11 @@ def test_live_judge_scores_media_steps_and_skips_thought():
     judge = make_live_dimension_judge(dag, llm)
     results = [judge("ignored") for _ in dag.nodes]
     thought = results[0]
-    assert thought["rubrics"][0]["dimension"] == "context"
+    # 方案 C：思考步不适用——不再伪造 context 分，也不触发修订
+    assert thought["applicable"] is False
+    assert thought["rubrics"] == []
+    assert "step_score" not in thought
+    assert thought.get("needs_revision") is not True
     assert len(llm.calls) == 3  # generate + describe + final
     for result in results[1:]:
         assert [r["dimension"] for r in result["rubrics"]] == list(DIMENSIONS)

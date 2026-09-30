@@ -71,6 +71,7 @@ class StepScore:
     role_understanding: str = ""  # Judge 对该步角色的理解
     failure_type: Optional[str] = None
     check_sources: list[str] = field(default_factory=list)
+    applicable: bool = True      # False = 该步不在评分范围内（如思考步），不计分不触发修订
 
 
 @dataclass
@@ -78,7 +79,7 @@ class ProcessRewardReport:
     """Process Reward 评分报告"""
     query: str
     per_step: list[StepScore]
-    overall_score: float         # 所有步骤的加权平均
+    overall_score: float         # 已评分步骤的加权平均；num_scored==0 时无意义（读 scored）
     num_steps: int
     num_scored: int
     num_failed_steps: int        # 需要修正的步骤数
@@ -87,6 +88,11 @@ class ProcessRewardReport:
     healing_log: list[dict]      # 自愈记录（如有）
     dag_summary: dict
     check_findings: list[dict] = field(default_factory=list)
+
+    @property
+    def scored(self) -> bool:
+        """是否有任何步骤被评分。num_scored==0 时 overall_score 无意义，勿当 0 分读。"""
+        return self.num_scored > 0
 
     @property
     def pass_rate(self) -> float:
@@ -251,7 +257,12 @@ class ProcessRewardScorer:
                 if node is not None:
                     node.score = step.step_score
 
-        report.error_sources = [n.step_index for n in dag.find_error_sources()]
+        # 根因定位与 needs_revision 共用同一阈值：find_error_sources() 的默认 3.0
+        # 比 min_step_score(3.5) 更严，会让 [3.0, 3.5) 的失败步被标记需修改却永远
+        # 不可能被判为根因（error_sources 为空）。
+        report.error_sources = [
+            n.step_index for n in dag.find_error_sources(threshold=self.min_step_score)
+        ]
         report.num_failed_steps = sum(1 for s in report.per_step if s.needs_revision)
         report.needs_revision = any(s.needs_revision for s in report.per_step)
         scored = [s for s in report.per_step if s.step_score > 0]
@@ -275,20 +286,28 @@ class ProcessRewardScorer:
         except Exception as e:
             # Judge 调用失败，返回兜底报告
             result = {
-                "overall_score": 0,
-                "efficiency_score": 0,
-                "tool_usage_score": 0,
+                # 不给数值分：Judge 崩了就是没有分数，不能伪造 0（= 最差）。
+                # 三个键缺失会被下面的 present 过滤判为「未评估」。
                 "strengths": [],
                 "weaknesses": [f"Judge 调用异常: {e}"],
                 "needs_revision": True,
             }
 
-        scores = [
-            result.get("overall_score", 0),
-            result.get("efficiency_score", 0),
-            result.get("tool_usage_score", 0),
+        # 只对**真正给出**的维度取均值：缺失的键不得当作 0 分（0 = 最差）。
+        # 一个键都没有 → 这次快速评估没有产生可用分数（Judge 是逐步型，或调用失败），
+        # 此时报告为「未评估」，而不是把整条轨迹压成 0 分。
+        present = [
+            float(value)
+            for value in (
+                result.get("overall_score"),
+                result.get("efficiency_score"),
+                result.get("tool_usage_score"),
+            )
+            if isinstance(value, (int, float)) and not isinstance(value, bool)
         ]
-        overall = sum(scores) / len(scores) if scores else 0
+        has_score = bool(present)
+        overall = round(sum(present) / len(present), 3) if has_score else 0.0
+        needs_revision = bool(result.get("needs_revision", False)) or not has_score
 
         return ProcessRewardReport(
             query=dag.query,
@@ -297,24 +316,31 @@ class ProcessRewardScorer:
                     step_index=-1,
                     step_type="fast_eval",
                     tool_name=None,
-                    rubrics=[
-                        RubricResult(
-                            dimension="overall",
-                            criteria="整体质量评估",
-                            score=result.get("overall_score", 0),
-                            reason="",
-                        ),
-                    ],
-                    step_score=overall,
-                    needs_revision=result.get("needs_revision", False),
+                    rubrics=(
+                        [
+                            RubricResult(
+                                dimension="overall",
+                                criteria="整体质量评估",
+                                score=overall,
+                                reason="",
+                            ),
+                        ]
+                        if has_score
+                        else []
+                    ),
+                    step_score=overall if has_score else 0.0,
+                    needs_revision=needs_revision,
+                    role_understanding="；".join(
+                        str(w) for w in (result.get("weaknesses") or [])
+                    ),
                 ),
             ],
             overall_score=overall,
             num_steps=dag.num_steps,
-            num_scored=1,
-            num_failed_steps=1 if result.get("needs_revision", False) else 0,
+            num_scored=1 if has_score else 0,
+            num_failed_steps=1 if needs_revision else 0,
             error_sources=[],
-            needs_revision=result.get("needs_revision", False),
+            needs_revision=needs_revision,
             healing_log=[],
             dag_summary=dag_summary(dag),
         )
@@ -338,31 +364,50 @@ class ProcessRewardScorer:
             try:
                 judge_output = self.judge_fn(prompt)
             except Exception as e:
-                # Judge 调用失败，使用占位分数
+                # Judge 调用失败：不给 step_score → 视为「未评估」而非低分
                 judge_output = {
                     "role_understanding": f"Judge 调用异常: {e}",
                     "rubrics": [
                         {"dimension": "error", "criteria": "Judge 异常",
                          "score": 0, "reason": str(e)},
                     ],
-                    "step_score": 0,
                     "needs_revision": True,
                 }
 
             rubrics = []
             for r in judge_output.get("rubrics", []):
+                raw_rubric_score = r.get("score")
+                if not isinstance(raw_rubric_score, (int, float)) or isinstance(
+                    raw_rubric_score, bool
+                ):
+                    # 没有分数的 rubric 没有测量结果：既不伪造 3（会低于阈值而误判），
+                    # 也不能让这个假分数进入维度聚合。
+                    continue
+                rubric_score = float(raw_rubric_score)
                 rubrics.append(RubricResult(
                     dimension=r.get("dimension", "unknown"),
                     criteria=r.get("criteria", ""),
-                    score=float(r.get("score", 3)),
+                    score=rubric_score,
                     reason=r.get("reason", ""),
-                    needs_revision=float(r.get("score", 3)) <= 3,
+                    needs_revision=rubric_score <= 3,
                 ))
 
-            step_score_val = float(judge_output.get("step_score", 3))
-            needs_revision = judge_output.get("needs_revision", False) or (
-                step_score_val < self.min_step_score
-            )
+            # 三态（与 C8 回归测试一致）：
+            #   applicable=False          → 不适用（思考步等）：不计分、不触发修订
+            #   applicable=True + 无分数  → 未评估：不计分，但标 needs_revision
+            #   applicable=True + 有分数  → 正常评分
+            # 旧行为把缺失分数回退到中性 3.0，而 3.0 < min_step_score(3.5)，于是
+            # 「未评估」被读成「低分失败」，并在阈值统一后成为根因。
+            applicable = bool(judge_output.get("applicable", True))
+            raw_score = judge_output.get("step_score")
+            unscored = raw_score is None
+            step_score_val = 0.0 if unscored else float(raw_score)
+            if applicable:
+                needs_revision = judge_output.get("needs_revision", False) or (
+                    step_score_val < self.min_step_score
+                )
+            else:
+                needs_revision = False
 
             step_scores.append(StepScore(
                 step_index=node.step_index,
@@ -372,13 +417,16 @@ class ProcessRewardScorer:
                 step_score=step_score_val,
                 needs_revision=needs_revision,
                 role_understanding=judge_output.get("role_understanding", ""),
+                applicable=applicable,
             ))
 
-            # 记录分数到 DAG 节点
-            node.score = step_score_val
+            # 记录分数到 DAG 节点（不适用 / 未评估 → None，不参与根因判定）
+            node.score = None if (unscored or not applicable) else step_score_val
 
-        # 定位根因
-        error_sources = [n.step_index for n in dag.find_error_sources()]
+        # 定位根因（阈值必须与 needs_revision 一致，否则低分步与根因集合会分裂）
+        error_sources = [
+            n.step_index for n in dag.find_error_sources(threshold=self.min_step_score)
+        ]
 
         # 计算加权总分
         scored_steps = [s for s in step_scores if s.step_score > 0]

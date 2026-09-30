@@ -328,11 +328,13 @@ def process_quality_from_report(
 ) -> dict[str, Any]:
     """把 Process Reward 报告收成 release-audit 可用的 process_quality 证据块。"""
     findings = [f.to_dict() for f in multimodal_findings]
+    # 没有任何步骤被评分时，0.0 会被读成「最差」；这里显式给 None（未评）。
+    scored_overall = report.overall_score if report.num_scored else None
     cases = [
         {
             "case_id": case_id,
-            "score": report.overall_score,
-            "process_overall_score": report.overall_score,
+            "score": scored_overall,
+            "process_overall_score": scored_overall,
             "tools": [s.tool_name for s in report.per_step if s.tool_name],
             "check_findings": list(report.check_findings or []) + findings,
             "failed_steps": [
@@ -349,7 +351,7 @@ def process_quality_from_report(
     ]
     return {
         "metric": "process_reward_multimodal_steps",
-        "overall_score": report.overall_score,
+        "overall_score": scored_overall,
         "cases": cases,
         "multimodal_step_findings": findings,
     }

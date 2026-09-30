@@ -16,6 +16,10 @@ from __future__ import annotations
 from typing import Any, Callable, Mapping, Optional, Sequence
 
 from eval_engine.core.failure_taxonomy import summarize_failures
+from eval_engine.core.attribution_anchor import (
+    cross_check_attribution,
+    summarize_cross_checks,
+)
 from eval_engine.core.multimodal_process_judge import (
     DIMENSIONS,
     _is_media_step,
@@ -123,6 +127,7 @@ def audit_release(
             for episode in episode_reports
             for finding in episode["rule_findings"]
         ],
+        "attribution_anchors": _attribution_block(scored),
         "failure_taxonomy": summarize_failures(
             [item["taxonomy_input"] for item in scored]
         ).to_dict(),
@@ -205,8 +210,62 @@ def _score_episode(
         "media_steps": media_steps,
         "dimension_cells": cells,
         "rule_findings": findings,
+        "attribution_anchor": _anchor_cross_check(report, episode, analysis),
         "taxonomy_input": (episode.episode_id, "multimodal_step", report),
     }
+
+
+def _anchor_cross_check(
+    report: Any,
+    episode: Any,
+    analysis: Optional[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """归因锚点交叉校验：确定性失败步是否出现在 error_sources（必要条件检查）。
+
+    只写入报告，不参与决策。trace-debugger 未安装或轨迹不可解析时记录 skipped，
+    不让审计整体失败。
+    """
+    try:
+        return cross_check_attribution(
+            report,
+            trajectory=episode.trajectory,
+            analysis=analysis,
+            episode_id=episode.episode_id,
+        )
+    except Exception as exc:  # pragma: no cover - 取决于运行环境是否装有 trace-debugger
+        return {
+            "episode_id": episode.episode_id,
+            "anchors": {},
+            "error_sources": sorted({int(s) for s in (report.error_sources or [])}),
+            "agreed_steps": [],
+            "missed_steps": [],
+            "unaided_sources": [],
+            "anchor_total": 0,
+            "anchor_hit": 0,
+            "skipped": f"{type(exc).__name__}: {exc}",
+        }
+
+
+def _attribution_block(scored: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """汇总每条 episode 的锚点校验结果（anchor_consistency 是必要条件通过率）。"""
+    results = [item.get("attribution_anchor") or {} for item in scored]
+    block = summarize_cross_checks(results)
+    block["per_episode"] = [
+        {
+            "episode_id": item.get("episode_id", ""),
+            "anchors": item.get("anchors") or {},
+            "error_sources": item.get("error_sources") or [],
+            "missed_steps": item.get("missed_steps") or [],
+        }
+        for item in results
+        if item.get("anchor_total")
+    ]
+    block["skipped"] = [
+        {"episode_id": item.get("episode_id", ""), "reason": item.get("skipped", "")}
+        for item in results
+        if item.get("skipped")
+    ]
+    return block
 
 
 def _gate_episode(

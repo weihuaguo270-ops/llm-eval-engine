@@ -62,12 +62,19 @@
 
 ---
 
-## 2. 待决策（涉及产品语义或跨仓契约）
+## 2. 决策与待决策（涉及产品语义或跨仓契约）
+
+### 2.1 已决策
+
+| # | 事项 | 决策 | 理由 / 收敛条件 |
+|---|------|------|-----------------|
+| D5 | 规则 vs 归档谁是权威 | **(c) 并列展示、标注来源**（`rule_findings[].source`），两者都不进决策 | 没有任何金标准标签能算出 P/R（见 U8），此时选 (a) 或 (b) 只是**用偏好替代证据**；而"看不见"是当前真正的缺陷。**收敛条件**：一旦有了人工标注的媒体失败金标准，再按 P/R 收敛到 (a) 或 (b)，并删除败者 |
+
+### 2.2 待决策
 
 | # | 事项 | 选项 / 建议 |
 |---|------|-------------|
-| D4 | `ProcessRewardReport.overall_score` 改 `Optional[float]` | 完整修法，但有 **13 处消费点**（4 处 `sum()`/`:.2f`/`>=` 会在 `None` 上抛错），且 `overall_score` 会随 `report` 被下游（react-agent）读取。**建议单开 PR 并 bump `EVAL_API_VERSION`**。当前已提供 `scored` / `num_scored` 作权威判据 |
-| D5 | 规则 vs 归档谁是权威 | image 的 `wrong_media_args` 只有规则报，video 的 `ungrounded_vision` 只有归档报（§1.1）。三种选择：(a) 以规则为准并补 video 规则；(b) 以归档为准；(c) 并列展示、标注来源——**当前是 (c)**，只解决"看不见"，不解决"谁对" |
+| D4 | `ProcessRewardReport.overall_score` 改 `Optional[float]` | 完整修法，但有 **13 处消费点**（4 处 `sum()`/`:.2f`/`>=` 会在 `None` 上抛错），且 `overall_score` 会随 `report` 被下游（react-agent）读取。**已单开 stacked PR（见 PR #10）并 bump `EVAL_API_VERSION`**。当前已提供 `scored` / `num_scored` 作权威判据 |
 
 ---
 

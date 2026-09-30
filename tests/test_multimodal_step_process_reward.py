@@ -118,6 +118,8 @@ def test_ok_episode_passes_process_quality_gate():
     pq = process_quality_from_report(
         report, case_id=episode["episode_id"], multimodal_findings=findings
     )
+    # D2：报告总分是「已评分步的加权均值」，与门禁值（媒体步 min）不是同一个口径。
+    assert pq["overall_score_scope"] == "all_scored_steps_weighted"
     decision = evaluate_evidence_bundle(
         episodes=[episode],
         process_quality=pq,

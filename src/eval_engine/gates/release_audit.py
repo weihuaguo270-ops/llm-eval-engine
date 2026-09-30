@@ -25,6 +25,7 @@ from eval_engine.core.multimodal_process_judge import (
     _is_media_step,
     make_dimension_judge,
 )
+from eval_engine.core.multimodal_step import analyze_multimodal_steps
 from eval_engine.core.process_reward import ProcessRewardScorer
 from eval_engine.core.trajectory_parser import StepsDAG, parse_trajectory
 from eval_engine.gates.evidence_bundle import evaluate_evidence_bundle
@@ -118,6 +119,7 @@ def audit_release(
             "process_reward_soft_dimensions" if calibration_report is not None else "uncalibrated"
         ),
         "process_quality": None if single is None else single["process_quality"],
+        "process_metrics": None if single is None else single["process_metrics"],
         "episodes": episode_reports,
         "calibration": calibration_report,
         "rebuilt_calibration": rebuilt_calibration,
@@ -196,13 +198,8 @@ def _score_episode(
     # Gate on the weakest media step so a strong generate cannot mask an
     # ungrounded final (mean of 5.0 and 2.75 would wrongly clear 3.5).
     overall = round(min(present), 3) if present else None
-    findings = []
     analysis = episode.metadata.get("trace_analysis")
-    if isinstance(analysis, Mapping):
-        for finding in adapt_media_rule_findings(analysis):
-            item = finding.to_dict()
-            item["episode_id"] = episode.episode_id
-            findings.append(item)
+    findings = _media_rule_findings(episode, dag, analysis)
     return {
         "episode_id": episode.episode_id,
         "payload": payload,
@@ -213,6 +210,37 @@ def _score_episode(
         "attribution_anchor": _anchor_cross_check(report, episode, analysis),
         "taxonomy_input": (episode.episode_id, "multimodal_step", report),
     }
+
+
+def _media_rule_findings(
+    episode: Any,
+    dag: StepsDAG,
+    analysis: Optional[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """确定性媒体规则 + 归档 trace_analysis 的规则项，按 (step, failure_type) 去重。
+
+    只写进审计报告的 ``rule_findings``，**不参与任何决策**（见 docs/ATTRIBUTION_AUDIT.md）。
+    确定性规则优先：它们现在就能复现，而归档 analysis 是历史产物；``source`` 字段区分二者
+    （``multimodal_step`` = 本次跑的规则，``trace_debugger`` = 归档 analysis 适配而来）。
+    """
+    metadata = episode.metadata if isinstance(episode.metadata, Mapping) else {}
+    require_vision = metadata.get("require_vision")
+    if not isinstance(require_vision, bool):
+        require_vision = None
+
+    merged: dict[tuple[Any, str], dict[str, Any]] = {}
+
+    def _add(finding: Any) -> None:
+        row = finding.to_dict()
+        row["episode_id"] = episode.episode_id
+        merged.setdefault((row.get("step_index"), str(row.get("failure_type"))), row)
+
+    for finding in analyze_multimodal_steps(dag, require_vision=require_vision):
+        _add(finding)
+    if isinstance(analysis, Mapping):
+        for finding in adapt_media_rule_findings(analysis):
+            _add(finding)
+    return list(merged.values())
 
 
 def _anchor_cross_check(
@@ -266,6 +294,24 @@ def _attribution_block(scored: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         if item.get("skipped")
     ]
     return block
+
+
+def _process_metrics(item: Mapping[str, Any], *, calibrated: bool) -> dict[str, Any]:
+    """把两个不同的「过程分」并列标注，避免被当成同一个数（D2）。
+
+    门禁值 = 媒体/终态步的 **min**（最弱媒体步说了算），且只有标定后才真正参与门禁；
+    报告总分 = 已评分步的**加权均值**（根因步 ×1.5）。两者口径不同，数值通常也不同。
+    """
+    _episode_id, _kind, report = item["taxonomy_input"]
+    return {
+        "gate_applied": calibrated and item["overall"] is not None,
+        "gate_media_min": item["overall"] if calibrated else None,
+        "gate_scope": "min of media/final step scores",
+        "report_weighted": report.overall_score if report.scored else None,
+        "report_scope": "weighted mean over scored steps (root cause x1.5)",
+        "num_scored": report.num_scored,
+        "num_steps": report.num_steps,
+    }
 
 
 def _gate_episode(
@@ -323,6 +369,7 @@ def _gate_episode(
         "hard_failures": list(decision.get("hard_failures") or []),
         "review_reasons": review_reasons,
         "process_quality": process_quality,
+        "process_metrics": _process_metrics(item, calibrated=calibrated),
         "calibration": calibration_report,
         "rule_findings": list(item["rule_findings"]),
     }

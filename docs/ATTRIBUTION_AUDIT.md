@@ -25,7 +25,7 @@
 | 9 | **`None` 被强转 0.0**：`evidence_bundle` 用 `float(... or 0.0)` | 未评分被报成 `process score 0.000 below 3.500`（假低分） | 显式区分 missing 与真实 0 分 |
 | 10 | **锚点校验未接线**：`attribution_anchor` 模块只被测试调用 | 无度量 | 审计报告新增 `attribution_anchors` 块（**只写报告、不参与决策**；trace-debugger 缺失时记 `skipped`） |
 | 11 | **（跨仓）盲表 provenance 泄漏**：trace-debugger 的 `build_sheet` 带 `source_file`，`case_id` 取自文件名 | 夹具文件名即失败类型名（`search_empty.json`）→ 标注者直接读到答案，破坏盲评前提 | 盲表用不透明 `case_id`、不含来源；provenance 只在 key（trace-debugger #8 `27db844`） |
-| 12 | **（跨仓）媒体规则孤岛**：trace-debugger 的 `analyze_multimodal_steps`（精确规则：空 prompt / 缺 path / sha 不匹配 / 终态未引用 / NSFW）**只被测试调用**；审计走 `adapt_media_rule_findings(metadata.trace_analysis)`，而该上游当前**不产出**那 4 个媒体类型 | 报告里"媒体规则证据"几乎恒空——**覆盖假象** | 未修（见 §2 待决策） |
+| 12 | **（跨仓）媒体规则孤岛**：trace-debugger 的 `analyze_multimodal_steps`（精确规则：空 prompt / 缺 path / sha 不匹配 / 终态未引用 / NSFW）**只被测试调用**；审计走 `adapt_media_rule_findings(metadata.trace_analysis)`，而该上游当前**不产出**那 4 个媒体类型 | 报告里"媒体规则证据"几乎恒空——**覆盖假象** | **已修（原 D1）**：审计报告接线确定性规则，与归档 analysis 按 `(step_index, failure_type)` 去重合并，**只报告、不参与决策** |
 
 ### 修复后的实测（42 个 episode 夹具，夹具模式）
 
@@ -38,7 +38,27 @@
 | `mm-step-bad-ungrounded-001` 报告总分 | 3.464 | **2.85**（门禁值仍 2.75） |
 | `anchor_consistency` | — | **1.0（2/2 锚点）** |
 
-测试：`pytest tests/` → **143 passed, 6 skipped**。
+测试：`pytest tests/` → **146 passed, 6 skipped**。
+
+### 1.1 P2 三项（原 D1–D3，已落地）
+
+| # | 事项 | 做法 | 关键证据 |
+|---|------|------|----------|
+| 原 D1 | `analyze_multimodal_steps` 接线 | `release_audit._media_rule_findings()` 合并「确定性规则」与「归档 `trace_analysis` 适配项」，按 `(step_index, failure_type)` 去重；`source` 字段区分 `multimodal_step` / `trace_debugger`；**只写报告、不参与决策、不碰 step score** | 见下「规则与归档不一致」 |
+| 原 D2 | 两套 overall 口径 | 报告新增 `process_metrics`（顶层 + 每 episode）：`gate_media_min` / `gate_scope` / `report_weighted` / `report_scope` / `gate_applied` / `num_scored` / `num_steps`；`process_quality_from_report` 输出加 `overall_score_scope` | image-bad：`gate_media_min=2.75` vs `report_weighted=2.85`；未标定时 `gate_applied=false` 且 `gate_media_min=null`（值算出但不作门禁） |
+| 原 D3 | live 缺维语义 | **不改**：`extract_dimension_scores` 仍 `raise ValueError("live Judge missing dimensions: ...")`，由 scorer 逐步兜住——该步 `applicable=True`、`step_score=0.0`、`needs_revision=True`，taxonomy 记 `judge_error`，`num_scored=0` → `overall_score=None` | 钉在 `tests/test_release_audit_live_judge.py::test_incomplete_live_dimensions_degrade_to_unscored_not_a_crash` |
+
+**原 D3 被否决的替代方案：** 「缺维度就给已有维度的部分学分」——那会把**判分器输入错误**伪装成**低分证据**，再经根因 ×1.5 加权污染 `error_sources` 归因（正是本审计要消灭的假根因）。因此保留 all-or-nothing，把"未评估"表达为**状态**而非分数。
+
+**规则与归档不一致（原 D1 实测，尚需裁决）：**
+
+| 夹具 | 确定性规则 | 归档 `trace_analysis` |
+|---|---|---|
+| `multimodal_step_bad.json` | `(1, unnecessary_generation)`、`(1, wrong_media_args)` | `(1, unnecessary_generation)` |
+| `multimodal_step_video_bad.json` | 无 | `(2, ungrounded_vision)` |
+| `multimodal_step_ok.json` | 无 | 无 |
+
+去重后：image 2 条（`source` 全为 `multimodal_step`）、video 1 条（`trace_debugger`）。**两者互不覆盖**：规则漏了 video 的 `ungrounded_vision`，归档漏了 image 的 `wrong_media_args`。接线后报告同时可见两种证据，但**哪个才是对的尚未裁决**（见 §2 D5）。
 
 ---
 
@@ -46,10 +66,8 @@
 
 | # | 事项 | 选项 / 建议 |
 |---|------|-------------|
-| D1 | `analyze_multimodal_steps` 是否接线 | 建议**先诊断接线**：让它生成 `rule_findings` 但**不灌进 step score、不改决策**，跑一轮看命中率再定。不要让它去压已冻结的 `judge_scores`（会破坏离线绑定与 κ 基线） |
-| D2 | 两套 overall 口径未标注 | 报告总分（`report.overall_score`，含全部已评分步、根因 ×1.5）与门禁值（`min` 媒体步）**是两个数**（实测 2.85 vs 2.75）且进不同产物。要么统一，要么在产物里并列标注 |
-| D3 | live 缺维语义 | `extract_dimension_scores` 缺维直接 `raise ValueError`：未评估被表达为**异常**而非状态。需定"异常 vs 显式未评估" |
 | D4 | `ProcessRewardReport.overall_score` 改 `Optional[float]` | 完整修法，但有 **13 处消费点**（4 处 `sum()`/`:.2f`/`>=` 会在 `None` 上抛错），且 `overall_score` 会随 `report` 被下游（react-agent）读取。**建议单开 PR 并 bump `EVAL_API_VERSION`**。当前已提供 `scored` / `num_scored` 作权威判据 |
+| D5 | 规则 vs 归档谁是权威 | image 的 `wrong_media_args` 只有规则报，video 的 `ungrounded_vision` 只有归档报（§1.1）。三种选择：(a) 以规则为准并补 video 规则；(b) 以归档为准；(c) 并列展示、标注来源——**当前是 (c)**，只解决"看不见"，不解决"谁对" |
 
 ---
 
@@ -57,11 +75,14 @@
 
 | # | 事项 |
 |---|------|
-| U1 | live Judge 是否**总**返回四个维度（缺一则 `ValueError`，是另一种失效模式） |
+| U1 | live Judge 是否**总**返回四个维度：缺维时的**行为**已在原 D3 钉住；**真实返回维度分布仍未测**（本审计未跑 live，无 API Key） |
 | U2 | `scripts/relabel_expand_human_on_live.py`、`scripts/seed_held_out_expand_human.py` 的具体行为（仅见到文件名） |
 | U3 | `examples/fixtures/calibration/multimodal_held_out_expand_human.json` 与夹具的对账（只对账了 `multimodal_dimension_held_out.json` 的 40 项，40/40 相等） |
 | U4 | `ArtifactRef.validate()` 的具体约束 |
 | U5 | 阈值分裂在**真实评分分布**下的影响面（多少步落在 [3.0, 3.5)）——需真实数据 |
+| U6 | `docs/failure_casebook.md` 与重新生成结果**不一致**：本地重跑 `scripts/generate_failure_casebook.py` 得到 `106 insertions(+), 109 deletions(-)`（条目顺序与页头都不同）→ 提交的副本是旧的或手改过，生成器**不可字节复现**。本次未修（与归因链路无关） |
+| U7 | `examples/run_benchmark.py` 每次产出**日期戳新文件**（`docs/benchmark_comparison_<date>.md`），不入版本库；基准回归门禁本地实测 **PASS**（3.647 vs 3.613，+0.034），即本次改动未移动基准总均值 |
+| U8 | `release_audit` 与 `trace_rules` 两条媒体规则链的**真阳性率**：本次只做到"并列展示"，没有金标准标签可算 P/R |
 
 ---
 
@@ -90,3 +111,5 @@ CI 侧（Linux，未装 trace-debugger）走的是 **`skipped` 回退路径**：
 - `anchor_consistency` 是**必要条件通过率**（确定性失败步是否被归因），**不是根因判对率**；42 夹具里 38 条的 `error_sources` 没有锚点可校验，仍需人工标注。
 - 本审计是**静态代码审计 + 夹具实测**，不给 live 结论；live 校准（κ）另见 [`METRICS_TRUST.md`](METRICS_TRUST.md) 与 [`HELD_OUT_EXPAND.md`](HELD_OUT_EXPAND.md)。
 - 夹具模式读的是**预填 `judge_scores`**（见 `HELD_OUT_EXPAND.md` 协议），其结论只说明**机制**，不等于线上表现。
+- `rule_findings` / `process_metrics` / `attribution_anchors` 都是**报告字段**：改动它们**不改变任何 decision**。P2 三项没有动门禁逻辑（门禁改动只在 §1 的 1–9 项）。
+- 原 D1 的接线只让证据**可见**，不代表证据**正确**：规则与归档在 3 个夹具上互不覆盖（§1.1），裁决见 §2 D5。

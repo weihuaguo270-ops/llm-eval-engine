@@ -34,7 +34,7 @@ class CaseResult:
     category: str
     query: str
     passed: bool
-    overall_score: float
+    overall_score: Optional[float]  # None = 该用例没有任何步被评分（未评估，不进均值）
     pass_rate: float
     num_failed_steps: int
     error_sources: list[int]
@@ -68,10 +68,15 @@ class ModelRunResult:
 
     @property
     def avg_score(self) -> float:
-        """返回用例等权平均过程得分。"""
-        if not self.cases:
+        """返回**已评分**用例的等权平均过程得分；一个都没有时返回 0.0。
+
+        未评估（overall_score is None）的用例不进分母：把"没评过"当 0 分会凭空
+        压低均值，正是本次归因审计要消灭的读法。
+        """
+        scored = [c.overall_score for c in self.cases if c.overall_score is not None]
+        if not scored:
             return 0.0
-        return sum(c.overall_score for c in self.cases) / len(self.cases)
+        return sum(scored) / len(scored)
 
     @property
     def avg_latency_ms(self) -> float:
@@ -138,10 +143,12 @@ def _aggregate_by_category(cases: list[CaseResult]) -> dict[str, dict[str, Any]]
     out: dict[str, dict[str, Any]] = {}
     for cat, group in buckets.items():
         n = len(group)
+        scored = [x.overall_score for x in group if x.overall_score is not None]
         out[cat] = {
             "num_cases": n,
             "pass_rate": round(sum(1 for x in group if x.passed) / n, 4),
-            "avg_score": round(sum(x.overall_score for x in group) / n, 3),
+            # 未评估的用例不进均值（与 ModelRunResult.avg_score 同口径）
+            "avg_score": round(sum(scored) / len(scored), 3) if scored else 0.0,
         }
     return out
 
@@ -228,10 +235,12 @@ class BenchmarkRunner:
                 report = scorer.score_trajectory(dag, fast_mode=False)
                 elapsed = int((time.perf_counter() - t0) * 1000)
                 err = analyze_error_propagation(report, dag)
+                case_score = report.overall_score
                 passed = (
-                    report.num_scored > 0
+                    report.scored
                     and not report.needs_revision
-                    and report.overall_score >= self.min_step_score
+                    and case_score is not None
+                    and case_score >= self.min_step_score
                 )
 
                 cr = CaseResult(

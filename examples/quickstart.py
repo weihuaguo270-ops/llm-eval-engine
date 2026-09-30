@@ -51,7 +51,8 @@ def demo_direct_scoring():
     })
     report = scorer.score_trajectory(dag, fast_mode=True)
 
-    print(f"总分: {report.overall_score:.2f}")
+    score = report.overall_score
+    print(f"总分: {score:.2f}" if score is not None else "总分: 未评估（没有步被评分）")
     print(f"步骤数: {report.num_steps}")
     print(f"通过率: {report.pass_rate:.1%}")
 

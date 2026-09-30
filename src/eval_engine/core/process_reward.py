@@ -40,7 +40,10 @@ from eval_engine.integrations.trace_findings import (
 
 # Mirrored by react-agent EVAL_API_VERSION / EVAL_ENGINE_API_CONTRACT.
 # Bump together when ProcessRewardScorer constructor kwargs change.
-EVAL_API_VERSION = "0.2"
+#
+# 0.3: ProcessRewardReport.overall_score 变为 Optional[float]（None = 没有任何步被评分）。
+#      下游读 overall_score 之前必须先判 None，或用 report.scored / num_scored 作判据。
+EVAL_API_VERSION = "0.3"
 
 
 # ──────────────────────────────────────────────
@@ -79,7 +82,7 @@ class ProcessRewardReport:
     """Process Reward 评分报告"""
     query: str
     per_step: list[StepScore]
-    overall_score: float         # 已评分步骤的加权平均；num_scored==0 时无意义（读 scored）
+    overall_score: Optional[float]  # 已评分步加权平均；None = 没有任何步被评分（未评估）
     num_steps: int
     num_scored: int
     num_failed_steps: int        # 需要修正的步骤数
@@ -91,7 +94,7 @@ class ProcessRewardReport:
 
     @property
     def scored(self) -> bool:
-        """是否有任何步骤被评分。num_scored==0 时 overall_score 无意义，勿当 0 分读。"""
+        """是否有任何步骤被评分。未评估时 overall_score 为 None，勿当 0 分读。"""
         return self.num_scored > 0
 
     @property
@@ -265,6 +268,8 @@ class ProcessRewardScorer:
         ]
         report.num_failed_steps = sum(1 for s in report.per_step if s.needs_revision)
         report.needs_revision = any(s.needs_revision for s in report.per_step)
+        # 规则 findings 可能把某步的 step_score 压到 0（= 未评估），所以这里要重算
+        # num_scored 并同步 overall_score，维持「num_scored==0 ⟺ overall_score is None」。
         scored = [s for s in report.per_step if s.step_score > 0]
         if scored:
             total_weight = 0.0
@@ -274,7 +279,9 @@ class ProcessRewardScorer:
                 weighted_sum += s.step_score * weight
                 total_weight += weight
             report.overall_score = round(weighted_sum / total_weight, 3)
-            report.num_scored = len(scored)
+        else:
+            report.overall_score = None
+        report.num_scored = len(scored)
         report.check_findings = [f.to_dict() for f in findings]
         return report
 
@@ -305,9 +312,11 @@ class ProcessRewardScorer:
             )
             if isinstance(value, (int, float)) and not isinstance(value, bool)
         ]
-        has_score = bool(present)
-        overall = round(sum(present) / len(present), 3) if has_score else 0.0
-        needs_revision = bool(result.get("needs_revision", False)) or not has_score
+        # None = 没有任何维度被评过（未评估），不是 0 分。下游必须先判 None。
+        overall: Optional[float] = (
+            round(sum(present) / len(present), 3) if present else None
+        )
+        needs_revision = bool(result.get("needs_revision", False)) or overall is None
 
         return ProcessRewardReport(
             query=dag.query,
@@ -325,10 +334,10 @@ class ProcessRewardScorer:
                                 reason="",
                             ),
                         ]
-                        if has_score
+                        if overall is not None
                         else []
                     ),
-                    step_score=overall if has_score else 0.0,
+                    step_score=overall if overall is not None else 0.0,
                     needs_revision=needs_revision,
                     role_understanding="；".join(
                         str(w) for w in (result.get("weaknesses") or [])
@@ -337,7 +346,7 @@ class ProcessRewardScorer:
             ],
             overall_score=overall,
             num_steps=dag.num_steps,
-            num_scored=1 if has_score else 0,
+            num_scored=1 if overall is not None else 0,
             num_failed_steps=1 if needs_revision else 0,
             error_sources=[],
             needs_revision=needs_revision,
@@ -428,8 +437,9 @@ class ProcessRewardScorer:
             n.step_index for n in dag.find_error_sources(threshold=self.min_step_score)
         ]
 
-        # 计算加权总分
+        # 计算加权总分；没有任何步被评分时为 None（未评估，而不是 0 分）
         scored_steps = [s for s in step_scores if s.step_score > 0]
+        overall: Optional[float] = None
         if scored_steps:
             # 按是否根因加权：根因步骤权重大
             total_weight = 0
@@ -438,14 +448,13 @@ class ProcessRewardScorer:
                 weight = 1.5 if s.step_index in error_sources else 1.0
                 weighted_sum += s.step_score * weight
                 total_weight += weight
-            overall = weighted_sum / total_weight if total_weight > 0 else 0.0
-        else:
-            overall = 0.0
+            if total_weight > 0:
+                overall = round(weighted_sum / total_weight, 3)
 
         return ProcessRewardReport(
             query=dag.query,
             per_step=step_scores,
-            overall_score=round(overall, 3),
+            overall_score=overall,
             num_steps=dag.num_steps,
             num_scored=len(scored_steps),
             num_failed_steps=sum(1 for s in step_scores if s.needs_revision),

@@ -148,7 +148,13 @@ def run_agent_benchmark(
             scorer = ProcessRewardScorer(judge_fn=judge_fn, min_step_score=min_step_score)
             report = scorer.score_trajectory(dag, fast_mode=False)
             err = analyze_error_propagation(report, dag)
-            passed = not report.needs_revision and report.overall_score >= min_step_score
+            case_score = report.overall_score
+            passed = (
+                report.scored
+                and not report.needs_revision
+                and case_score is not None
+                and case_score >= min_step_score
+            )
 
             cr = CaseResult(
                 case_id=case["id"],
@@ -167,9 +173,10 @@ def run_agent_benchmark(
             mr.cases.append(cr)
             if not passed:
                 taxonomy_inputs.append((case["id"], case.get("category", "unknown"), report))
+            score_text = f"{case_score:.2f}" if case_score is not None else "n/a"
             print(
                 f"  [{profile}] {case['id']} mode={agent_res.mode} "
-                f"score={report.overall_score:.2f} pass={passed}"
+                f"score={score_text} pass={passed}"
             )
         model_results.append(mr)
 

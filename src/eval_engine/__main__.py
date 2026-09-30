@@ -64,7 +64,8 @@ def _run_eval(args):
 
     print(f"\n📊 评估结果")
     print(f"{'='*40}")
-    print(f"  总分: {report.overall_score:.2f}")
+    score = report.overall_score
+    print(f"  总分: {score:.2f}" if score is not None else "  总分: 未评估（没有步被评分）")
     print(f"  步骤数: {report.num_steps}")
     print(f"  通过率: {report.pass_rate:.1%}")
     print(f"  需修正: {'是' if report.needs_revision else '否'}")

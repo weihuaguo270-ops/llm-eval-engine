@@ -2,7 +2,7 @@
 
 **审计对象：** `ProcessRewardScorer` → `report.error_sources`（根因步）→ release audit 这条链路。
 **方法：** 静态代码审计 + 42 个 episode 夹具实测（默认夹具模式）；**未跑 live**。
-**日期：** 2026-09-30 · 对应 PR：llm-eval-engine #8（审计主体，已 squash 合并 `75b951a`）、llm-eval-engine #9（§1.1 的 P2 三项）、trace-debugger #8（已 squash 合并）。
+**日期：** 2026-09-30 · 对应 PR（均已 squash 合并）：llm-eval-engine #8 `75b951a`（审计主体）、#9 `c29cbc2`（§1.1 的 P2 三项）、#11 `c86b6d6`（§1 第 13 项，原 D4；原 PR #10 因 #9 合并时删除 head 分支被 GitHub 自动关闭，内容由 #11 承接）、trace-debugger #8、react-agent #105 `ddb4a2d`（跨仓 `EVAL_API_VERSION` 0.3）。
 
 ## 摘要（一句话）
 
@@ -74,7 +74,7 @@
 
 ### 2.2 待决策
 
-当前无待决策项。原 D4 已在本 PR 落地（见 §1 第 13 项），但**必须与 react-agent 的配套 PR 同时合并**：react-agent 从本仓 master 装机，并在 `tests/test_eval_engine_contract.py` 断言两边 `EVAL_API_VERSION` 相等。
+当前无待决策项。原 D4 已落地（见 §1 第 13 项），跨仓配套也已完成：llm-eval-engine #11（0.3）与 react-agent #105 均已合并，两边 `EVAL_API_VERSION` 都是 `0.3`（react-agent 从本仓 master 装机，并在 `tests/test_eval_engine_contract.py` 断言两边相等）。
 
 ---
 

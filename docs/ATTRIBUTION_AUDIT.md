@@ -2,7 +2,7 @@
 
 **审计对象：** `ProcessRewardScorer` → `report.error_sources`（根因步）→ release audit 这条链路。
 **方法：** 静态代码审计 + 42 个 episode 夹具实测（默认夹具模式）；**未跑 live**。
-**日期：** 2026-09-30 · 对应 PR：llm-eval-engine #8、trace-debugger #8。
+**日期：** 2026-09-30 · 对应 PR：llm-eval-engine #8（审计主体，已 squash 合并 `75b951a`）、llm-eval-engine #9（§1.1 的 P2 三项）、trace-debugger #8（已 squash 合并）。
 
 ## 摘要（一句话）
 

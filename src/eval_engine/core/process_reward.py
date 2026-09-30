@@ -71,6 +71,7 @@ class StepScore:
     role_understanding: str = ""  # Judge 对该步角色的理解
     failure_type: Optional[str] = None
     check_sources: list[str] = field(default_factory=list)
+    applicable: bool = True      # False = 该步不在评分范围内（如思考步），不计分不触发修订
 
 
 @dataclass
@@ -363,16 +364,22 @@ class ProcessRewardScorer:
                     needs_revision=float(r.get("score", 3)) <= 3,
                 ))
 
-            # 缺失 step_score 表示 Judge 没有真正评估这一步。旧行为回退到中性 3.0，
-            # 而 3.0 < min_step_score(3.5)，会把「未评估」当成「低分」，进而把该步
-            # 归因为根因。显式区分：未评估 → step_score 0（不计入总分）、
-            # node.score=None（find_error_sources 只认已评分节点）。
+            # 三态（与 C8 回归测试一致）：
+            #   applicable=False          → 不适用（思考步等）：不计分、不触发修订
+            #   applicable=True + 无分数  → 未评估：不计分，但标 needs_revision
+            #   applicable=True + 有分数  → 正常评分
+            # 旧行为把缺失分数回退到中性 3.0，而 3.0 < min_step_score(3.5)，于是
+            # 「未评估」被读成「低分失败」，并在阈值统一后成为根因。
+            applicable = bool(judge_output.get("applicable", True))
             raw_score = judge_output.get("step_score")
             unscored = raw_score is None
             step_score_val = 0.0 if unscored else float(raw_score)
-            needs_revision = judge_output.get("needs_revision", False) or (
-                step_score_val < self.min_step_score
-            )
+            if applicable:
+                needs_revision = judge_output.get("needs_revision", False) or (
+                    step_score_val < self.min_step_score
+                )
+            else:
+                needs_revision = False
 
             step_scores.append(StepScore(
                 step_index=node.step_index,
@@ -382,10 +389,11 @@ class ProcessRewardScorer:
                 step_score=step_score_val,
                 needs_revision=needs_revision,
                 role_understanding=judge_output.get("role_understanding", ""),
+                applicable=applicable,
             ))
 
-            # 记录分数到 DAG 节点（未评估 → None，不参与根因判定）
-            node.score = None if unscored else step_score_val
+            # 记录分数到 DAG 节点（不适用 / 未评估 → None，不参与根因判定）
+            node.score = None if (unscored or not applicable) else step_score_val
 
         # 定位根因（阈值必须与 needs_revision 一致，否则低分步与根因集合会分裂）
         error_sources = [

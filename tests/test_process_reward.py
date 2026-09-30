@@ -238,6 +238,29 @@ def test_judge_exception_step_is_unscored_not_root_cause():
     assert report.error_sources == []
 
 
+def test_not_applicable_step_is_excluded_from_score_and_revision():
+    """方案 C 回归：applicable=False 的步（思考步）不计分、不触发修订、不进总分。"""
+
+    def _judge(prompt: str) -> dict:
+        if "类型: action" in prompt:
+            return {"role_understanding": "", "rubrics": [],
+                    "step_score": 1.0, "needs_revision": True}
+        return {"role_understanding": "", "rubrics": [], "applicable": False}
+
+    dag = parse_trajectory(_threshold_trajectory())
+    scorer = ProcessRewardScorer(judge_fn=_judge, min_step_score=3.5)
+    report = scorer.score_trajectory(dag, fast_mode=False)
+
+    not_applicable = report.per_step[1]
+    assert not_applicable.applicable is False
+    assert not_applicable.step_score == 0.0
+    assert not_applicable.needs_revision is False, "不适用不得触发修订"
+    assert report.num_scored == 1, "不适用步不进入已评分集合"
+    assert report.overall_score == 1.0, "不适用步不参与加权总分"
+    assert report.num_failed_steps == 1
+    assert report.error_sources == [0], "低分步仍是根因"
+
+
 if __name__ == "__main__":
     print("=" * 50)
     print("Process Reward + 错误分析 测试")

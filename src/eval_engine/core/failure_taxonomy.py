@@ -24,6 +24,7 @@ FAILURE_TYPES = (
     "ungrounded_vision",
     "unsafe_media",
     "other",
+    "unscored",
 )
 
 _TYPE_LABELS = {
@@ -39,6 +40,7 @@ _TYPE_LABELS = {
     "ungrounded_vision": "视觉未接地",
     "unsafe_media": "不安全媒体",
     "other": "其他",
+    "unscored": "未评估（无评分证据）",
 }
 
 _MULTIMODAL_STRUCTURED = frozenset(
@@ -114,8 +116,23 @@ def classify_step_failure(
     case_id: str = "",
 ) -> Optional[FailureRecord]:
     """对单步低分结果归类；非低分步返回 None。"""
+    if not getattr(step, "applicable", True):
+        return None  # 不适用（如思考步）：不在评分范围内，不算失败
     if not step.needs_revision and step.step_score >= 3.5:
         return None
+
+    if step.step_score <= 0:
+        # 未评估：有 needs_revision 但没有分数。不得归类为下游错误传播——
+        # 一个没被评过的步骤既不是根因，也不是"受影响的下游"。
+        return FailureRecord(
+            case_id=case_id,
+            step_index=step.step_index,
+            failure_type="unscored",
+            step_score=0.0,
+            reason="该步没有评分证据（未评估）",
+            is_root_cause=False,
+            tool_name=step.tool_name,
+        )
 
     error_sources = error_sources or []
 

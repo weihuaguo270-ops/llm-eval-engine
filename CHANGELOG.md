@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Changed (2026-09-30) — API 0.3: `overall_score` is Optional
+
+- `ProcessRewardReport.overall_score` is now `Optional[float]`: `None` means **no step was
+  scored** (unscored), never `0.0` (0.0 = worst evidence). `EVAL_API_VERSION` 0.2 → 0.3
+- Consumers updated: `benchmark.runner` (unscored cases stay out of `avg_score` and the
+  per-category averages), `EvalLoop` (oscillation check skipped while either round is
+  unscored), `observability.report`, `__main__`, and the expense / agent-benchmark / e2e
+  examples (print `未评估` instead of raising or showing `0.00`)
+- `_apply_findings` now enforces `num_scored == 0 ⟺ overall_score is None`: a rule that
+  zeroes every step no longer leaves a stale score behind
+- **Cross-repo**: react-agent mirrors this constant and must bump in the same release
+  (`tests/test_eval_engine_contract.py` asserts both sides are equal)
+
 ### Fixed (2026-09-30) — attribution chain audit
 
 - Root-cause threshold follows `min_step_score` (was a hard-coded 3.0), so steps scoring

@@ -174,3 +174,36 @@ def test_bad_episode_attributes_multimodal_failures_and_reviews():
     # 过程分不足 → review（非 CLIP 成对显著差）
     assert decision["decision"] == "review"
     assert any("process score" in r for r in decision["review_reasons"])
+
+
+def test_media_step_without_evidence_is_unscored_not_root_cause():
+    """C8 回归：媒体步无评分证据 → 需要修订（门禁不变），但不得被归因为根因。
+
+    旧行为给该步一个中性的 context=3.0，而 3.0 < min_step_score(3.5)，
+    于是「没有评分证据」被当成「低分失败步」，并成为 error_sources 的根因。
+    """
+    from eval_engine.core.multimodal_process_judge import (
+        _is_media_step,
+        judge_multimodal_step,
+    )
+    from eval_engine.core.trajectory_parser import parse_trajectory
+
+    dag = parse_trajectory({
+        "query": "生成一张登录页截图",
+        "steps": [
+            {"step_index": 0, "type": "thought", "content": "计划"},
+            {"step_index": 1, "type": "action",
+             "action": {"name": "generate_image", "args": {"prompt": "login"}},
+             "content": "generate_image", "observation": "ok"},
+            {"step_index": 2, "type": "final", "content": "done"},
+        ],
+        "total_steps": 3,
+        "final_answer": "done",
+    })
+    node = next(n for n in dag.nodes if n.step_index == 1)
+    assert _is_media_step(node), "夹具未生效：该步应为媒体步"
+
+    result = judge_multimodal_step(node, dag)
+    assert result["needs_revision"] is True, "无评分证据仍不得据此通过"
+    assert "step_score" not in result, "未评估的步不得给出中性低分"
+

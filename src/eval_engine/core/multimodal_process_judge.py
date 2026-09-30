@@ -137,7 +137,20 @@ def judge_multimodal_step(node: StepNode, dag: StepsDAG) -> dict[str, Any]:
     """Turn stored dimension scores into Process Reward rubrics."""
     del dag
     raw = node.metadata.get("judge_scores") or {}
-    scores = _dimension_scores(raw, _is_media_step(node) or node.step_type == "final")
+    media = _is_media_step(node) or node.step_type == "final"
+    has_evidence = (
+        any(name in raw and raw[name] is not None for name in DIMENSIONS)
+        or raw.get("context") is not None
+    )
+    if media and not has_evidence:
+        # 媒体/终态步没有评分证据：保持保守门禁（needs_revision=True，不得据此通过），
+        # 但不提供 step_score → 该步为「未评估」，不得被当成 3.0 低分并归因为根因。
+        return {
+            "role_understanding": node.tool_name or node.step_type,
+            "rubrics": [],
+            "needs_revision": True,
+        }
+    scores = _dimension_scores(raw, media)
     return _result_from_scores(
         node,
         scores,

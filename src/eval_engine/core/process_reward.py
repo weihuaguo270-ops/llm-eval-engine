@@ -251,7 +251,12 @@ class ProcessRewardScorer:
                 if node is not None:
                     node.score = step.step_score
 
-        report.error_sources = [n.step_index for n in dag.find_error_sources()]
+        # 根因定位与 needs_revision 共用同一阈值：find_error_sources() 的默认 3.0
+        # 比 min_step_score(3.5) 更严，会让 [3.0, 3.5) 的失败步被标记需修改却永远
+        # 不可能被判为根因（error_sources 为空）。
+        report.error_sources = [
+            n.step_index for n in dag.find_error_sources(threshold=self.min_step_score)
+        ]
         report.num_failed_steps = sum(1 for s in report.per_step if s.needs_revision)
         report.needs_revision = any(s.needs_revision for s in report.per_step)
         scored = [s for s in report.per_step if s.step_score > 0]
@@ -338,14 +343,13 @@ class ProcessRewardScorer:
             try:
                 judge_output = self.judge_fn(prompt)
             except Exception as e:
-                # Judge 调用失败，使用占位分数
+                # Judge 调用失败：不给 step_score → 视为「未评估」而非低分
                 judge_output = {
                     "role_understanding": f"Judge 调用异常: {e}",
                     "rubrics": [
                         {"dimension": "error", "criteria": "Judge 异常",
                          "score": 0, "reason": str(e)},
                     ],
-                    "step_score": 0,
                     "needs_revision": True,
                 }
 
@@ -359,7 +363,13 @@ class ProcessRewardScorer:
                     needs_revision=float(r.get("score", 3)) <= 3,
                 ))
 
-            step_score_val = float(judge_output.get("step_score", 3))
+            # 缺失 step_score 表示 Judge 没有真正评估这一步。旧行为回退到中性 3.0，
+            # 而 3.0 < min_step_score(3.5)，会把「未评估」当成「低分」，进而把该步
+            # 归因为根因。显式区分：未评估 → step_score 0（不计入总分）、
+            # node.score=None（find_error_sources 只认已评分节点）。
+            raw_score = judge_output.get("step_score")
+            unscored = raw_score is None
+            step_score_val = 0.0 if unscored else float(raw_score)
             needs_revision = judge_output.get("needs_revision", False) or (
                 step_score_val < self.min_step_score
             )
@@ -374,11 +384,13 @@ class ProcessRewardScorer:
                 role_understanding=judge_output.get("role_understanding", ""),
             ))
 
-            # 记录分数到 DAG 节点
-            node.score = step_score_val
+            # 记录分数到 DAG 节点（未评估 → None，不参与根因判定）
+            node.score = None if unscored else step_score_val
 
-        # 定位根因
-        error_sources = [n.step_index for n in dag.find_error_sources()]
+        # 定位根因（阈值必须与 needs_revision 一致，否则低分步与根因集合会分裂）
+        error_sources = [
+            n.step_index for n in dag.find_error_sources(threshold=self.min_step_score)
+        ]
 
         # 计算加权总分
         scored_steps = [s for s in step_scores if s.step_score > 0]

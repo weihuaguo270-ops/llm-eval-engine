@@ -141,6 +141,103 @@ def test_iteration_improvement():
     print("✅ test_iteration_improvement passed")
 
 
+def test_error_sources_share_the_revision_threshold():
+    """回归：根因定位必须与 needs_revision 共用阈值
+
+    修复前 find_error_sources() 使用默认 3.0，而 min_step_score=3.5：得分为 3.2 的
+    失败步会被标记 needs_revision，却永远不可能被判为根因（error_sources 为空）。
+    """
+    trajectory = {
+        "session_id": "traj_threshold_split",
+        "query": "计算 1+1",
+        "steps": [
+            {"step_index": 0, "type": "action",
+             "action": {"name": "calculator", "args": {"expression": "1+1"}},
+             "content": "calculator"},
+            {"step_index": 1, "type": "final", "content": "结果是2"},
+        ],
+        "total_steps": 2,
+        "final_answer": "结果是2",
+    }
+
+    def _judge(prompt: str) -> dict:
+        score = 3.2 if "类型: action" in prompt else 4.0
+        return {
+            "role_understanding": "边界用例：低分但高于旧默认阈值",
+            "rubrics": [],
+            "step_score": score,
+            "needs_revision": score < 3.5,
+        }
+
+    dag = parse_trajectory(trajectory)
+    scorer = ProcessRewardScorer(judge_fn=_judge, min_step_score=3.5)
+    report = scorer.score_trajectory(dag, fast_mode=False)
+
+    assert report.per_step[0].step_score == 3.2, "夹具未生效：根因步未被评 3.2"
+    assert report.needs_revision is True
+    assert report.error_sources == [0], (
+        "3.2 < min_step_score(3.5) 的失败步必须能成为根因，"
+        f"实际 error_sources={report.error_sources}"
+    )
+
+    print("✅ test_error_sources_share_the_revision_threshold passed")
+
+
+def _threshold_trajectory() -> dict:
+    return {
+        "session_id": "traj_threshold",
+        "query": "计算 1+1",
+        "steps": [
+            {"step_index": 0, "type": "action",
+             "action": {"name": "calculator", "args": {"expression": "1+1"}},
+             "content": "calculator"},
+            {"step_index": 1, "type": "final", "content": "结果是2"},
+        ],
+        "total_steps": 2,
+        "final_answer": "结果是2",
+    }
+
+
+def test_missing_step_score_is_unscored_not_root_cause():
+    """C8 回归：Judge 未给出 step_score → 「未评估」，不是低分根因。
+
+    旧行为回退到中性 3.0，而 3.0 < min_step_score(3.5)，会把未评估的步
+    同时标成 needs_revision 和根因。
+    """
+
+    def _judge(prompt: str) -> dict:
+        if "类型: action" in prompt:
+            return {"role_understanding": "", "rubrics": [], "needs_revision": False}
+        return {"role_understanding": "", "rubrics": [],
+                "step_score": 4.0, "needs_revision": False}
+
+    dag = parse_trajectory(_threshold_trajectory())
+    scorer = ProcessRewardScorer(judge_fn=_judge, min_step_score=3.5)
+    report = scorer.score_trajectory(dag, fast_mode=False)
+
+    assert report.per_step[0].step_score == 0.0, "未评估不得被当成 3.0 分"
+    assert report.per_step[0].needs_revision is True, "评估不完整仍应需要修订"
+    assert report.error_sources == [], "未评估的步不得被归因为根因"
+    assert report.per_step[1].step_score == 4.0
+
+
+def test_judge_exception_step_is_unscored_not_root_cause():
+    """Judge 调用失败 → 未评估：标 needs_revision，但不是根因。"""
+
+    def _judge(prompt: str) -> dict:
+        if "类型: action" in prompt:
+            raise RuntimeError("judge boom")
+        return {"role_understanding": "", "rubrics": [],
+                "step_score": 4.0, "needs_revision": False}
+
+    dag = parse_trajectory(_threshold_trajectory())
+    scorer = ProcessRewardScorer(judge_fn=_judge, min_step_score=3.5)
+    report = scorer.score_trajectory(dag, fast_mode=False)
+
+    assert report.per_step[0].needs_revision is True
+    assert report.error_sources == []
+
+
 if __name__ == "__main__":
     print("=" * 50)
     print("Process Reward + 错误分析 测试")

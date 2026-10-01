@@ -18,6 +18,11 @@ FAILURE_TYPES = (
     "inefficient_loop",
     "safety_violation",
     "judge_error",
+    # 检索步确定性规则失败（源自 trace-debugger 的硬失败信号）。
+    # 不并入 wrong_tool/other：搜不到 ≠ 选错工具，搜索超时 ≠ 未分类。
+    "search_empty",
+    "search_weak",
+    "search_timeout",
     # 轨迹内多模态过程归因（非生成模型选型）
     "unnecessary_generation",
     "wrong_media_args",
@@ -35,6 +40,9 @@ _TYPE_LABELS = {
     "inefficient_loop": "冗余/低效循环",
     "safety_violation": "安全违规",
     "judge_error": "Judge 异常",
+    "search_empty": "搜索无有效结果",
+    "search_weak": "搜索结果结构过弱",
+    "search_timeout": "搜索超时",
     "unnecessary_generation": "多余媒体生成",
     "wrong_media_args": "媒体参数错误",
     "ungrounded_vision": "视觉未接地",
@@ -54,6 +62,14 @@ _MULTIMODAL_STRUCTURED = frozenset(
         "inefficient_loop",
     }
 )
+
+# 检索步规则失败（trace-debugger 的硬失败信号）。
+# process_reward 对 trace_debugger 来源只设 step.failure_type、不加 rubric，
+# 因此这里必须显式保住类型；否则非根因步会被改写成 error_propagation，
+# 检索类失败就从 by_type 里消失（与 media 保护同一理由）。
+_RULE_STRUCTURED = frozenset({"search_empty", "search_weak", "search_timeout"})
+
+_KEEP_STRUCTURED = _MULTIMODAL_STRUCTURED | _RULE_STRUCTURED
 
 
 @dataclass
@@ -145,7 +161,7 @@ def classify_step_failure(
 
     structured = getattr(step, "failure_type", None)
     if structured and structured in FAILURE_TYPES:
-        keep_structured = structured in _MULTIMODAL_STRUCTURED or any(
+        keep_structured = structured in _KEEP_STRUCTURED or any(
             (getattr(r, "check_source", "") or "")
             in ("trace_debugger", "eval_contract", "multimodal_step")
             for r in step.rubrics

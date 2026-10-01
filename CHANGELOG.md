@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added (2026-10-01) — 检索步过程维度独立分栏
+
+- 新增 `src/eval_engine/core/search_step.py`（检索工具名分派 + 四维判定标准）与 `src/eval_engine/gates/search_calibration.py`（`search_dimension_cell` 分栏；无样本返回 `status="uncalibrated"`）
+- 检索步确定性失败类型 `search_empty` / `search_weak` / `search_timeout` 进入 taxonomy 并受结构化保护（不再落到 `wrong_tool` / `other`）
+- 分栏登记：`docs/search_dimension_column_20261001.md`；κ 单位与主钉 `dimension_cell` 隔离，**当前无 held-out 样本、不报 κ**
+
 ### Changed (2026-09-30) — API 0.3: `overall_score` is Optional
 
 - `ProcessRewardReport.overall_score` is now `Optional[float]`: `None` means **no step was

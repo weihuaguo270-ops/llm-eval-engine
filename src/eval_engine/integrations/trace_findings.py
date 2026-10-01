@@ -13,11 +13,14 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Mapping, Optional, Sequence
 
 # trace-debugger FailureType 字符串 → 本仓 FAILURE_TYPES
+# 检索类不再并入 wrong_tool / other：原映射把"检索步自身失败"换算成了"选错工具"
+# 或"未分类"，而 search_weak 原本没有条目、静默落 other。
 _TRACE_TO_TAXONOMY: dict[str, str] = {
     "tool_error": "wrong_params",
     "acceptance_failed": "wrong_params",
-    "search_empty": "wrong_tool",
-    "search_timeout": "other",
+    "search_empty": "search_empty",
+    "search_weak": "search_weak",
+    "search_timeout": "search_timeout",
     "llm_offtrack": "hallucination",
     "context_overflow": "other",
     "duplicate": "inefficient_loop",

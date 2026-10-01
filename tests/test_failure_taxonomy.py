@@ -100,3 +100,38 @@ def test_scoreless_step_with_judge_exception_stays_judge_error():
     rec = classify_step_failure(step, error_sources=[], case_id="c1")
     assert rec is not None
     assert rec.failure_type == "judge_error"
+
+
+# ── 回归：检索类失败类型 ──
+
+
+def test_search_failure_types_declared_in_taxonomy():
+    from eval_engine.core.failure_taxonomy import FAILURE_TYPES, _TYPE_LABELS
+
+    for name in ("search_empty", "search_weak", "search_timeout"):
+        assert name in FAILURE_TYPES
+        assert _TYPE_LABELS.get(name), f"{name} 缺少中文标签"
+
+
+def test_trace_sourced_search_failure_is_not_rewritten_to_propagation():
+    """非根因步的确定性检索失败不得被改写成 error_propagation。
+
+    trace-debugger 来源的 finding 不给步骤加 rubric（见 process_reward），
+    所以保护只能靠类型集合，而不是 rubric 上的 check_source。
+    """
+    from eval_engine.core.failure_taxonomy import classify_step_failure
+
+    step = StepScore(
+        step_index=0,
+        step_type="action",
+        tool_name="web_search",
+        rubrics=[],
+        step_score=4.5,
+        needs_revision=True,
+        failure_type="search_empty",
+        check_sources=["trace_debugger"],
+    )
+    rec = classify_step_failure(step, error_sources=[1], case_id="c1")
+    assert rec is not None
+    assert rec.failure_type == "search_empty"
+    assert rec.is_root_cause is False

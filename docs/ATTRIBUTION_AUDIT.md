@@ -108,7 +108,7 @@
 
 | 校准集 | 来源 | n | κ |
 |--------|------|---|----|
-| 文本 / Agent 过程 | `src/eval_engine/dataset/data/calibration_human_judge.json`（`reports/calibration_report_20261001_live.json` 的 `source_path`） | 53 | **0.8565**（inter-rater 0.7979，最差维度 `overall`） |
+| 文本 / Agent 过程 | `src/eval_engine/dataset/data/calibration_human_judge.json`（`reports/calibration_report_20261001_live.json` 的 `source_path`） | 53 | **0.8565**（inter-rater **0.724**，真人盲标；旧脚本伪 r2 的 0.7979 已作废；最差维度 `overall`） |
 | 多模态四维 expand | `examples/fixtures/calibration/multimodal_held_out_expand_human.json` | 312 | **0.617**（与 `HELD_OUT_EXPAND.md:39` 一致） |
 
 引用 κ 时必须写明是哪一套；把 0.8565 当成多模态结论、或把 53 格当成 expand 的覆盖面，都是错的。

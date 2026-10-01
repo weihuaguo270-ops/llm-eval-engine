@@ -117,7 +117,7 @@ src/eval_engine/
 ├── benchmark/                   固定任务集跑批 + 对比报告
 ├── judge/                       Judge 调用、模板、人机校准
 ├── loop/                        评分 → 修正 → 重执行
-├── gates/                       baseline / 回归门禁（含 shipped baseline）
+├── gates/                       baseline / 回归门禁 / release_audit / search_calibration
 ├── intent/                      任务路由
 ├── safety/                      HITL 审批钩子
 ├── dataset/                     golden + calibration 数据
@@ -283,6 +283,8 @@ python examples/run_release_audit.py examples/fixtures/episodes/multimodal_step_
 **可引用（钉死，2026-09-22）：** held-out live κ≈**0.70**（n=40，deepseek-chat）；门禁 `process_reward_media_steps_min`；
 产物 `reports/release_audit_live_four.json` + `reports/multimodal_held_out_live.json`。
 **κ≈0.22 不当 SLA。** 扩样见 [`docs/HELD_OUT_EXPAND.md`](docs/HELD_OUT_EXPAND.md)、口径见 [`docs/CITATION_MULTIMODAL_PROCESS.md`](docs/CITATION_MULTIMODAL_PROCESS.md)。
+
+**检索步过程维度另开一栏**（`search_dimension_cell` = `episode × search step × dimension`），与上面的 `dimension_cell` 主钉**不合成总分**；分栏与确定性失败类型（`search_empty` / `search_weak` / `search_timeout`）已就位，但**无 held-out 人工样本 ⇒ 状态 `uncalibrated`，不报任何 κ** — [`docs/search_dimension_column_20261001.md`](docs/search_dimension_column_20261001.md)。
 
 跨仓业务发布演练已提供统一入口：
 

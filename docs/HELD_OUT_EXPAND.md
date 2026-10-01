@@ -42,7 +42,7 @@ python examples/run_release_audit.py examples/fixtures/episodes/held_out_expand 
 | 校准 | `reports/multimodal_held_out_expand_live.json` |
 | MD | `docs/calibration_snapshot_20260922_live_held_out_multimodal_expand.md` |
 
-更大 n 上 κ 仍 ≥0.6。可选下一步：`human_score_r2`、加码对外「Judge 可信」——**尚未执行**（无第二人则跳过 r2；对外主钉仍用基线 0.70 分栏 + expand 稳定性证据）。
+更大 n 上 κ 仍 ≥0.6。`human_score_r2` 已完成（2026-10-01：held_out n=53 盲标回填，标注者间 κ≈0.72，±1 一致 100%）；待做的是加码对外「Judge 可信」。对外主钉仍用基线 0.70 分栏 + expand 稳定性证据，不合成总分。
 
 ## 真实业务（非 fixture · 12 条）
 

@@ -71,7 +71,7 @@ python examples/run_release_audit.py examples/fixtures/episodes/held_out_expand 
 
 **过渡数（不当 SLA）：** κ≈0.22 = 旧 human × 首轮 live Judge。
 
-**r2 / 加码口径：** κ 在更大 n 已 ≥0.6 → 可谈可选 `human_score_r2` 与加码「Judge 可信」；**尚未执行**（无第二人则跳过；主钉仍分栏引用基线 0.70）。
+**r2 / 加码口径：** held_out n=53 的 `human_score_r2` 已由独立第二标注者盲标回填（2026-10-01，标注者间 κ≈0.72，±1 一致 100%）；「加码对外 Judge 可信」仍未执行。对外按分栏引用：文本主钉 held_out live κ≈0.86（边界 v2.1），多模态主钉 ≈0.70（`dimension_cell`），不合成总分。
 
 ## 姊妹仓：Execution 通过率（react-agent）
 

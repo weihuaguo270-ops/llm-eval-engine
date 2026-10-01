@@ -10,7 +10,9 @@
   | 基线 fixture | 4 | 40 | ≈0.70 | — | 对外主钉 |
   | held_out_expand | **36** | **312** | ≈**0.62** | [0.54, 0.69] | 更大 n 仍 ≥0.6 |
   | 业务（非 fixture） | **12** | 分批 | 分条 gate | — | 2×pass / 10×review |
+  | 检索步（`search_dimension_cell`，单位不同） | 0 | 0 | **未校准** | — | 分栏已建、无 held-out 样本 ⇒ 不报 κ |
 - **独立轨迹合计 ≈48**（近文本 held_out ≈53）
+- **检索步分栏**：`search_dimension_cell` = `episode × search step × dimension`，与上表 `dimension_cell` **不合成总分**；确定性失败类型 `search_empty` / `search_weak` / `search_timeout` 已打通，但缺 held-out 人工样本 ⇒ 不引用任何 κ — [`search_dimension_column_20261001.md`](search_dimension_column_20261001.md)
 - **已完成（文本 r2）**：held_out 53 条 `human_score_r2` 盲标回填；标注者间 κ≈0.72（±1 一致 100%）
 - **可谈但未做**：加码对外「Judge 可信」（主钉仍分栏引用 held_out live vs r1）
 - **仍往后**：签字 / shadow / 回滚——等业务流量入口和责任人

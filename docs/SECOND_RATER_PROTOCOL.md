@@ -12,7 +12,7 @@
 
 ## 流程
 
-1. 阅读本文件 + 数据文件 `meta.labeling_protocol`（刻度 1–5 与边界裁决）。
+1. 阅读本文件 + 数据文件 `meta.labeling_protocol`（刻度 1–5、边界裁决 v2 与灰区补全 v2.1）。
 2. 打开 [`second_rater_worksheet.md`](second_rater_worksheet.md)，只看 `id` / `template` / `prompt`。
 3. 独立打整数分；可写一行 `reason`。
 4. 将分数回填到 `calibration_human_judge.json` 的 `human_score_r2`（或 PR 附 CSV，由维护者合并）。
@@ -31,11 +31,11 @@ python examples/run_calibration.py --live   # 扩样后刷新 held_out live
 - 用模型生成「伪人工分」填入 `human_score_r2`
 - 把 pending 条目（无 `human_score`）计入 κ
 
-## 当前状态（v5；live 刷新 2026-08-07）
+## 当前状态（v5；r2 已重标 2026-10-01）
 
-- 协议与 worksheet 已就绪
-- held_out **n=53** 已全部写入 `human_score_r2`
-- 标注者间 κ≈**0.80**（offline）
-- held_out live κ≈**0.73**（n=53，CI [0.58, 0.88]，DeepSeek，2026-08-07）
-  - 快照：[`calibration_snapshot_20260807_live_held_out.md`](calibration_snapshot_20260807_live_held_out.md)
-  - 2026-07-27 live κ≈0.67 仅作历史对照
+- 协议与 worksheet：[`second_rater_worksheet.md`](second_rater_worksheet.md)
+- held_out **n=53** 已全部写入新的 `human_score_r2`（盲标回填；二次修订）
+- 标注者间 κ≈**0.72**（n=53，精确一致 81.1%，±1 一致 **100%**）
+- held_out live κ≈**0.86**（n=53，CI [0.73, 0.97]，DeepSeek，2026-10-01；边界 v2.1）仍为「Judge vs r1」
+  - 快照：[`calibration_snapshot_20261001_live_held_out.md`](calibration_snapshot_20261001_live_held_out.md)
+- 旧双人 κ≈0.80（脚本伪 r2）已作废

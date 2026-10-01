@@ -52,7 +52,7 @@ def test_release_gate_combines_independent_evidence():
         safety_report={"attack_success_rate": 0.0},
         judge_calibration={
             "gate_split": "held_out",
-            "by_split": {"held_out": {"kappa": 0.73}},
+            "by_split": {"held_out": {"kappa": 0.86}},
         },
     )
     assert passed["passed"] is True

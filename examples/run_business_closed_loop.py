@@ -110,7 +110,7 @@ def build_demo_report() -> dict[str, Any]:
     # 5. 发布门禁
     judge_calibration = {
         "gate_split": "held_out",
-        "by_split": {"held_out": {"sample_size": 53, "kappa": 0.73}},
+        "by_split": {"held_out": {"sample_size": 53, "kappa": 0.86}},
     }
     gate = release_decision(
         dataset_audit=data_audit,

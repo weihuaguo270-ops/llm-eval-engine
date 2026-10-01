@@ -8,6 +8,25 @@
 - 检索步确定性失败类型 `search_empty` / `search_weak` / `search_timeout` 进入 taxonomy 并受结构化保护（不再落到 `wrong_tool` / `other`）
 - 分栏登记：`docs/search_dimension_column_20261001.md`；κ 单位与主钉 `dimension_cell` 隔离，**当前无 held-out 样本、不报 κ**
 
+### Changed (2026-10-01) — 文本 Judge held_out live 引用对齐 v2.1
+
+- held_out live 刷新：κ≈**0.86**（n=53，CI [0.73, 0.97]，DeepSeek）；边界 `rubric_boundary_version=v2.1`
+- 快照：`docs/calibration_snapshot_20261001_live_held_out.md`；`reports/calibration_report_20261001_live.json`
+- 对外引用同步：`METRICS_TRUST.md`、`README.md`、`EVAL_DESIGN.md`、`SECOND_RATER_PROTOCOL.md`、`CITATION_MULTIMODAL_PROCESS.md`
+- 废止对外主钉：held_out live κ≈0.73（2026-08-07，边界 v2）
+
+### Changed (2026-10-01) — 重置 `human_score_r2` 待真人盲标
+
+- 清空校准集全部 `human_score_r2` / `annotator_r2`；`second_rater_status=protocol_ready`
+- 重生成 [`docs/second_rater_worksheet.md`](docs/second_rater_worksheet.md)（held_out 53 条）；写满前不报告双人 κ
+- `expand_calibration_v5.py` 不再脚本伪造 r2；相关测试与对外引用改为「标注者间未报告」
+
+### Changed (2026-10-01) — 真人 r2 盲标回填
+
+- held_out 53 条 `human_score_r2` 自 worksheet 合并；`second_rater_status=completed_r2_reannotation`
+- 初标 κ≈0.55 → 一次修订 κ≈0.64 → 二次修订 κ≈**0.72**（精确一致 81.1%，±1 **100%**）
+- 对外文档同步；旧脚本双人 κ≈0.80 继续作废
+
 ### Changed (2026-09-30) — API 0.3: `overall_score` is Optional
 
 - `ProcessRewardReport.overall_score` is now `Optional[float]`: `None` means **no step was

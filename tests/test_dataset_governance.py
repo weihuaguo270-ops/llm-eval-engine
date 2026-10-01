@@ -91,7 +91,77 @@ def test_annotation_queue_agreement_and_adjudication():
     assert cases[1]["human_score"] == 4
 
     with pytest.raises(KeyError):
-        apply_adjudications(cases, {"unknown": {"human_score": 3}})
+        apply_adjudications(
+            cases,
+            {
+                "unknown": {
+                    "human_score": 3,
+                    "adjudicator": "lead",
+                    "reason": "x",
+                }
+            },
+        )
+
+
+def test_apply_adjudications_rejects_invalid_decision():
+    cases = _clean_cases()
+    cases[1]["human_score_r2"] = 1  # queued via disagreement
+
+    with pytest.raises(ValueError, match="out of scale"):
+        apply_adjudications(
+            cases,
+            {
+                "held-1": {
+                    "human_score": 6,
+                    "adjudicator": "lead",
+                    "reason": "bad",
+                }
+            },
+        )
+
+    with pytest.raises(ValueError, match="missing adjudicator"):
+        apply_adjudications(
+            cases,
+            {"held-1": {"human_score": 3, "reason": "rubric evidence"}},
+        )
+
+    with pytest.raises(ValueError, match="missing reason"):
+        apply_adjudications(
+            cases,
+            {"held-1": {"human_score": 3, "adjudicator": "lead"}},
+        )
+
+
+def test_apply_adjudications_queue_gate_and_force():
+    cases = _clean_cases()
+    # dev-1 双人一致，不在队列中
+    with pytest.raises(ValueError, match="not in annotation queue"):
+        apply_adjudications(
+            cases,
+            {
+                "dev-1": {
+                    "human_score": 4,
+                    "adjudicator": "lead",
+                    "reason": "override attempt",
+                }
+            },
+        )
+
+    forced = apply_adjudications(
+        cases,
+        {
+            "dev-1": {
+                "human_score": 4,
+                "adjudicator": "lead",
+                "reason": "documented exception",
+            }
+        },
+        force=True,
+    )
+    assert forced[0]["human_score"] == 4.0
+    assert forced[0]["annotation_status"] == "adjudicated"
+    assert forced[0]["adjudication_forced"] is True
+    assert cases[0]["human_score"] == 5
 
 
 def test_jsonl_roundtrip(tmp_path):

@@ -23,6 +23,8 @@ jobs:
         run: python examples/run_benchmark.py --compare
       - name: Generate failure casebook
         run: python scripts/generate_failure_casebook.py
+      - name: Casebook is reproducible from the generator
+        run: git diff --exit-code -- docs/failure_casebook.md
       - name: E2E trajectory eval smoke
         run: python examples/e2e_trajectory_eval.py --case bench_tool_001
       - name: Clone react-agent (sibling integration)

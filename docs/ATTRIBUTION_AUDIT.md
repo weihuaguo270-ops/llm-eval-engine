@@ -4,6 +4,8 @@
 **方法：** 静态代码审计 + 42 个 episode 夹具实测（默认夹具模式）；**未跑 live**。
 **日期：** 2026-09-30 · 对应 PR（均已 squash 合并）：llm-eval-engine #8 `75b951a`（审计主体）、#9 `c29cbc2`（§1.1 的 P2 三项）、#11 `c86b6d6`（§1 第 13 项，原 D4；原 PR #10 因 #9 合并时删除 head 分支被 GitHub 自动关闭，内容由 #11 承接）、trace-debugger #8、react-agent #105 `ddb4a2d`（跨仓 `EVAL_API_VERSION` 0.3）。
 
+**2026-10-01 更新：** §3 重写为「已核实关闭 / 已处置 / 带验收条件的阻塞项」三类，并补上离线实测数字（U1/U5/U8）；U6 重新生成 casebook 并加 CI 防漂移。
+
 ## 摘要（一句话）
 
 `error_sources` 由 **Judge 语义分 + DAG 拓扑**合成，而审计前**没有任何东西检验它是否与确定性事实一致**；同时评分与归因在"分数缺失"这件事上有 **2 态而需要 3 态**，导致大量**假根因**。本审计修掉同族缺陷并接入了第一道可机器执行的校验。
@@ -78,18 +80,38 @@
 
 ---
 
-## 3. 未验证（本审计未覆盖）
+## 3. 未验证项的处理（2026-10-01 更新）
 
-| # | 事项 |
-|---|------|
-| U1 | live Judge 是否**总**返回四个维度：缺维时的**行为**已在原 D3 钉住；**真实返回维度分布仍未测**（本审计未跑 live，无 API Key） |
-| U2 | `scripts/relabel_expand_human_on_live.py`、`scripts/seed_held_out_expand_human.py` 的具体行为（仅见到文件名） |
-| U3 | `examples/fixtures/calibration/multimodal_held_out_expand_human.json` 与夹具的对账（只对账了 `multimodal_dimension_held_out.json` 的 40 项，40/40 相等） |
-| U4 | `ArtifactRef.validate()` 的具体约束 |
-| U5 | 阈值分裂在**真实评分分布**下的影响面（多少步落在 [3.0, 3.5)）——需真实数据 |
-| U6 | `docs/failure_casebook.md` 与重新生成结果**不一致**：本地重跑 `scripts/generate_failure_casebook.py` 得到 `106 insertions(+), 109 deletions(-)`（条目顺序与页头都不同）→ 提交的副本是旧的或手改过，生成器**不可字节复现**。本次未修（与归因链路无关） |
-| U7 | `examples/run_benchmark.py` 每次产出**日期戳新文件**（`docs/benchmark_comparison_<date>.md`），不入版本库；基准回归门禁本地实测 **PASS**（3.647 vs 3.613，+0.034），即本次改动未移动基准总均值 |
-| U8 | `release_audit` 与 `trace_rules` 两条媒体规则链的**真阳性率**：本次只做到"并列展示"，没有金标准标签可算 P/R |
+原 U1–U8 分三类：**已核实关闭**（U2/U3/U4）、**已处置**（U6 修复、U7 澄清）、**带验收条件的阻塞项**（U1/U5/U8）。
+
+### 3.1 已核实关闭
+
+| # | 原问题 | 结论与证据 |
+|---|--------|-----------|
+| U2 | 两个 expand 脚本的行为 | `scripts/seed_held_out_expand_human.py:150-192`：遍历 36 个 expand 夹具，为每个媒体/终态步 × 4 维写死人工分，**缺任何一格即 `SystemExit`**（:162），输出 `judge_score: None` 待回填，meta 记 `labeler: r1-maintainer` / `second_rater_status: pending`（:182-184）。`scripts/relabel_expand_human_on_live.py:22-46`：读 `reports/multimodal_held_out_expand_live.json`，按 `(episode_id, step_index, dimension)` 用人工分覆盖 live 行，打印覆盖前后 κ/MAE，回写并加 note。**含义**：该链的 κ 是「判分器 vs 单一维护者」（无第二评分者），且人工分与判分器同源于协议文档，存在循环性风险——与 U8 同根因 |
+| U3 | expand 人工标注与夹具对账 | **已由测试覆盖**：`tests/test_held_out_expand_seed.py:29-55` 逐格 `indexed[(episode, step, dim)]`（缺失即 KeyError）、断言 `human_score` 非空与 `judge_score is None`、`rebuild_held_out_calibration` 后全非空且条数 == `sample_size_human_cells`。原判断「只对账了 40 项那份」已过时 |
+| U4 | `ArtifactRef.validate()` 约束 | `src/eval_engine/multimodal/evaluator.py:52-69`：`id` 非空、`media_type ∈ {image,video,audio,document,other}`、`uri` 非空、**`sha256` 可空**（非空须 64 位十六进制）、`width/height > 0`、`duration_ms/frame_count ≥ 0`；`from_dict`（:35-36）另拒内嵌 `data`/`base64`。「缺 sha」类规则的存在空间正来自 `sha256` 可空 |
+| U6 | casebook 与重生成不一致 | **提交的是旧脚本产物（陈旧），生成器本身可复现**：连跑两次文件哈希相同。本 PR 重新生成并提交，并在 `benchmark.yml` 增加 `git diff --exit-code -- docs/failure_casebook.md`，防止再次漂移 |
+| U7 | 日期戳产物不入库 | **属约定、非缺陷**：`docs/benchmark_comparison_*.md` 是被 README 引用的**证据报告**（`README.md:86,96,98`），机器产物是 `reports/*.json`（已 gitignore）。CI 每次跑批都会生成这些文件但不提交，属预期行为，无需改代码 |
+
+### 3.2 带验收条件的阻塞项
+
+| # | 缺口 | 现有证据 | 关闭条件 |
+|---|------|----------|----------|
+| U1 | live Judge 的真实维度分布 | **归档 live 实测已可用**（`reports/multimodal_held_out_expand_live.json`，36 轨迹）：**312 格 / 78 步，`judge_score` 空值 0，步-维直方图 = {4: 78}**（四维各 78 次，即该批四维齐全）；`reports/release_audit_held_out_expand_live.json` 的 `calibration` 块 **κ=0.617，n=312**，与 `HELD_OUT_EXPAND.md:39` 的 ≈0.62（CI [0.54,0.69]）一致 | 长期监测（不阻塞）：后续 live 运行缺维步占比保持 0；一旦缺维，按 §1 第 4 项/原 D3 降级为 `judge_error` + 未评估，可在 `failure_taxonomy` 计数 |
+| U5 | 阈值带 [3.0,3.5) 的**真实**分布 | 离线代理（本轮实测）：随包 benchmark 32 用例 × 3 模型共 **324 步**，带内 **15 步（占已评分步 4.63%），且 15/15 `needs_revision=True`**——修复前这 15 步「必须修却永远不可能被判为根因」；42 个夹具只有 4 条有分数（10 步，带内 1 步），**38/42 未评估** | 在真实评分数据上给出带内步占比与受影响用例数；敏感性：即使真实分布比 benchmark 偏 2–3 倍，受影响面仍在同一量级 |
+| U8 | 两条媒体规则链的真阳性率 | **一致性基线（42 夹具全量，本轮实测）**：两链同时为空 **31**；仅规则命中 **9**；仅归档命中 **1**；都有但不等 **1**；**同为非空且完全一致 0**。分歧集中在 `unsafe_media`（4 条仅规则）、`wrong_media_args` / `unnecessary_generation`（仅规则）、`ungrounded_vision`（仅归档） | 需要**独立**失败类型标注（现有标注是维度分、且仅 1 名标注者）：先定标注协议（标什么、条数、κ 阈值），取得 ≥30 条金标准后计算 P/R，据此把 D5 从 (c) 收敛到 (a)/(b) |
+
+### 3.3 一个易混点（本轮踩到并更正）
+
+本仓同时存在两套 κ，**不可互换**：
+
+| 校准集 | 来源 | n | κ |
+|--------|------|---|----|
+| 文本 / Agent 过程 | `src/eval_engine/dataset/data/calibration_human_judge.json`（`reports/calibration_report_20261001_live.json` 的 `source_path`） | 53 | **0.8565**（inter-rater 0.7979，最差维度 `overall`） |
+| 多模态四维 expand | `examples/fixtures/calibration/multimodal_held_out_expand_human.json` | 312 | **0.617**（与 `HELD_OUT_EXPAND.md:39` 一致） |
+
+引用 κ 时必须写明是哪一套；把 0.8565 当成多模态结论、或把 53 格当成 expand 的覆盖面，都是错的。
 
 ---
 

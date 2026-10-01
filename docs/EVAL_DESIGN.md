@@ -64,7 +64,7 @@
 | 数据集 | 版本 | 规模 |
 |--------|------|------|
 | `benchmark_suite.json` | **v2** | **32** 条（tool 8 / rag 6 / search 6 / safety 6 / faith 6） |
-| `calibration_human_judge.json` | **v5** | scored **70**，held_out **53**，r2 **53** |
+| `calibration_human_judge.json` | **v5** | scored **70**，held_out **53**，r2 **53**（2026-10-01 重标） |
 | `golden.json` | — | 9 条（capability 种子，待合并进 benchmark） |
 
 ## 5. 复现命令
@@ -114,20 +114,20 @@ python examples/run_benchmark_agent.py --mode agent --providers deepseek-v3 gpt-
 1. Benchmark v2 轨迹为 **curated 冻结样本**，非生产日志全量。
 2. offline κ=1.0 **不能**替代 live Judge SLA。
 3. 三模型 profile **不是**同一 Agent 框架实时换 API 的 live 跑批（需 react-agent 闭环扩展）。
-4. r2 标注为 v5 协议化写入；真实盲标流程见 `docs/SECOND_RATER_PROTOCOL.md`。
+4. r2 已按 `docs/SECOND_RATER_PROTOCOL.md` 真人盲标回填（2026-10-01）；标注者间 κ 见 `METRICS_TRUST.md`。
 
 ## 8. 引用指标时的要求
 
 写 README、Release Notes 或对外报告时：
 
-- 写明数据集版本与快照日期（如 benchmark v2、calibration v5、**2026-08-07**）
+- 写明数据集版本与快照日期（如 benchmark v2、calibration v5、**2026-10-01**）
 - 分栏引用 offline / live / held_out，不合成单一「总分」
 - 优先引用 **held_out live κ + bootstrap 95% CI**（当前见 `docs/METRICS_TRUST.md`）
 
 **可接受的引用形态：**
 
 - 「32 条 Process Reward benchmark，三模型 profile 对比（offline，日期…）」
-- 「held_out n=53，live κ≈0.73（DeepSeek，2026-08-07）」
+- 「held_out n=53，live κ≈0.86（DeepSeek，2026-10-01，边界 v2.1）」
 - 「失败 taxonomy：幻觉 / 工具错 / 传播错误分布」
 
 **不要这样写：**

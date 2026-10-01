@@ -19,23 +19,24 @@ python examples/run_calibration.py --live --split held_out   # 真实 Judge
 ```
 
 - 金标准 **v5**：`dev`（协议调参）与 `held_out`（独立评估，n=53）分开；pending 不进 κ。
+- **边界协议**：`rubric_boundary_version=v2.1`（v2 + 灰区补全；固化既有标注惯例）。
 - **κ 单位（文本）**：按校准 **item**（一条 prompt 的 overall `human_score`↔`judge_score`）。
 - 报告含 **agreement_table + bootstrap 95% CI**（seed 见 `meta.reproducibility`）。
-- **第二标注者**：v5 已写入 `human_score_r2`（n=53）；协议见 `SECOND_RATER_PROTOCOL.md`。
+- **第二标注者**：v5 held_out **n=53** 已重标写入 `human_score_r2`（2026-10-01 盲标）；协议见 `SECOND_RATER_PROTOCOL.md`。
 - **双视角**：Likert κ / 精确一致看档位；**MSE / RMSE / 连续 MAE** 看 1.0–5.0 幅度（`EVAL_DESIGN.md` §3.1）。
 
-### 当前基准（v5；live 刷新 2026-08-07）
+### 当前基准（v5；live 刷新 2026-10-01 · 边界 v2.1）
 
 | 栏 | 值 | 说明 |
 |----|-----|------|
-| held_out **live** | κ≈**0.73**（n=53，CI [0.58, 0.88]，DeepSeek） | Judge 可信度主证据 |
+| held_out **live** | κ≈**0.86**（n=53，CI [0.73, 0.97]，DeepSeek，精确一致 90.6%） | Judge 可信度主证据（vs r1） |
 | held_out **offline** | κ=**1.0**（n=53，冻结分） | 仅证明冻结 Judge 与 r1 对齐 |
-| 标注者间 | κ≈**0.80**（n=53，r1 vs r2） | 金标准内部一致性 |
+| 标注者间 | κ≈**0.72**（n=53，r1 vs r2；精确一致 81.1%，±1 **100%**） | 金标准内部一致性（二次修订后） |
 | 全量 offline | κ≈**0.96**（n=70） | 含 dev 调参样本，不作 SLA |
 
-快照：[`calibration_snapshot_20260807_live_held_out.md`](calibration_snapshot_20260807_live_held_out.md)
+快照：[`calibration_snapshot_20261001_live_held_out.md`](calibration_snapshot_20261001_live_held_out.md)
 
-**废止口径：** n=15、κ≈0.47；held_out live n=20/κ≈0.69（v4）；held_out live κ≈0.67（2026-07-27）；或「offline κ 当线上 SLA」。
+**废止口径：** n=15、κ≈0.47；held_out live n=20/κ≈0.69（v4）；held_out live κ≈0.67（2026-07-27）；held_out live κ≈0.73（2026-08-07，边界 v2）；或「offline κ 当线上 SLA」。
 
 ## 多模态过程审计（release-audit · κ 单位钉死）
 

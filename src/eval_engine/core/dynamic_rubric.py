@@ -11,6 +11,16 @@
       ② 搜索结果是否被后续步骤利用？
       ③ 如果搜索效果不好，Agent 是否有备选方案？
 
+实现状态（检索步，勿误读）：上面①②③只是示意、**未实现**。
+本模块按 step_type 分派，实际产出的是 thought / action（tool_selection、
+tool_argument_quality）/ observation（information_utilization）/ final 的维度，
+以及多模态工具步的四个 media 维度；**没有检索步专属维度**。
+检索步目前的确定性失败信号来自 trace-debugger 规则，经 failure_taxonomy 的
+search_empty / search_weak / search_timeout 承载（见 core/failure_taxonomy.py）。
+若要补齐检索步过程维度，需要一个与 core/multimodal_step.py 同形态的工具名分派
+模块；按 docs/METRICS_TRUST.md 的"κ 单位钉死"规则，其校准须**新开分栏**，
+不得并入现有 dimension_cell 主钉。
+
 设计思路：
     1. Agent 执行完一步（或完成全部轨迹后）
     2. 对该步构建"评分上下文"（输入/输出/当时可用信息）

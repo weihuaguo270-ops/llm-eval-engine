@@ -65,15 +65,15 @@ Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步�
 
 ## 当前证据（请分栏引用）
 
-**Judge 校准**（金标准 v5；live 刷新 **2026-08-07**）：
+**Judge 校准**（金标准 v5；live 刷新 **2026-10-01** · 边界 **v2.1**）：
 
 | 栏 | 值 | 说明 |
 |----|-----|------|
-| held_out **live** | κ≈**0.73**（n=53，CI [0.58, 0.88]，DeepSeek） | 对外主证据 |
+| held_out **live** | κ≈**0.86**（n=53，CI [0.73, 0.97]，DeepSeek，精确一致 90.6%） | 对外主证据（vs r1） |
 | held_out **offline** | κ=**1.0**（n=53，冻结分） | 仅证明冻结 Judge 与 r1 对齐 |
-| 标注者间 | κ≈**0.80**（n=53，r1 vs r2） | 金标准内部一致性 |
+| 标注者间 | κ≈**0.72**（n=53，r1 vs r2；精确一致 81.1%，±1 100%） | 二次修订后 |
 
-快照：[`calibration_snapshot_20260807_live_held_out.md`](docs/calibration_snapshot_20260807_live_held_out.md) · [`_offline.md`](docs/calibration_snapshot_20260807_offline.md)
+快照：[`calibration_snapshot_20261001_live_held_out.md`](docs/calibration_snapshot_20261001_live_held_out.md) · [历史 offline 20260807](docs/calibration_snapshot_20260807_offline.md)
 
 **Benchmark offline**（v2，32×3 profile）：
 

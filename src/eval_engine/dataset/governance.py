@@ -22,6 +22,7 @@ _VOLATILE_FIELDS = {
     "annotator",
     "adjudicator",
     "adjudication_reason",
+    "adjudication_forced",
     "created_at",
     "updated_at",
 }
@@ -227,8 +228,23 @@ def annotation_agreement(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 def apply_adjudications(
     cases: Sequence[Mapping[str, Any]],
     adjudications: Mapping[str, Mapping[str, Any]],
+    *,
+    require_queued: bool = True,
+    force: bool = False,
+    scale_min: float = 1.0,
+    scale_max: float = 5.0,
 ) -> list[dict[str, Any]]:
-    """应用仲裁结果，不修改输入数据。"""
+    """应用仲裁结果，不修改输入数据。
+
+    写前硬校验：
+      - case id 必须存在
+      - decision 必须含 human_score，且落在 [scale_min, scale_max]
+      - adjudicator / reason 必须非空（审计）
+
+    队列门槛（默认开启）：
+      - require_queued=True 且 force=False 时，id 须出现在 build_annotation_queue 中
+      - 例外覆盖传 force=True
+    """
     # 仲裁结果写入副本，保留原数据版本供审计。
     # Materialize each read-only Mapping as a mutable, independent case record.
     result: list[dict[str, Any]] = [deepcopy(dict(case)) for case in cases]
@@ -236,6 +252,12 @@ def apply_adjudications(
     unknown = sorted(set(adjudications) - known_ids)
     if unknown:
         raise KeyError(f"unknown adjudication case ids: {unknown}")
+
+    queued_ids = {
+        str(item["case_id"]) for item in build_annotation_queue(result)
+    }
+    enforce_queue = require_queued and not force
+
     for case in result:
         case_id = str(case.get("id", ""))
         decision = adjudications.get(case_id)
@@ -243,12 +265,36 @@ def apply_adjudications(
             continue
         if "human_score" not in decision:
             raise ValueError(f"adjudication {case_id} is missing human_score")
-        case["human_score"] = float(decision["human_score"])
-        case["annotation_status"] = "adjudicated"
-        case["adjudicator"] = str(decision.get("adjudicator", ""))
-        case["adjudication_reason"] = str(decision.get("reason", ""))
-    return result
+        try:
+            score = float(decision["human_score"])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"adjudication {case_id} human_score must be numeric"
+            ) from exc
+        if score < scale_min or score > scale_max:
+            raise ValueError(
+                f"adjudication {case_id} human_score={score} "
+                f"out of scale [{scale_min}, {scale_max}]"
+            )
+        adjudicator = str(decision.get("adjudicator", "")).strip()
+        reason = str(decision.get("reason", "")).strip()
+        if not adjudicator:
+            raise ValueError(f"adjudication {case_id} is missing adjudicator")
+        if not reason:
+            raise ValueError(f"adjudication {case_id} is missing reason")
+        if enforce_queue and case_id not in queued_ids:
+            raise ValueError(
+                f"adjudication {case_id} is not in annotation queue; "
+                "pass force=True to override"
+            )
 
+        case["human_score"] = score
+        case["annotation_status"] = "adjudicated"
+        case["adjudicator"] = adjudicator
+        case["adjudication_reason"] = reason
+        if force and case_id not in queued_ids:
+            case["adjudication_forced"] = True
+    return result
 
 def load_jsonl(path: str | Path) -> list[dict[str, Any]]:
     """加载 JSONL 记录。"""

@@ -8,6 +8,7 @@ from eval_engine.core.process_reward import ProcessRewardScorer, RubricResult, S
 from eval_engine.core.trajectory_parser import parse_trajectory
 from eval_engine.integrations.trace_findings import (
     analyze_trajectory_findings,
+    map_trace_failure_type,
     normalize_analysis_dict,
 )
 
@@ -153,3 +154,83 @@ def test_taxonomy_prefers_structured_failure_type():
 def test_analyze_trajectory_findings_accepts_offline_analysis():
     report = analyze_trajectory_findings(_traj(), analysis=TOOL_ERROR_ANALYSIS)
     assert report.findings[0].raw_failure_type == "tool_error"
+
+
+# ── 回归：检索类失败必须保留自己的类型 ──
+# 旧行为：search_empty→wrong_tool、search_timeout→other、search_weak 无条目落 other。
+
+
+SEARCH_EMPTY_ANALYSIS = {
+    "session_id": "golden_search_empty",
+    "needs_fix": True,
+    "paths": [
+        {
+            "failures": ["search_empty"],
+            "steps": [
+                {
+                    "step_index": 1,
+                    "action": "web_search",
+                    "failure_type": "search_empty",
+                    "failure_detail": "web_search returned no results",
+                }
+            ],
+        }
+    ],
+}
+
+
+def _search_traj() -> dict:
+    return {
+        "session_id": "t-search",
+        "query": "usd cny rate today",
+        "steps": [
+            {
+                "step": 1,
+                "thought": "search the rate",
+                "action": {"name": "web_search", "arguments": "{\"q\": \"usd cny\"}"},
+                "observation": "",
+            },
+            {
+                "step": 2,
+                "thought": "FINAL ANSWER: 712",
+                "observation": "",
+            },
+        ],
+        "final_answer": "712",
+    }
+
+
+def test_search_failure_types_map_to_themselves():
+    """检索类不再被换算成 wrong_tool / other；大小写不敏感。"""
+    for raw in ("search_empty", "search_weak", "search_timeout"):
+        assert map_trace_failure_type(raw) == raw
+    assert map_trace_failure_type("SEARCH_EMPTY") == "search_empty"
+    assert map_trace_failure_type(" unknown_search_rule ") == "other"
+
+
+def test_search_failure_survives_process_reward_and_taxonomy():
+    """端到端：trace 检索失败 → step.failure_type → taxonomy.by_type 全程保型。"""
+
+    def _judge(prompt: str) -> dict:
+        score = 1.0 if "web_search" in prompt else 4.5
+        return {
+            "role_understanding": "",
+            "rubrics": [],
+            "step_score": score,
+            "needs_revision": score < 3.5,
+        }
+
+    dag = parse_trajectory(_search_traj())
+    scorer = ProcessRewardScorer(judge_fn=_judge, min_step_score=3.5)
+    report = scorer.score_trajectory(dag, trace_analysis=SEARCH_EMPTY_ANALYSIS)
+
+    bad = next(s for s in report.per_step if s.step_index == 0)
+    assert bad.failure_type == "search_empty"
+    assert "trace_debugger" in bad.check_sources
+
+    from eval_engine.core.failure_taxonomy import summarize_failures
+
+    summary = summarize_failures([("c1", "search", report)])
+    assert summary.by_type.get("search_empty") == 1
+    assert summary.by_type.get("wrong_tool", 0) == 0
+    assert summary.by_type.get("other", 0) == 0

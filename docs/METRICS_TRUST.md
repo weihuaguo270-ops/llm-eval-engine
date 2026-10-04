@@ -38,6 +38,22 @@ python examples/run_calibration.py --live --split held_out   # 真实 Judge
 
 **废止口径：** n=15、κ≈0.47；held_out live n=20/κ≈0.69（v4）；held_out live κ≈0.67（2026-07-27）；held_out live κ≈0.73（2026-08-07，边界 v2）；或「offline κ 当线上 SLA」。
 
+## 结果判断（决策级 · 文本）
+
+`κ` 只说分数一致性；**「能不能用」要看结果判断**。口径与命令见 [`EVAL_DESIGN.md`](EVAL_DESIGN.md) §3.2。
+
+| 项 | 值（金标准 v5 · held_out n=53 · **live**） |
+|----|------|
+| 判定分布（human / judge） | pass 29/29｜marginal 5/7｜defect 19/17 |
+| 缺陷率（human / judge） | 35.9% / 32.1%（item 级 95% CI **[0.208, 0.453]**） |
+| **决策级一致率** | **96.2%**（51/53） |
+| **误杀 / 漏杀** | 0 / **2**（漏杀＝人判缺陷而 Judge 放过；两处均在 `tool_selection`） |
+
+- 与 κ **并列、不合成**：分数级 κ≈0.86 与决策级 96.2% 回答的是**不同问题**；
+- **frozen 栏的结果判断不得引用**（只证复现一致）；
+- 判据指纹 `reproducibility.rubric_boundary_sha256`（当前 v2.1 = `0a780f5ad7916440`）；
+  改判据必须同步 `dataset/data/rubric_boundary_line1.json` 并升 `rubric_boundary_version`（有测试锁定）。
+
 ## 多模态过程审计（release-audit · κ 单位钉死）
 
 与上表文本 Judge 金标准**分栏**，勿合成同一 SLA。完整口径：[`CITATION_MULTIMODAL_PROCESS.md`](CITATION_MULTIMODAL_PROCESS.md)。

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Added (2026-10-04) — 结果判断（决策级）+ 判据指纹 + 指标自验
+
+- **结果判断（决策级）**：新增 `examples/run_result_evaluation.py`。合格线**逐字来自金标准刻度锚点**并落盘为
+  `dataset/data/verdict_bands_line1.json`（**含出处**）；输出逐 template 的判定分布、**缺陷率 + item 级 95% CI**、
+  **决策级一致率**、**误杀/漏杀**、判定交叉表。报告按自带 `mode` **自动标注栏位**，非 live 栏打出告警；
+  **簇 < 10 不报聚簇 CI**（退化）。当前 held_out live：缺陷率 35.9%/32.1%，**决策级一致率 96.2%**，误杀 0 / **漏杀 2**。
+- **判据指纹**：判据文本落审计副本 `dataset/data/rubric_boundary_line1.json`（v2.1，`sha256[:16]=0a780f5ad7916440`）；
+  `run_calibration.py` 把 `reproducibility.rubric_boundary_sha256` 写进报告与快照（**+10 行，判据文本逐字节未变**）；
+  新增**漂移测试**——改判据而未同步审计副本/未升版本号 → 测试失败。
+- **口径文档**：`EVAL_DESIGN.md` §3.2（合格线表、`blank≠合格`、`unbanded≠合格`、为何必须与 κ 并列）；
+  `METRICS_TRUST.md` 新增「结果判断（决策级 · 文本）」一节。
+- **测试**：新增 `tests/test_result_verdict.py`（3 项）、`tests/test_rubric_boundary_fingerprint.py`（4 项）；
+  全量 **164 passed / 5 skipped**。
+- **依据（指标自验，先做后改）**：注入缺陷实验 7 变体 × 11 次 live held_out 运行——刻度反向使 κ 0.8565→**0.4898**
+  （证明判据文本确实驱动 Judge）；删全部边界 κ **−0.26**、删安全类边界 κ **−0.06~−0.09** 均**稳健检出**；
+  删锚点/模糊材料为**弱检出（跨阈）**，故小效应需重复 ≥3 次。实验产物在 `reports/_inject_20261003/`（gitignored）。
+
 ### Changed (2026-10-01) — 文本 Judge held_out live 引用对齐 v2.1
 
 - held_out live 刷新：κ≈**0.86**（n=53，CI [0.73, 0.97]，DeepSeek）；边界 `rubric_boundary_version=v2.1`

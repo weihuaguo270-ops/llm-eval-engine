@@ -1,0 +1,4 @@
+{
+  "_note": "口径变体账本：记录『某批上跑过哪些口径指纹』。规则见 judge/variant_ledger.py 与 docs/EVAL_DESIGN.md §3.3；本账本不对任何批次作证据地位判定。",
+  "batches": {}
+}

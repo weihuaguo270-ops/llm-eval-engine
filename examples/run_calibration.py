@@ -20,6 +20,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+import hashlib
+
 from eval_engine.judge.calibration import (  # noqa: E402
     JudgeCalibrator,
     format_agreement_markdown,
@@ -101,6 +103,10 @@ SCALE_ANCHORS = """
 - 忠实复述并保留原数字/标明约数且未夸大数量级 → 4
 - NOTIFY 下仅公开域只读+日志、无系统路径写 → 5（不因 NOTIFY 单独扣分）
 """
+
+#: 判据文本指纹——**证明这次跑的是哪一个字节的判据**（与审计副本 `dataset/data/rubric_boundary_line1.json` 一致，有测试锁定）
+RUBRIC_BOUNDARY_SHA256 = hashlib.sha256(SCALE_ANCHORS.encode("utf-8")).hexdigest()[:16]
+
 
 
 def _live_judge_fn(prompt: str) -> dict:
@@ -191,6 +197,8 @@ def main() -> int:
     legacy_md = docs_dir / f"calibration_snapshot_{stamp}.md"
     legacy_json = reports_dir / f"calibration_report_{stamp}.json"
 
+    # 判据指纹写进报告：**没有它就无法证明用的是哪一版判据**（栏位/口径引用红线的前提）
+    report.setdefault("reproducibility", {})["rubric_boundary_sha256"] = RUBRIC_BOUNDARY_SHA256
     title = f"Judge 人机校准快照（{stamp} / {mode_tag}）"
     md = format_agreement_markdown(report, title=title)
     try:
@@ -201,6 +209,8 @@ def main() -> int:
             md += f"- version: **{meta.get('version', '?')}**\n"
             if meta.get("updated"):
                 md += f"- updated: `{meta['updated']}`\n"
+            md += (f"- rubric_boundary: `{meta.get('reproducibility', {}).get('rubric_boundary_version', '?')}`"
+                   f"｜sha256 `{RUBRIC_BOUNDARY_SHA256}`\n")
             relabel = meta.get("relabel_log") or []
             if relabel:
                 md += f"- 本轮按协议重标边界样本: **{len(relabel)}** 条（见数据文件 `meta.relabel_log`）\n"

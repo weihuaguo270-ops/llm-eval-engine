@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added (2026-10-04) — 有序量表一致性统计（加权 κ / Krippendorff α / 配对置换检验）
+
+- 新增 `src/eval_engine/judge/agreement.py`：`weighted_kappa`（linear/quadratic）、`krippendorff_alpha`
+  （nominal/ordinal/interval，支持多标注者与缺失值）、`paired_permutation_kappa`（版本间配对检验）、
+  `ordinal_agreement`（成套输出）。**不替换**既有未加权 `cohens_kappa`（历史口径）。
+- `examples/run_calibration.py` 报告新增 `agreement_ordinal` / `inter_rater_ordinal`，快照 md 并列输出。
+- 当前 held_out live：人机 κ 未加权 0.8565 → **线性加权 0.9483** → **α(ordinal) 0.9860**；
+  标注者间 0.7240 → **0.8974** → **0.9499**。**全部分歧均为相邻档（|差|=1）**，故未加权 κ 低估一致性。
+- **据此更正一处误判**：`trajectory_safety` 的「人人 κ=0.5556」是未加权口径的表象，
+  同口径线性加权 0.836 / α 0.942 → **不再据此判定判据不可执行**（改判据的目标应看 `tool_selection`，其人人 α 最低 0.926）。
+- 口径文档：`docs/METRICS_TRUST.md` 新增「有序量表口径」小节（含引用规则：须带统计量与权重、四者不可混比）。
+- 测试：新增 `tests/test_agreement_ordinal.py`（11 项，**手算值锁定**）；全量 **175 passed / 5 skipped**。
+
 ### Added (2026-10-04) — 结果判断（决策级）+ 判据指纹 + 指标自验
 
 - **结果判断（决策级）**：新增 `examples/run_result_evaluation.py`。合格线**逐字来自金标准刻度锚点**并落盘为

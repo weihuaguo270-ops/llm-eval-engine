@@ -248,6 +248,85 @@ def agreement_table(
     }
 
 
+def bootstrap_ci_clustered(
+    human_scores: list[float],
+    judge_scores: list[float],
+    clusters: list[str],
+    *,
+    n_boot: int = 2000,
+    seed: int = 20260716,
+    alpha: float = 0.05,
+    scale_min: int = 1,
+    scale_max: int = 5,
+) -> dict[str, Any]:
+    """对 κ / 精确一致率做**按簇重采样**的百分位 bootstrap（簇通常是"请求"）。
+
+    为什么不能只用 :func:`bootstrap_ci`：同一请求会产生多个检索步 cell，它们**相关**。
+    按 cell 逐个重采样等于把这些 cell 当独立观测，**CI 假性偏窄**——报出去的
+    「κ ± CI」会比真实可信度更漂亮。
+
+    本函数每次**整簇**抽样（抽到的请求贡献它全部 cell），因此 CI 反映的是
+    「换一批请求会怎样」，这也是引用时应报的那个区间。
+
+    ``clusters`` 与分数**逐位对齐**（同长度）。
+    """
+    n = len(human_scores)
+    if n == 0 or n != len(judge_scores) or n != len(clusters):
+        return {"n_boot": 0, "seed": seed, "alpha": alpha, "method": "cluster"}
+
+    h0 = _to_likert(human_scores, scale_min, scale_max)
+    j0 = _to_likert(judge_scores, scale_min, scale_max)
+    groups: dict[str, list[int]] = {}
+    for position, cluster in enumerate(clusters):
+        groups.setdefault(str(cluster), []).append(position)
+    keys = sorted(groups)
+    k = len(keys)
+    if k < 2:
+        # 只有一个簇：任何重采样都等于原样本，CI 无意义 → 明确返回而非给个假区间
+        return {
+            "n_boot": 0,
+            "seed": seed,
+            "alpha": alpha,
+            "method": "cluster",
+            "n_clusters": k,
+            "note": "只有一个请求，无法按请求评估不确定性（CI 不可估）",
+        }
+
+    rng = random.Random(seed)
+    kappas: list[float] = []
+    exacts: list[float] = []
+    for _ in range(n_boot):
+        picked = [keys[rng.randrange(k)] for _ in range(k)]
+        sample: list[int] = []
+        for key in picked:
+            sample.extend(groups[key])
+        hs = [h0[i] for i in sample]
+        js = [j0[i] for i in sample]
+        kappas.append(cohens_kappa(hs, js, likert=True, scale_min=scale_min, scale_max=scale_max))
+        exacts.append(sum(1 for a, b in zip(hs, js) if a == b) / len(sample))
+
+    def _pct(vals: list[float]) -> dict[str, float]:
+        s = sorted(vals)
+        lo_i = int((alpha / 2) * (len(s) - 1))
+        hi_i = int((1 - alpha / 2) * (len(s) - 1))
+        return {
+            "point": round(sum(vals) / len(vals), 4),
+            "low": round(s[lo_i], 4),
+            "high": round(s[hi_i], 4),
+        }
+
+    return {
+        "n_boot": n_boot,
+        "seed": seed,
+        "alpha": alpha,
+        "method": "cluster",
+        "n_clusters": k,
+        "n_cells": n,
+        "kappa": _pct(kappas),
+        "exact_agree_rate": _pct(exacts),
+    }
+
+
 def bootstrap_ci(
     human_scores: list[float],
     judge_scores: list[float],

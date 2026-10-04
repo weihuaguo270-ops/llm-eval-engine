@@ -1,4 +1,42 @@
 {
-  "_note": "口径变体账本：记录『某批上跑过哪些口径指纹』。规则见 judge/variant_ledger.py 与 docs/EVAL_DESIGN.md §3.3；本账本不对任何批次作证据地位判定。",
-  "batches": {}
+  "_note": "口径变体账本：记录『某批上跑过哪些口径指纹、各自什么角色（baseline/comparison/probe/selection）、adopt 配额用没用、那次对照绑的是哪份预注册』。每批配额 = 基线（可重复跑）+ 一次 adopt 级对照；配额内那次对照必须先有预注册（dataset/data/prereg/），账本记其 sha256。规则见 src/eval_engine/judge/variant_ledger.py 与 docs/EVAL_DESIGN.md §3.3；本账本不对任何批次作证据地位判定。",
+  "batches": {
+    "calibration_human_judge@v5/held_out": {
+      "arms": {
+        "0a780f5ad7916440": {
+          "roles": [
+            "baseline"
+          ],
+          "first_seen": "2026-10-04",
+          "last_seen": "2026-10-04",
+          "runs": 1,
+          "purposes": [
+            "adopt"
+          ],
+          "selection_use": false,
+          "prereg": null
+        },
+        "b1475b3e81f5e1d4": {
+          "roles": [
+            "comparison"
+          ],
+          "first_seen": "2026-10-04",
+          "last_seen": "2026-10-04",
+          "runs": 1,
+          "purposes": [
+            "adopt"
+          ],
+          "selection_use": false,
+          "prereg": {
+            "path": "D:\\agent_learning\\llm-eval-engine\\src\\eval_engine\\dataset\\data\\prereg\\calibration_human_judge@v5_held_out_b1475b3e81f5e1d4.json",
+            "sha256": "e28c985b879bee8d52e96828eaf58e06624662930ef8c51be37cc4bb61128441",
+            "frozen_at": "2026-10-04T19:00:39+08:00"
+          }
+        }
+      },
+      "baseline": "0a780f5ad7916440",
+      "comparison": "b1475b3e81f5e1d4",
+      "quota_used": true
+    }
+  }
 }

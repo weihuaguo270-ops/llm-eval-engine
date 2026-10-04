@@ -199,6 +199,19 @@ def main() -> int:
 
     # 判据指纹写进报告：**没有它就无法证明用的是哪一版判据**（栏位/口径引用红线的前提）
     report.setdefault("reproducibility", {})["rubric_boundary_sha256"] = RUBRIC_BOUNDARY_SHA256
+    # 有序量表的标准统计（加权 κ / Krippendorff α）——与未加权 κ **并列**，不替换（跨口径不可比）
+    from eval_engine.judge.agreement import ordinal_agreement
+
+    _pairs = report.get("pairs") or []
+    if _pairs:
+        report["agreement_ordinal"] = ordinal_agreement(
+            [x["human"] for x in _pairs], [x["judge"] for x in _pairs]
+        )
+    _ir_pairs = (report.get("inter_rater") or {}).get("pairs") or []
+    if _ir_pairs:
+        report["inter_rater_ordinal"] = ordinal_agreement(
+            [x["human"] for x in _ir_pairs], [x["judge"] for x in _ir_pairs]
+        )
     title = f"Judge 人机校准快照（{stamp} / {mode_tag}）"
     md = format_agreement_markdown(report, title=title)
     try:
@@ -240,6 +253,22 @@ def main() -> int:
         "```\n\n"
         f"数据文件: `{cal.source_path}`\n"
     )
+    if report.get("agreement_ordinal"):
+        _ao = report["agreement_ordinal"]
+        md += (
+            "\n## 有序量表统计（与未加权 κ 并列，**不可混比**）\n\n"
+            f"- κ 未加权（历史口径）= **{_ao['kappa_unweighted']}**｜"
+            f"线性加权 = **{_ao['kappa_linear']}**｜二次加权 = {_ao['kappa_quadratic']}｜"
+            f"**α(ordinal) = {_ao['alpha_ordinal']}**（n={_ao['n']}，"
+            f"精确一致 {_ao['exact_rate']:.1%}，±1 一致 {_ao['within_one_rate']:.1%}）\n"
+            "- 1–5 是**有序**量表：未加权 κ 把相邻分歧当完整分歧，会**低估**一致性；引用须带统计量与权重。\n"
+        )
+    if report.get("inter_rater_ordinal"):
+        _io = report["inter_rater_ordinal"]
+        md += (
+            f"- 标注者间同口径：未加权 **{_io['kappa_unweighted']}**｜线性加权 **{_io['kappa_linear']}**｜"
+            f"α(ordinal) **{_io['alpha_ordinal']}**\n"
+        )
     md_path.write_text(md, encoding="utf-8")
     json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     if not args.live:

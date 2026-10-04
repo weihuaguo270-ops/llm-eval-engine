@@ -83,6 +83,9 @@ python examples/run_calibration.py
 # Judge 校准 live held_out
 python examples/run_calibration.py --live --split held_out
 
+# 结果判断（决策级：缺陷率 / 决策级一致率 / 误评·漏评）
+python examples/run_result_evaluation.py --split held_out
+
 # 端到端：轨迹 → 评分 → 报告
 python examples/e2e_trajectory_eval.py
 

@@ -26,8 +26,9 @@ Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步�
 | 业务环节 | 项目交付 | 决策用途 |
 |----------|----------|----------|
 | 评测设计 | 固定 Benchmark、动态 rubric、步骤级 Process Reward | 区分最终结果失败与过程失败 |
-| 数据治理 | 数据集指纹、切分泄漏检查、双人标注与仲裁 | 保证版本可追溯，避免测试集污染 |
+| 数据治理 | 数据集指纹、**判据文本指纹**（`sha256`）、切分泄漏检查、双人标注与仲裁 | 保证版本可追溯，避免测试集污染 |
 | 评测器治理 | 人机一致性、κ/MAE/MSE/RMSE、held-out 校准 | 判断 Judge 能否进入门禁 |
+| **结果判断（决策级）** | 判定分布、缺陷率、**决策级一致率**、误评/漏评；合格线**逐字取自刻度锚点**（含出处） | 从「分数是否一致」推进到「**这批数据支持什么结论**」 |
 | 风险验收 | 安全对抗集、**轨迹内 Artifact 过程验收** | 核验读图/出图步骤质量与安全；非多模态选型榜 |
 | 发布治理 | baseline、业务切片漂移、质量/时延/成本硬门禁 | 输出 pass/review/hold 依据 |
 
@@ -41,7 +42,8 @@ Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步�
 | 步骤级 Judge 打分 + 错误传播标注 | 训练型 PRM |
 | 按上下文生成 rubric（`dynamic_rubric.py`） | 替代 react-agent 的 capability 主评测集 |
 | Eval Loop：低分 → 修正 → 重跑（`eval_loop.py`） | Agent 运行时本身 |
-| 人机校准：κ、MAE、MSE/RMSE、混淆矩阵 | 把 offline κ 当线上 SLA |
+| 人机校准：κ、MAE、MSE/RMSE、混淆矩阵；**结果判断（决策级）**：缺陷率、决策级一致率、误评/漏评 | 把 offline κ 当线上 SLA |
+| **判据指纹与漂移检测**（改判据未同步审计副本/未升版本即失败） | 改口径后在同一批样本上报「提升」 |
 | 固定 Benchmark 跑批 + Agent 发布对比 | 端到端生产级 Agent 平台；生成模型选型台 |
 | 失败类型 taxonomy + 分布统计 | 只报总分不做归因 |
 | 回归门禁 + shipped baseline | 把 offline 对比当线上 SLA |
@@ -56,6 +58,7 @@ Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步�
 | 回归门禁 | `python examples/run_benchmark.py --compare` | vs shipped baseline |
 | Judge 校准 offline | `python examples/run_calibration.py` | v5，held_out n=53 |
 | Live 校准 held_out | `python examples/run_calibration.py --live --split held_out` | 需 API Key |
+| **结果判断（决策级）** | `python examples/run_result_evaluation.py --split held_out` | 缺陷率/决策级一致率/误评·漏评；默认取最近一份 live 报告 |
 | Live Judge 跑批 | `python examples/run_benchmark_live.py` | 需 API Key；轨迹冻结 |
 | Live Agent 跑批 | `python examples/run_benchmark_agent.py --mode agent` | 需 react-agent + Key |
 | E2E 轨迹评分 | `python examples/e2e_trajectory_eval.py` | 单条冒烟 |
@@ -117,7 +120,7 @@ src/eval_engine/
 ├── benchmark/                   固定任务集跑批 + 对比报告
 ├── judge/                       Judge 调用、模板、人机校准
 ├── loop/                        评分 → 修正 → 重执行
-├── gates/                       baseline / 回归门禁 / release_audit / search_calibration
+├── gates/                       baseline / 回归门禁 / release_audit
 ├── intent/                      任务路由
 ├── safety/                      HITL 审批钩子
 ├── dataset/                     golden + calibration 数据
@@ -283,8 +286,6 @@ python examples/run_release_audit.py examples/fixtures/episodes/multimodal_step_
 **可引用（钉死，2026-09-22）：** held-out live κ≈**0.70**（n=40，deepseek-chat）；门禁 `process_reward_media_steps_min`；
 产物 `reports/release_audit_live_four.json` + `reports/multimodal_held_out_live.json`。
 **κ≈0.22 不当 SLA。** 扩样见 [`docs/HELD_OUT_EXPAND.md`](docs/HELD_OUT_EXPAND.md)、口径见 [`docs/CITATION_MULTIMODAL_PROCESS.md`](docs/CITATION_MULTIMODAL_PROCESS.md)。
-
-**检索步过程维度另开一栏**（`search_dimension_cell` = `episode × search step × dimension`），与上面的 `dimension_cell` 主钉**不合成总分**；分栏与确定性失败类型（`search_empty` / `search_weak` / `search_timeout`）已就位，但**无 held-out 人工样本 ⇒ 状态 `uncalibrated`，不报任何 κ** — [`docs/search_dimension_column_20261001.md`](docs/search_dimension_column_20261001.md)。
 
 跨仓业务发布演练已提供统一入口：
 

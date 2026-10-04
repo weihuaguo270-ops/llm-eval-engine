@@ -530,6 +530,41 @@ def load_golden_file(path: Optional[str] = None) -> list[dict[str, Any]]:
     raise ValueError(f"无法识别校准数据格式: {path}")
 
 
+def extract_judge_score_or_none(judge_result: dict[str, Any]) -> Optional[float]:
+    """提取标量分；**判不出来时返回 None**（不伪装成 3 分）。
+
+    与 `extract_judge_score` 的区别：后者为历史行为（解析失败 → 3.0），保留以兼容既有调用。
+    live 校准路径应使用本函数：把「弃权 / 无法解析」单独计为 `unscored`，
+    **从 κ/MAE 等一致性指标中剔除**，并单列 coverage（Inspect AI 的 unscored 口径）。
+    """
+    if judge_result.get("abstain") is True:
+        return None
+    vals: list[float] = []
+    for r in judge_result.get("rubrics") or []:
+        v = r.get("score")
+        if isinstance(v, str) and v.strip().lower() in ("", "null", "none", "na", "n/a"):
+            continue
+        if v is None:
+            continue
+        try:
+            vals.append(float(v))
+        except (TypeError, ValueError):
+            continue
+    if vals:
+        return sum(vals) / len(vals)
+    for key in ("step_score", "score", "judge_score"):
+        v = judge_result.get(key)
+        if isinstance(v, str) and v.strip().lower() in ("", "null", "none", "na", "n/a"):
+            continue
+        if v is None:
+            continue
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def extract_judge_score(judge_result: dict[str, Any]) -> float:
     """从 JudgeExecutor / 模板输出中提取标量分。"""
     rubrics = judge_result.get("rubrics") or []
@@ -605,6 +640,7 @@ class JudgeCalibrator:
         splits: list[str] = []
         dimension_pairs: dict[str, list[tuple[float, float]]] = {}
         skipped = 0
+        unscored = 0  # judge 弃权/无法解析：单独记账，不进 κ
         meta_repro: dict[str, Any] = {}
 
         # 尝试读 meta.reproducibility（若 golden 来自文件）
@@ -643,7 +679,13 @@ class JudgeCalibrator:
                 prompt = item.get("prompt", "")
                 try:
                     judge_result = judge_fn(prompt)
-                    judge_score = extract_judge_score(judge_result)
+                    judge_score = extract_judge_score_or_none(judge_result)
+
+                    if judge_score is None:
+
+                        unscored += 1
+
+                        continue
                     rubrics = judge_result.get("rubrics") or []
                 except Exception:
                     skipped += 1
@@ -727,6 +769,14 @@ class JudgeCalibrator:
             "needs_calibration": gate_kappa < self.threshold,
             "threshold": self.threshold,
             "gate_split": "held_out" if "held_out" in by_split else "all",
+            "unscored": unscored,
+
+            "coverage": round(len(human_scores) / (len(human_scores) + unscored), 4)
+
+                        if (len(human_scores) + unscored) else 0.0,
+
+            "unscored_note": "judge 弃权或无法解析 → 从 κ/MAE 剔除，单列 coverage（Inspect AI 的 unscored 口径）",
+
             "avg_human": round(sum(human_scores) / len(human_scores), 3),
             "avg_judge": round(sum(judge_scores) / len(judge_scores), 3),
             "drift": round(

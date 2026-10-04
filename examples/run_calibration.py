@@ -22,6 +22,11 @@ sys.path.insert(0, str(ROOT / "src"))
 
 import hashlib
 
+from eval_engine.judge.variant_ledger import (  # noqa: E402
+    batch_key,
+    check_and_record,
+)
+
 from eval_engine.judge.calibration import (  # noqa: E402
     JudgeCalibrator,
     format_agreement_markdown,
@@ -169,7 +174,29 @@ def main() -> int:
             return 2
         print(f"[live] judge wiring: {wiring}")
         print(f"[live] model={os.environ.get('JUDGE_MODEL')} base={os.environ.get('JUDGE_BASE_URL')}")
+        # 选择防护：同一 batch 不得第二次用于选择口径（EVAL_DESIGN §3.3；规则见 judge/variant_ledger.py）
+        try:
+            _meta = (json.loads(Path(cal.source_path).read_text(encoding="utf-8")).get("meta") or {})
+        except Exception:
+            _meta = {}
+        _repro = _meta.get("reproducibility") or {}
+        _decision = check_and_record(
+            batch_key(_repro.get("dataset_id") or _meta.get("title"), _meta.get("version"), split),
+            RUBRIC_BOUNDARY_SHA256,
+            purpose=os.environ.get("JUDGE_VARIANT_PURPOSE", "adopt").strip().lower(),
+            allow_selection=os.environ.get("JUDGE_ALLOW_SELECTION", "").strip() == "1",
+        )
+        if not _decision["allowed"]:
+            print("[selection-guard] 拒绝运行：")
+            for _line in _decision["reason"].splitlines():
+                print("  " + _line)
+            return 2
+        print(f"[selection-guard] {_decision['reason']}")
+        if _decision.get("selection"):
+            print("[selection-guard] 本次读数将标记 selection_use=true —— **不得用于采纳**")
         report = cal.run(judge_fn=_live_judge_fn, mode="live", split=split)
+        if _decision.get("selection"):
+            report["selection_use"] = True
         scores = [p.get("judge") for p in (report.get("pairs") or [])]
         if scores and len(set(scores)) == 1 and scores[0] == 3:
             print(

@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+### Changed (2026-10-04) — 口径变体防护改为「配额 = 每批一次 adopt 级对照」+ 预注册强制
+
+- `judge/variant_ledger.py` **语义重写**：每批至多 **两个 adopt 指纹**（基线 + 一次对照）。
+  基线可重复跑、不消耗配额；配额已用后再出现**第三个**不同 adopt 指纹 → **拒绝**（退出码 2，
+  且在调用 Judge LLM **之前**拒绝）。`probe`（故意造坏）与 `JUDGE_ALLOW_SELECTION=1` 均放行，
+  但**不消耗配额**且**不得用于采纳**。
+  **原语义**（"同一批不得出现第二个不同 adopt 指纹"）连"基线 + 一个变体"都会拒，使旧批永远无法做对照。
+- **预注册强制**（配额内那次对照的**真正护栏**）：comparison 臂**必须先有**预注册文件，否则拒绝。
+  默认路径 `dataset/data/prereg/<batch>_<variant_sha16>.json`（**入库跟踪**——刻意不放被
+  `.gitignore` 忽略的 `reports/`，否则外部无法验证"它早于那次运行"），可用 `--prereg <file>` 覆盖。
+  必须写明：预测方向/幅度、采纳判据、负结果处置、**写就时间**；且 `variant_sha16` 绑定本次指纹。
+  账本记录其 **sha256**：冻结后**被改动或删除** → 该臂复现时**拒绝**。
+- 账本 schema 演进为 `arms{roles, baseline, comparison, quota_used, prereg}`；
+  旧 `fingerprints` 格式**保守迁移**（视配额已用）。新增 `JUDGE_VARIANT_LEDGER` 可指向别处（测试隔离）。
+- 报告新增自描述字段：`reproducibility.variant_batch` / `variant_role` / `variant_quota_consumed`
+  与 `prereg{path, sha256, frozen_at}`。
+- **测试**：`tests/test_variant_ledger.py` 重写为 **40 项**（§3.3 语义表 **7 行全覆盖** + 11 个坏预注册
+  + 预注册**篡改/删除**后拒绝复现 + 旧 schema 迁移 + **端到端**：起本地 HTTP 桩计数，验证 CLI 在
+  **调用 Judge LLM 之前**拒绝（桩收到 0 次请求）/放行（桩确实收到请求））；全量 **214 passed / 6 skipped**。
+
+### Changed (2026-10-04) — 负结果：v2.1 → v2.1.1（补齐 3 条模板层条文）**未采纳**
+
+- 审计发现 v2.1 两个表示层**不同步**：`judge/templates/*.yaml` 已断言、而校准 Judge 的唯一来源
+  `SCALE_ANCHORS` 缺失 3 条边界条文——相邻重复同参调用且无新信息→≤2；观测为空/超时仍给具体数字→1；
+  同义改写且无新增事实→5。
+- **先冻结预注册**（`dataset/data/prereg/…b1475b3e81f5e1d4.json`，`frozen_at=2026-10-04T19:00:39+08:00`，
+  sha256 `e28c985b…`），再在同一批 held_out 上跑**一次** live 对照（账本 quota **已用**）。
+- 实测：决策级一致率 96.2%→**98.1%**（+1 条）、漏杀 2→1、线性 κ 0.9483→0.9488、二次 0.9841→0.9844、
+  **α(ordinal) 0.9860→0.9827**、未加权 0.8565→0.8560；三项统计量**配对置换 p 全为 1.0**；
+  判分仅动 2 条（`cal_58` 变好 / `cal_20` 变差），且**均属与改动无关**。
+- **结论：未采纳**，保留 v2.1（指纹 `0a780f5ad7916440` **逐字节不动**）；
+  记录见 [`docs/NEGATIVE_RESULTS.md`](docs/NEGATIVE_RESULTS.md)。
+- 附带确认：同批 v2.1 基线**复现一致**——live n=53，κ 0.8565、线性 0.9483、α(ordinal) 0.9860、
+  CI [0.7319, 0.9669]、标注者间 0.7240、unscored 0 / coverage 1.0。
+
 ### Added (2026-10-04) — 有序量表一致性统计（加权 κ / Krippendorff α / 配对置换检验）
 
 - 新增 `src/eval_engine/judge/agreement.py`：`weighted_kappa`（linear/quadratic）、`krippendorff_alpha`

@@ -153,6 +153,14 @@ def main() -> int:
         choices=["", "dev", "held_out"],
         help="仅评估指定分栏",
     )
+    parser.add_argument(
+        "--prereg",
+        default="",
+        help=(
+            "预注册文件路径（覆盖默认 dataset/data/prereg/<batch>_<sha16>.json）。"
+            "配额内那次对照（comparison 臂）必须先有它，否则拒绝运行"
+        ),
+    )
     args = parser.parse_args()
     split = args.split or None
     _load_dotenv()
@@ -174,27 +182,44 @@ def main() -> int:
             return 2
         print(f"[live] judge wiring: {wiring}")
         print(f"[live] model={os.environ.get('JUDGE_MODEL')} base={os.environ.get('JUDGE_BASE_URL')}")
-        # 选择防护：同一 batch 不得第二次用于选择口径（EVAL_DESIGN §3.3；规则见 judge/variant_ledger.py）
+        # 选择防护：每批配额 = 基线（可重复）+ **一次** adopt 级对照（EVAL_DESIGN §3.3；规则见 judge/variant_ledger.py）
         try:
             _meta = (json.loads(Path(cal.source_path).read_text(encoding="utf-8")).get("meta") or {})
         except Exception:
             _meta = {}
         _repro = _meta.get("reproducibility") or {}
+        _batch = batch_key(
+            _repro.get("dataset_id") or _meta.get("title"), _meta.get("version"), split
+        )
         _decision = check_and_record(
-            batch_key(_repro.get("dataset_id") or _meta.get("title"), _meta.get("version"), split),
+            _batch,
             RUBRIC_BOUNDARY_SHA256,
             purpose=os.environ.get("JUDGE_VARIANT_PURPOSE", "adopt").strip().lower(),
             allow_selection=os.environ.get("JUDGE_ALLOW_SELECTION", "").strip() == "1",
+            prereg_file=(args.prereg or None),
         )
         if not _decision["allowed"]:
             print("[selection-guard] 拒绝运行：")
             for _line in _decision["reason"].splitlines():
                 print("  " + _line)
             return 2
+        print(
+            f"[selection-guard] batch={_batch} fingerprint={RUBRIC_BOUNDARY_SHA256} "
+            f"role={_decision.get('role')} 消耗配额={bool(_decision.get('consumes_quota'))}"
+        )
         print(f"[selection-guard] {_decision['reason']}")
         if _decision.get("selection"):
             print("[selection-guard] 本次读数将标记 selection_use=true —— **不得用于采纳**")
         report = cal.run(judge_fn=_live_judge_fn, mode="live", split=split)
+        # 报告自描述：这次跑的是哪个角色、配额用没用、对照绑的是哪份预注册
+        _repro_out = report.setdefault("reproducibility", {})
+        _repro_out["variant_batch"] = _batch
+        _repro_out["variant_role"] = _decision.get("role")
+        _repro_out["variant_quota_consumed"] = bool(_decision.get("consumes_quota"))
+        if _decision.get("prereg"):
+            report["prereg"] = {
+                key: _decision["prereg"].get(key) for key in ("path", "sha256", "frozen_at")
+            }
         if _decision.get("selection"):
             report["selection_use"] = True
         scores = [p.get("judge") for p in (report.get("pairs") or [])]

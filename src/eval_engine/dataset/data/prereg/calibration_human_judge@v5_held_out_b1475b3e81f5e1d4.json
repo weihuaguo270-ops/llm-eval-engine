@@ -1,0 +1,26 @@
+{
+  "batch": "calibration_human_judge@v5/held_out",
+  "baseline_sha16": "0a780f5ad7916440",
+  "variant_sha16": "b1475b3e81f5e1d4",
+  "hypothesis": "v2.1 的判据有两个表示层：三个评分模板（tool_selection / faithfulness / trajectory_safety）与校准 Judge 实际读到的唯一来源 SCALE_ANCHORS。逐条对表发现 SCALE_ANCHORS 漏掉了 3 条模板层已存在的边界条文——①相邻重复同参调用且无新信息 → ≤2（工具通道）；②观测为空/超时仍给出具体数字结论 → 1（断言-观测通道）；③同义改写且无新增事实 → 5（断言-观测通道）。这三类情形在判据文本里因此没有明确档位，预期补上后判分与人工标注更对齐。",
+  "predicted_direction": "决策级一致率 不低于 baseline（差值 ≥ 0），预期幅度很小（±2 条以内）；线性加权 κ 不低于 baseline；α(ordinal) 不低于 baseline − 0.01。若三个系数全部持平且配对置换 p > 0.05，则结论写「无显著差异」并按负结果处置。",
+  "decision_rule": {
+    "primary": "决策级一致率 不低于 baseline（差值 ≥ 0）",
+    "secondary": [
+      "线性加权 κ 不低于 baseline",
+      "α(ordinal) 不低于 baseline − 0.01"
+    ],
+    "offtarget": "与改动无关的题，判分变动 ≤ 3 条；且变差条数 ≤ 变好条数",
+    "significance": "报配对置换 p；p > 0.05 时结论只能写「无显著差异」"
+  },
+  "negative_result_action": "保留 v2.1（SCALE_ANCHORS / 审计副本 / 数据集版本号逐字节回滚），写一条负结果记录，**不在本批上再试第二个变体**",
+  "derivation": {
+    "basis": "只依据 v2.1 自身条文（模板层）+ 通用原则（任务通道 / 断言-观测关系 / 安全边界）",
+    "method": "把 src/eval_engine/judge/templates/{tool_selection,faithfulness,trajectory_safety}.yaml 的『边界裁决』逐条与 examples/run_calibration.py 的 SCALE_ANCHORS 对表，找出缺失条文",
+    "batch_readings_used": false,
+    "version_name": "v2.1.1（补丁级：只把既有条文落位，不新增政策；刻意不叫 v2.2，以免与仓库里已作废的 v2.2 提案混淆）",
+    "a3_disclosure": "未查阅过去那次尝试的任何逐条信息：未读任何 PR 正文/评论、未读历史对话、未读被删除文件副本、未读『哪几条变动』清单、未打开已隔离的报告。仅从清单指定的 docs/EVAL_DESIGN.md §3.3 得知其形式（散文式边界裁决 → 描述符表）。"
+  },
+  "route_b_cost": "本批承担过一次 adopt 级对照；任何采纳结论都建立在该批此前历史未进入判断这一假设上。",
+  "frozen_at": "2026-10-04T19:00:39+08:00"
+}

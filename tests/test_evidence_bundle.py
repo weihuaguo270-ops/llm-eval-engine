@@ -218,3 +218,151 @@ def test_bundle_passes_after_a_metadata_only_bands_edit(tmp_path):
     )
 
     assert result["decision"] == "pass"
+
+
+# ── 判定结果（决策级）进门禁：**证据 ≠ 政策** ──────────────────────────────
+
+
+def _verdict_block(**overrides):
+    block = {
+        "label": "held_out",
+        "n": 53,
+        "judge_defect_rate": 0.321,
+        "human_defect_rate": 0.359,  # 两个口径**分开放**，不得混成一个数
+        "defect_rate_ci_item": [0.208, 0.453],
+        "false_kill": 0,
+        "false_pass": 2,
+    }
+    block.update(overrides)
+    return block
+
+
+def _verdict_evidence(blocks=None, **overrides):
+    evidence = {
+        "schema_version": "verdict-evidence/v1",
+        "bands_identity": {
+            "algo": "sha256:canonical-json-of-dimensions/v1",
+            "sha256": "a" * 64,
+            "recognized": True,
+            "reason": None,
+        },
+        "blocks": [_verdict_block()] if blocks is None else blocks,
+    }
+    evidence.update(overrides)
+    return evidence
+
+
+def test_verdict_evidence_without_policy_cannot_pass():
+    """**证据 ≠ 政策**：数字在、但没人说多少算不合格 ⇒ 不得判过。
+
+    本模块**不设默认阈值**——"多少算不合格"是发布方的政策，不是实现细节。
+    """
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()], verdict_evidence=_verdict_evidence()
+    )
+
+    assert result["decision"] == "review"
+    assert "no declared policy" in " ".join(result["review_reasons"])
+    assert result["evidence"]["verdict_policy_declared"] is False
+
+
+def test_verdict_evidence_within_policy_passes():
+    """**假阳性校准**：在政策之内、身份也对得上 ⇒ 不得因这条新检查变成 review。"""
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(),
+        verdict_policy={"max_judge_defect_rate": 0.40, "max_false_pass": 2},
+    )
+
+    assert result["decision"] == "pass"
+    assert result["evidence"]["verdict_evidence_present"] is True
+
+
+def test_robust_overshoot_holds_but_straddling_ci_reviews():
+    """**两级**：区间下界都超阈 ⇒ `hold`（稳健超标）；点估计超阈而区间跨阈 ⇒ `review`。"""
+    held = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(
+            blocks=[_verdict_block(judge_defect_rate=0.60, defect_rate_ci_item=[0.45, 0.74])]
+        ),
+        verdict_policy={"max_judge_defect_rate": 0.40},
+    )
+    assert held["decision"] == "hold"
+    assert any("above policy" in reason for reason in held["hard_failures"])
+
+    review = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(
+            blocks=[_verdict_block(judge_defect_rate=0.42, defect_rate_ci_item=[0.30, 0.55])]
+        ),
+        verdict_policy={"max_judge_defect_rate": 0.40},
+    )
+    assert review["decision"] == "review"
+    assert any("straddles" in reason for reason in review["review_reasons"])
+
+
+def test_false_pass_above_policy_holds():
+    """**漏杀**（人判缺陷而 Judge 放过）是发布门禁最该拦的方向 ⇒ 超限即 `hold`。"""
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(),
+        verdict_policy={"max_judge_defect_rate": 0.90, "max_false_pass": 0},
+    )
+
+    assert result["decision"] == "hold"
+    assert any("false-pass above policy" in reason for reason in result["hard_failures"])
+
+
+def test_insufficient_blocks_are_listed_and_cannot_support_a_verdict():
+    """样本不足 ⇒ **不支持率结论**：不参与判定，但**必须显式列出**。
+
+    否则"没算"又会被读成"没缺陷"——本仓那条纪律的同一个病。
+    """
+    thin = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(blocks=[_verdict_block(n=5)]),
+        verdict_policy={"max_judge_defect_rate": 0.40},
+    )
+    assert thin["evidence"]["verdict_evidence"]["insufficient"] == [
+        {"label": "held_out", "n": 5}
+    ]
+    assert thin["decision"] == "review"
+    assert any("enough judged cells" in reason for reason in thin["review_reasons"])
+
+    mixed = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(
+            blocks=[_verdict_block(n=5), _verdict_block(label="dev", n=53)]
+        ),
+        verdict_policy={"max_judge_defect_rate": 0.40},
+    )
+    assert mixed["evidence"]["verdict_evidence"]["insufficient"] == [
+        {"label": "held_out", "n": 5}
+    ]
+    assert mixed["decision"] == "pass"
+
+
+def test_verdict_evidence_carries_the_criteria_identity_into_the_same_check():
+    """判定结果里自带的合格线身份 → 走 P3 的**同一套**检查（不另立一套口径）。"""
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(
+            bands_identity={"recognized": False, "sha256": None, "reason": "unreadable"}
+        ),
+        verdict_policy={"max_judge_defect_rate": 0.90},
+    )
+
+    assert result["decision"] == "review"
+    assert any("bands identity unrecognized" in r for r in result["review_reasons"])
+
+
+def test_unsupported_verdict_evidence_schema_holds():
+    """与其它证据块同一约定：schema 不匹配 ⇒ `hold`。"""
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(schema_version="verdict-evidence/v0"),
+        verdict_policy={"max_judge_defect_rate": 0.90},
+    )
+
+    assert result["decision"] == "hold"
+    assert "unsupported verdict evidence schema" in result["hard_failures"]

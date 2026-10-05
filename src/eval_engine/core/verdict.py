@@ -33,6 +33,19 @@ UNDECIDABLE_TOKENS = frozenset(
     }
 )
 
+#: 「可判格 < N **只报计数、不报率**」的**外部量化依据**。
+#:
+#: 原先这个 15 是**拍出来的**。Efficient-HELM 给出 Examples-Per-Scenario 与
+#: 95% CI of Rank Location 的对应关系——**10→±5、200→±2、1000→±1**，
+#: 即个位数样本的排名/比例区间宽到无法解读。故"格数不够只报计数"不是保守，
+#: 而是**与外部量化一致**的下限。
+#: 出处：<https://crfm-helm.readthedocs.io/en/latest/efficient_benchmarking/>；
+#: 归纳见 `docs/RUBRIC_EVAL_EXTERNAL_BENCHMARK.md` §2 与附录 A。
+#:
+#: **定义在这里而不是脚本里**：发布门禁消费判定结果时也要用同一个数，
+#: 而**一个数只能有一个定义处**（否则又是两个口径）。
+MIN_JUDGED_FOR_RATE = 15
+
 
 #: 合格线文件里承载「维度 → 档位」的**两种外壳键**。两种都在真实文件里出现过，
 #: 而按哪一种解析会**改变判定结果**——实测：同一份内容、同一个 5 分，
@@ -223,6 +236,7 @@ def clustered_rate_ci(
 __all__ = [
     "BANDS_IDENTITY_ALGO",
     "BANDS_WRAPPER_KEYS",
+    "MIN_JUDGED_FOR_RATE",
     "UNDECIDABLE_TOKENS",
     "bands_identity",
     "canonical_bands_bytes",

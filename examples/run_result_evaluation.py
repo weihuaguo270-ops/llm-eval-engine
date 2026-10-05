@@ -44,6 +44,9 @@ from eval_engine.core.verdict import (  # noqa: E402
     load_bands_document,
     verdict_for,
 )
+# 产物要**自我声明**它是哪一类证据：schema 字符串只有一处定义（在门禁那边）——
+# 否则又是一份"看着像证据、门禁不认"的产物
+from eval_engine.gates.evidence_bundle import VERDICT_EVIDENCE_SCHEMA  # noqa: E402
 
 DATA_DIR = REPO / "src" / "eval_engine" / "dataset" / "data"
 DEFAULT_BANDS = DATA_DIR / "verdict_bands_line1.json"
@@ -233,6 +236,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     (out.with_suffix(".json")).write_text(
         json.dumps(
             {
+                # 门禁按这个字段认它是不是判定结果证据（`verdict-evidence/v1`）
+                "schema_version": VERDICT_EVIDENCE_SCHEMA,
                 "source": str(report_path),
                 "split": args.split,
                 "bands_identity": identity,

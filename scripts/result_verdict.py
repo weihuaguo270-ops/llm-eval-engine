@@ -63,6 +63,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--bands", type=Path, default=None,
         help="合格线表 JSON（默认 <batch>/verdict_bands.json；缺则判定为 unbanded）",
     )
+    parser.add_argument(
+        "--expect-bands-sha256", default=None,
+        help="预期合格线身份（前缀即可）。不符则退出码 3（P2：读取端软校验）",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     index = json.loads((args.batch / "search_steps.json").read_text(encoding="utf-8"))
@@ -79,7 +83,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         for key in ("note", "rulings_version", "convention", "provenance", "derivation")
         if key in document
     }
-    # 【P1】合格线**内容身份**：只算、只记录——本脚本不改判定行为（是否据此阻断见计划 P2/P3）。
+    # 【P1】合格线**内容身份**；【P2】起：身份不可识别/不符会改**退出码**，但**不改判定结果**。
     identity = bands_identity(bands_path)
     dimensions = tuple(index["meta"].get("dimensions") or ())
     if args.dimension:
@@ -177,6 +181,19 @@ def main(argv: Optional[list[str]] = None) -> int:
     out = args.out or args.batch / "result_verdict.json"
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n[written] {out}")
+
+    # 【P2】读取端**软校验**：产物**先落盘**（快照不可再采集 → 报告必须留下），
+    # **告警只走退出码**——这是本仓采集侧 P0-2 已经用过的同一条纪律。
+    # 本步**不改门禁**：门禁接入是计划 P3。
+    if not identity["recognized"]:
+        print(f"\n❌ 合格线**不可识别**（{identity['reason']}）→ 退出码 2")
+        print("   上面的判定会全落成 `unbanded`——**这不是「零缺陷」，是「没算」**")
+        return 2
+    if args.expect_bands_sha256 and not identity["sha256"].startswith(args.expect_bands_sha256):
+        print("\n❌ 合格线身份与预期不符 → 退出码 3")
+        print(f"   预期（前缀）：{args.expect_bands_sha256}")
+        print(f"   实际：        {identity['sha256']}（{identity['algo']}）")
+        return 3
     return 0
 
 

@@ -44,6 +44,7 @@ def audit_release(
     rebuild_calibration: bool = False,
     min_process_score: float = 3.5,
     judge_meta: Optional[Mapping[str, Any]] = None,
+    verdict_criteria: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
     """Return one decision per episode, then the strictest of those decisions.
 
@@ -87,6 +88,7 @@ def audit_release(
                 calibrated=calibration_report is not None,
                 calibration_report=calibration_report,
                 min_process_score=min_process_score,
+                verdict_criteria=verdict_criteria,
             )
         )
 
@@ -118,6 +120,8 @@ def audit_release(
         "decision_basis": (
             "process_reward_soft_dimensions" if calibration_report is not None else "uncalibrated"
         ),
+        # 【P3】判定标准身份随报告走（`None` = 本次未评估该证据，**不是"通过"**）
+        "verdict_criteria": verdict_criteria,
         "process_quality": None if single is None else single["process_quality"],
         "process_metrics": None if single is None else single["process_metrics"],
         "episodes": episode_reports,
@@ -320,6 +324,7 @@ def _gate_episode(
     calibrated: bool,
     calibration_report: Optional[dict[str, Any]],
     min_process_score: float,
+    verdict_criteria: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
     process_quality = None
     if calibrated and item["overall"] is not None:
@@ -332,6 +337,8 @@ def _gate_episode(
     decision = evaluate_evidence_bundle(
         episodes=[item["payload"]],
         process_quality=process_quality,
+        # 【P3】判定标准身份一并进门禁：不可识别/与预期不符 ⇒ review，声明与重算矛盾 ⇒ hold
+        verdict_criteria=verdict_criteria,
         min_process_score=min_process_score,
     )
     review_reasons = [

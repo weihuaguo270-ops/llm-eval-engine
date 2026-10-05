@@ -15,9 +15,19 @@ def evaluate_evidence_bundle(
     version_comparison: Mapping[str, Any] | None = None,
     human_review: Mapping[str, Any] | None = None,
     multimodal_understanding: Mapping[str, Any] | None = None,
+    verdict_criteria: Mapping[str, Any] | None = None,
     min_process_score: float = 3.5,
 ) -> dict[str, Any]:
-    """Fail closed on business state and budgets; keep Judge quality separate."""
+    """Fail closed on business state and budgets; keep Judge quality separate.
+
+    Every evidence block is **presence-conditional**: ``None`` means "not evaluated on
+    this path" and is recorded as ``*_present: False`` — never guessed into a verdict.
+    ``verdict_criteria`` carries the decision criteria's own identity (合格线 identity,
+    see `docs/VERDICT_IDENTITY_PLAN.md`) and applies the **two-level** check:
+    unrecognized / mismatched-against-expectation ⇒ ``review``; a *declared* identity
+    contradicting the *recomputed* one ⇒ ``hold`` (the artifact contradicts itself —
+    that is the fail-closed case, not a configuration problem).
+    """
     reasons: list[str] = []
     review_reasons: list[str] = []
 
@@ -111,6 +121,40 @@ def evaluate_evidence_bundle(
             ):
                 reasons.append("multimodal understanding evidence failed")
 
+    # 【P3】判定标准（合格线）身份：**两级阻断**。
+    # 依据 `docs/VERDICT_IDENTITY_PLAN.md` §1 的 P3/P4：
+    # 「读不到 ≠ 通过」——不可识别、或与**预期**不一致 ⇒ review（配置问题，可修）；
+    # 「产物不得自相矛盾」——**声明**的身份与**重算**的身份不符 ⇒ hold（篡改/换版）。
+    # 与其它证据块一样**存在即校验**：`None` 只记"没在这一步评估"，绝不代猜。
+    bands_identity_evidence: dict[str, Any] | None = None
+    if verdict_criteria is not None:
+        actual = str(verdict_criteria.get("sha256") or "")
+        expected = verdict_criteria.get("expected_sha256")
+        declared = verdict_criteria.get("declared_sha256")
+        bands_identity_evidence = {
+            "algo": verdict_criteria.get("algo"),
+            "sha256": actual or None,
+            "recognized": verdict_criteria.get("recognized") is True,
+            "reason": verdict_criteria.get("reason"),
+            "expected_sha256": expected,
+            "declared_sha256": declared,
+        }
+        if verdict_criteria.get("recognized") is not True:
+            review_reasons.append(
+                "bands identity unrecognized "
+                f"({verdict_criteria.get('reason') or 'unknown'})"
+            )
+        else:
+            if expected and not actual.startswith(str(expected)):
+                review_reasons.append(
+                    f"bands identity mismatch: expected {expected}, got {actual[:16]}"
+                )
+            if declared and str(declared) != actual:
+                reasons.append(
+                    "bands identity contradicts declared value: "
+                    f"declared {str(declared)[:16]}, recomputed {actual[:16]}"
+                )
+
     decision = "hold" if reasons else "review" if review_reasons else "pass"
     return {
         "decision": decision,
@@ -128,5 +172,7 @@ def evaluate_evidence_bundle(
             "version_comparison_present": version_comparison is not None,
             "human_review_present": human_review is not None,
             "multimodal_understanding_present": multimodal_understanding is not None,
+            "verdict_criteria_present": verdict_criteria is not None,
+            "bands_identity": bands_identity_evidence,
         },
     }

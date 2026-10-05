@@ -38,6 +38,7 @@ except Exception:  # pragma: no cover
     pass
 
 from eval_engine.core.verdict import (  # noqa: E402
+    bands_identity,
     clustered_rate_ci,
     load_bands,
     load_bands_document,
@@ -120,8 +121,18 @@ def evaluate(
 
 
 def render(
-    blocks: list[dict[str, Any]], document: dict[str, Any], source: Path, mode: str
+    blocks: list[dict[str, Any]],
+    document: dict[str, Any],
+    identity: dict[str, Any],
+    source: Path,
+    mode: str,
 ) -> str:
+    # 身份**随数字走**：数字离开这份报告时，读者仍能知道它依赖哪一份合格线
+    identified = (
+        f"`{identity['sha256'][:16]}`（{len(identity['dimensions'])} 维）"
+        if identity["recognized"]
+        else f"**不可识别**（{identity['reason']} → 判定会全落成 `unbanded`）"
+    )
     lines = [
         "# 结果判断（决策级）",
         "",
@@ -130,6 +141,7 @@ def render(
         f"- 数据来源：`{source.relative_to(REPO).as_posix()}`",
         f"- 合格线出处：{document['provenance']['field']} — 「{document['provenance']['verbatim']}」",
         f"- 推导：{document['derivation']}",
+        f"- 合格线身份：{identity['algo']}｜{identified}",
         "",
         "> 与 `run_calibration.py` 的 **κ（分数级）并列，不合成**。",
         "",
@@ -175,6 +187,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     # 维度层交给判定；整份文档留给口径出处（`provenance` / `derivation`）
     bands = load_bands(args.bands)
     document = load_bands_document(args.bands)
+    # 【P1】合格线**内容身份**：只算、只记录——本脚本不改判定行为。
+    identity = bands_identity(args.bands)
     templates = template_of_item(json.loads(GOLDEN.read_text(encoding="utf-8")))
     # 统一解析为**绝对路径**：否则 `--report` 传相对路径时 `relative_to(REPO)` 会抛异常
     report_path = Path(args.report or latest_live_report()).resolve()
@@ -195,14 +209,22 @@ def main(argv: Optional[list[str]] = None) -> int:
     for tpl in sorted({r["template"] for r in rows}):
         blocks.append(evaluate([r for r in rows if r["template"] == tpl], bands, f"{args.split}｜template={tpl}"))
 
-    text = render(blocks, document, report_path, mode)
+    text = render(blocks, document, identity, report_path, mode)
     out = args.out or (REPORTS / f"result_evaluation_{report_path.stem.split('_')[-2]}_{args.split}.md")
     out.write_text(text, encoding="utf-8")
     print(text)
     print(f"[written] {out.relative_to(REPO).as_posix()}")
     (out.with_suffix(".json")).write_text(
-        json.dumps({"source": str(report_path), "split": args.split, "blocks": blocks},
-                   ensure_ascii=False, indent=2),
+        json.dumps(
+            {
+                "source": str(report_path),
+                "split": args.split,
+                "bands_identity": identity,
+                "blocks": blocks,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
         encoding="utf-8",
     )
     return 0

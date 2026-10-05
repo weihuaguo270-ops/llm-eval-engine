@@ -36,6 +36,7 @@ except Exception:  # pragma: no cover
     pass
 
 from eval_engine.core.verdict import (  # noqa: E402
+    bands_identity,
     clustered_rate_ci,
     load_bands,
     load_bands_document,
@@ -78,6 +79,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         for key in ("note", "rulings_version", "convention", "provenance", "derivation")
         if key in document
     }
+    # 【P1】合格线**内容身份**：只算、只记录——本脚本不改判定行为（是否据此阻断见计划 P2/P3）。
+    identity = bands_identity(bands_path)
     dimensions = tuple(index["meta"].get("dimensions") or ())
     if args.dimension:
         dimensions = (args.dimension,)
@@ -103,7 +106,9 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     report: dict[str, Any] = {
         "batch": str(args.batch), "dimensions": list(dimensions),
-        "bands_loaded": bool(bands), "bands_meta": bands_meta, "by_dimension": {},
+        "bands_loaded": bool(bands), "bands_meta": bands_meta,
+        # 【P1】身份随数字走：数字离开这份报告时，读者仍能知道它依赖哪一份合格线
+        "bands_identity": identity, "by_dimension": {},
     }
     for dim in dimensions:
         band = bands.get(dim, {})
@@ -151,6 +156,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     for key, value in bands_meta.items():
         # 口径出处（含"这是重建版"这类自我声明）必须随数字一起出现
         print(f"> 口径[{key}]：{value}")
+    if identity["recognized"]:
+        print(f"> 合格线身份：{identity['algo']}｜`{identity['sha256'][:16]}`"
+              f"（{len(identity['dimensions'])} 维：{'、'.join(identity['dimensions'])}）")
+    else:
+        print(f"> 合格线身份：**不可识别**（{identity['reason']}）"
+              "—— 下面每一维都会落成 `unbanded`，**这不是「零缺陷」**")
     for dim, item in report["by_dimension"].items():
         judged = item["judged_cells"]
         print(f"[{dim}]")

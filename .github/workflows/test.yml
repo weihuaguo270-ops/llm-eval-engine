@@ -29,6 +29,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: pip install ".[test]"
+    - name: Inline-quote syntax check
+      run: python scripts/check_inline_quotes.py
+    - name: Verdict-criteria citation check
+      run: python scripts/check_verdict_citations.py
     - name: Test
       if: matrix.python-version != '3.11'
       run: pytest tests/ -v --tb=short

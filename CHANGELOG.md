@@ -20,7 +20,7 @@
 - **结果判断（决策级）**：新增 `examples/run_result_evaluation.py`。合格线**逐字来自金标准刻度锚点**并落盘为
   `dataset/data/verdict_bands_line1.json`（**含出处**）；输出逐 template 的判定分布、**缺陷率 + item 级 95% CI**、
   **决策级一致率**、**误杀/漏杀**、判定交叉表。报告按自带 `mode` **自动标注栏位**，非 live 栏打出告警；
-  **簇 < 10 不报聚簇 CI**（退化）。当前 held_out live：缺陷率 35.9%/32.1%，**决策级一致率 96.2%**，误杀 0 / **漏杀 2**。
+  **簇 < 10 不报聚簇 CI**（退化）。当前 held_out live：缺陷率 35.9%/32.1%，**决策级一致率 96.2%**，误杀 0 / **漏杀 2**。（合格线身份：`e939bea70c008429`）
 - **Rubric 指纹**：Rubric 文本落审计副本 `dataset/data/rubric_boundary_line1.json`（v2.1，`sha256[:16]=0a780f5ad7916440`）；
   `run_calibration.py` 把 `reproducibility.rubric_boundary_sha256` 写进报告与快照（**+10 行，Rubric 文本逐字节未变**）；
   新增**漂移测试**——改 Rubric 而未同步审计副本/未升版本号 → 测试失败。

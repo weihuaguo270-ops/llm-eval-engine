@@ -37,6 +37,16 @@ except Exception:  # pragma: no cover
 
 from eval_engine.core.verdict import clustered_rate_ci, load_bands, verdict_for  # noqa: E402
 
+#: 「可判格 < N 只报计数」的**外部量化依据**（P2-4）。
+#:
+#: 原先这个 15 是**拍出来的**。Efficient-HELM 给出 Examples-Per-Scenario 与
+#: 95% CI of Rank Location 的对应关系——**10→±5、200→±2、1000→±1**，
+#: 即个位数样本的排名/比例区间宽到无法解读。故"格数不够只报计数"不是保守，
+#: 而是**与外部量化一致**的下限。
+#: 出处：<https://crfm-helm.readthedocs.io/en/latest/efficient_benchmarking/>；
+#: 归纳见 `docs/RUBRIC_EVAL_EXTERNAL_BENCHMARK.md` §2 与附录 A。
+MIN_JUDGED_FOR_RATE = 15
+
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="结果判断：缺陷率（带聚簇 CI）")
@@ -50,7 +60,23 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     index = json.loads((args.batch / "search_steps.json").read_text(encoding="utf-8"))
-    bands = load_bands(args.bands or (args.batch / "verdict_bands.json"))
+    bands_path = args.bands or (args.batch / "verdict_bands.json")
+    bands = load_bands(bands_path)
+    # 【P3-3】口径出处必须**打出来**。`load_bands` 只取内层 `verdict_bands`（P0-1 的兼容修复），
+    # 于是外壳里的 `note` / `rulings_version` 会被丢掉——而「**这份合格线是重建版**」
+    # 正写在 `note` 里。这里是补回被我自己那处修复引入的**透明度回退**。
+    bands_meta: dict[str, Any] = {}
+    if Path(bands_path).exists():
+        try:
+            raw = json.loads(Path(bands_path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            raw = None
+        if isinstance(raw, dict):
+            bands_meta = {
+                key: raw[key]
+                for key in ("note", "rulings_version", "convention")
+                if key in raw
+            }
     dimensions = tuple(index["meta"].get("dimensions") or ())
     if args.dimension:
         dimensions = (args.dimension,)
@@ -76,7 +102,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     report: dict[str, Any] = {
         "batch": str(args.batch), "dimensions": list(dimensions),
-        "bands_loaded": bool(bands), "by_dimension": {},
+        "bands_loaded": bool(bands), "bands_meta": bands_meta, "by_dimension": {},
     }
     for dim in dimensions:
         band = bands.get(dim, {})
@@ -114,17 +140,27 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     print(f"=== 结果判断：{args.batch.name}（维度 {list(dimensions)}）")
     print("> 判定规则：4–5 合格｜3 边缘｜1–2 缺陷｜na/unattr/oos 不可判｜空/未同判 不计入判定")
-    print("> **纪律**：可判格 < 15 时**只报计数、不报率**（与「n<5 不引用 κ」同源）\n")
+    print(f"> **纪律**：可判格 < {MIN_JUDGED_FOR_RATE} 时**只报计数、不报率**"
+          f"（与「n<5 不引用 κ」同源；量化依据见模块头 MIN_JUDGED_FOR_RATE 注释）\n")
+    if not bands:
+        # **防静默降级**：合格线读不出来时，每一维都会判成 `unbanded`、缺陷率全 0。
+        # 不看输出的读者会把「没算」读成「零缺陷」（实测踩过：外层结构不符导致全表 unbanded）。
+        print("⚠️ 未加载到任何合格线 → 下面每一维都会是 `unbanded`、缺陷率全 0。")
+        print(f"   **这不是「零缺陷」，是「没算」**。请检查 --bands：{bands_path}\n")
+    for key, value in bands_meta.items():
+        # 口径出处（含"这是重建版"这类自我声明）必须随数字一起出现
+        print(f"> 口径[{key}]：{value}")
     for dim, item in report["by_dimension"].items():
         judged = item["judged_cells"]
         print(f"[{dim}]")
         print(f"   缺陷定义：{item['defect_definition']}")
         print(f"   判定计数：{item['counts']}")
-        if judged >= 15:
+        if judged >= MIN_JUDGED_FOR_RATE:
             print(f"   可判格 {judged}｜**缺陷率** {item['defect_rate']}"
                   f"（95% CI {item['defect_rate_ci']}，按请求聚簇）")
         else:
-            print(f"   可判格 {judged}（< 15）→ **只报计数**：缺陷 {item['counts'].get('defect', 0)} 个"
+            print(f"   可判格 {judged}（< {MIN_JUDGED_FOR_RATE}）→ **只报计数**："
+                  f"缺陷 {item['counts'].get('defect', 0)} 个"
                   f"｜率不可引用（分母过小，点估计与聚簇 CI 会对不上）")
     out = args.out or args.batch / "result_verdict.json"
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")

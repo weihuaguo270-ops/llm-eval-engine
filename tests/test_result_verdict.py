@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from eval_engine.core.verdict import clustered_rate_ci, verdict_for
+from eval_engine.core.verdict import clustered_rate_ci, load_bands, verdict_for
 
 REPO = Path(__file__).resolve().parents[1]
 BANDS_FILE = REPO / "src" / "eval_engine" / "dataset" / "data" / "verdict_bands_line1.json"
@@ -49,3 +49,33 @@ def test_clustered_rate_ci_bounds_and_degeneracy():
     # 单簇 → 重采样无变化 → 退化
     low1, high1 = clustered_rate_ci({"only": 1}, {"only": 2}, n_boot=200)
     assert low1 == high1 == pytest.approx(0.5)
+
+
+def test_load_bands_accepts_flat_and_wrapped_shapes(tmp_path):
+    """合格线表两种外层结构都要吃得下。
+
+    外壳结构（``{"verdict_bands": {...}, "rulings_version": ...}``）曾让**整表静默变成
+    `unbanded`**：旧实现把整份文档当合格线表，每个维度都取不到，而且不报错——
+    缺陷率全 0 会被误读成「零缺陷」。这里同时锁住"元数据不得当成维度"。
+    """
+    flat = {"d": {"pass_min": 4, "marginal_min": 3, "defect": "x"}}
+    wrapped = {
+        "note": "重建版",
+        "rulings_version": "v19",
+        "verdict_bands": flat,
+        "convention": "4–5 合格",
+    }
+    for payload in (flat, wrapped):
+        path = tmp_path / "bands.json"
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        bands = load_bands(path)
+        assert bands == flat, "两种外层结构必须解析出同一张表"
+        assert "note" not in bands and "rulings_version" not in bands, "元数据不是维度"
+        assert verdict_for("d", "4", bands) == "pass"
+        assert verdict_for("d", "2", bands) == "defect"
+        assert verdict_for("d", "4", {}) == "unbanded"
+
+    assert load_bands(tmp_path / "missing.json") == {}
+    not_an_object = tmp_path / "list.json"
+    not_an_object.write_text("[1, 2]", encoding="utf-8")
+    assert load_bands(not_an_object) == {}

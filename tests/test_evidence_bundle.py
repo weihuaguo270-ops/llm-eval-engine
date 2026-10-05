@@ -366,3 +366,35 @@ def test_unsupported_verdict_evidence_schema_holds():
 
     assert result["decision"] == "hold"
     assert "unsupported verdict evidence schema" in result["hard_failures"]
+
+
+def test_verdict_evidence_without_a_bands_identity_cannot_pass():
+    """**补的一刀**：判定结果证据在场、却指不出合格线 ⇒ 不得判过。
+
+    否则"没配身份"就在这条新路径上**静默放行**——能力在、却没人查（P3 那个病的同构体）。
+    """
+    evidence = _verdict_evidence()
+    evidence.pop("bands_identity")
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=evidence,
+        verdict_policy={"max_judge_defect_rate": 0.90},
+    )
+
+    assert result["decision"] == "review"
+    assert any("no recognizable bands identity" in r for r in result["review_reasons"])
+
+
+def test_unrecognizable_identity_is_reported_once_by_the_shared_check():
+    """带 `recognized=False` 的身份**不算"空手来"**：由 P3 那段报出来，**不重复报两条**。"""
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_evidence=_verdict_evidence(
+            bands_identity={"recognized": False, "sha256": None, "reason": "unreadable"}
+        ),
+        verdict_policy={"max_judge_defect_rate": 0.90},
+    )
+
+    reasons = result["review_reasons"]
+    assert any("bands identity unrecognized" in r for r in reasons)
+    assert not any("no recognizable bands identity" in r for r in reasons), "别重复报"

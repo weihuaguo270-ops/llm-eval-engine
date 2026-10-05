@@ -146,6 +146,13 @@ def evaluate_evidence_bundle(
                 carried = dict(verdict_evidence.get("bands_identity") or {})
                 if verdict_evidence.get("expected_bands_sha256"):
                     carried["expected_sha256"] = verdict_evidence["expected_bands_sha256"]
+                # **证据在场却指不出判据** ⇒ 不得判过。否则"没配身份"会在这条新路径上
+                # 静默放行——那正是 P3 那个病的同构体（能力在、却没人查）。
+                # 带 `recognized is False` 的身份**不算"空手来"**：它会被下面那段报出来。
+                if not carried.get("sha256") and carried.get("recognized") is not False:
+                    review_reasons.append(
+                        "verdict evidence carries no recognizable bands identity"
+                    )
                 verdict_criteria = carried or None
             blocks = [
                 b for b in (verdict_evidence.get("blocks") or []) if isinstance(b, Mapping)

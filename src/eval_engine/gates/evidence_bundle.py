@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
+from eval_engine.core.verdict import MIN_JUDGED_FOR_RATE
+
+#: 判定结果证据的 schema 版本（与其它证据块同一约定：不匹配即 hold）
+VERDICT_EVIDENCE_SCHEMA = "verdict-evidence/v1"
+
 
 def evaluate_evidence_bundle(
     *,
@@ -16,6 +21,8 @@ def evaluate_evidence_bundle(
     human_review: Mapping[str, Any] | None = None,
     multimodal_understanding: Mapping[str, Any] | None = None,
     verdict_criteria: Mapping[str, Any] | None = None,
+    verdict_evidence: Mapping[str, Any] | None = None,
+    verdict_policy: Mapping[str, Any] | None = None,
     min_process_score: float = 3.5,
 ) -> dict[str, Any]:
     """Fail closed on business state and budgets; keep Judge quality separate.
@@ -27,6 +34,12 @@ def evaluate_evidence_bundle(
     unrecognized / mismatched-against-expectation ⇒ ``review``; a *declared* identity
     contradicting the *recomputed* one ⇒ ``hold`` (the artifact contradicts itself —
     that is the fail-closed case, not a configuration problem).
+
+    ``verdict_evidence`` (``verdict-evidence/v1``) is the **decision-level result**
+    (缺陷率 / 漏杀 per block, produced by ``examples/run_result_evaluation.py``) and
+    ``verdict_policy`` is the **threshold the release owner declares**. 证据与政策分开：
+    **没有政策就不许判过**（``review``）——"数字在、但没人说多少算不合格"不是通过的理由。
+    阈值**不设默认值**：本模块不替发布方拍一个数。
     """
     reasons: list[str] = []
     review_reasons: list[str] = []
@@ -121,6 +134,79 @@ def evaluate_evidence_bundle(
             ):
                 reasons.append("multimodal understanding evidence failed")
 
+    # **判定结果**（决策级）进门禁：这就是"发布门禁消费判定结果"那一步。
+    # 它与下面的 P3 身份检查**共用同一套规则**——`verdict_evidence` 自带的 `bands_identity`
+    # 会被喂给下面那段，**不另立一套口径**。
+    verdict_evidence_summary: dict[str, Any] | None = None
+    if verdict_evidence is not None:
+        if verdict_evidence.get("schema_version") != VERDICT_EVIDENCE_SCHEMA:
+            reasons.append("unsupported verdict evidence schema")
+        else:
+            if verdict_criteria is None:
+                carried = dict(verdict_evidence.get("bands_identity") or {})
+                if verdict_evidence.get("expected_bands_sha256"):
+                    carried["expected_sha256"] = verdict_evidence["expected_bands_sha256"]
+                verdict_criteria = carried or None
+            blocks = [
+                b for b in (verdict_evidence.get("blocks") or []) if isinstance(b, Mapping)
+            ]
+            verdict_evidence_summary = {
+                "blocks": len(blocks),
+                "policy": dict(verdict_policy) if verdict_policy else None,
+                "insufficient": [],
+                "above_policy": [],
+            }
+            if not verdict_policy or verdict_policy.get("max_judge_defect_rate") is None:
+                # 有数字、没政策 ⇒ 不得判过（**本模块不替发布方拍一个阈值**）
+                review_reasons.append("verdict evidence has no declared policy")
+            else:
+                threshold = float(verdict_policy["max_judge_defect_rate"])
+                max_false_pass = verdict_policy.get("max_false_pass")
+                usable = 0
+                for block in blocks:
+                    label = str(block.get("label") or "unknown")
+                    n = int(block.get("n") or 0)
+                    if n < MIN_JUDGED_FOR_RATE:
+                        # 样本不足 ⇒ **不支持率结论**：不参与判定，但**必须显式列出**
+                        # （否则"没算"又会被读成"没缺陷"）
+                        verdict_evidence_summary["insufficient"].append({"label": label, "n": n})
+                        continue
+                    usable += 1
+                    rate = float(block.get("judge_defect_rate") or 0.0)
+                    ci = (
+                        block.get("defect_rate_ci_cluster")
+                        or block.get("defect_rate_ci_item")
+                        or []
+                    )
+                    low = float(ci[0]) if ci else None
+                    if rate > threshold:
+                        verdict_evidence_summary["above_policy"].append(
+                            {"label": label, "judge_defect_rate": rate, "ci_low": low}
+                        )
+                        if low is not None and low > threshold:
+                            # 区间下界都超阈 ⇒ **稳健超标**，不是噪声
+                            reasons.append(
+                                f"verdict defect rate above policy in {label}: {rate:.3f} "
+                                f"(95% CI lower {low:.3f} > {threshold:.3f})"
+                            )
+                        else:
+                            # 点估计超阈但区间跨阈 ⇒ 需人看，不直接判死
+                            review_reasons.append(
+                                f"verdict defect rate above policy in {label}: {rate:.3f} "
+                                f"(CI straddles {threshold:.3f})"
+                            )
+                    if max_false_pass is not None and int(block.get("false_pass") or 0) > int(
+                        max_false_pass
+                    ):
+                        reasons.append(
+                            f"verdict false-pass above policy in {label}: "
+                            f"{int(block.get('false_pass') or 0)} > {int(max_false_pass)}"
+                        )
+                if blocks and not usable:
+                    review_reasons.append(
+                        "no verdict block has enough judged cells to support a rate"
+                    )
+
     # 【P3】判定标准（合格线）身份：**两级阻断**。
     # 依据 `docs/VERDICT_IDENTITY_PLAN.md` §1 的 P3/P4：
     # 「读不到 ≠ 通过」——不可识别、或与**预期**不一致 ⇒ review（配置问题，可修）；
@@ -174,5 +260,8 @@ def evaluate_evidence_bundle(
             "multimodal_understanding_present": multimodal_understanding is not None,
             "verdict_criteria_present": verdict_criteria is not None,
             "bands_identity": bands_identity_evidence,
+            "verdict_evidence_present": verdict_evidence is not None,
+            "verdict_policy_declared": bool(verdict_policy),
+            "verdict_evidence": verdict_evidence_summary,
         },
     }

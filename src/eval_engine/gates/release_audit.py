@@ -45,6 +45,8 @@ def audit_release(
     min_process_score: float = 3.5,
     judge_meta: Optional[Mapping[str, Any]] = None,
     verdict_criteria: Optional[Mapping[str, Any]] = None,
+    verdict_evidence: Optional[Mapping[str, Any]] = None,
+    verdict_policy: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
     """Return one decision per episode, then the strictest of those decisions.
 
@@ -89,6 +91,8 @@ def audit_release(
                 calibration_report=calibration_report,
                 min_process_score=min_process_score,
                 verdict_criteria=verdict_criteria,
+                verdict_evidence=verdict_evidence,
+                verdict_policy=verdict_policy,
             )
         )
 
@@ -122,6 +126,9 @@ def audit_release(
         ),
         # 【P3】判定标准身份随报告走（`None` = 本次未评估该证据，**不是"通过"**）
         "verdict_criteria": verdict_criteria,
+        # 判定结果证据与**发布方申报的政策**一起随报告走：好让人复核"多少算不合格"是谁定的
+        "verdict_evidence_present": verdict_evidence is not None,
+        "verdict_policy": verdict_policy,
         "process_quality": None if single is None else single["process_quality"],
         "process_metrics": None if single is None else single["process_metrics"],
         "episodes": episode_reports,
@@ -325,6 +332,8 @@ def _gate_episode(
     calibration_report: Optional[dict[str, Any]],
     min_process_score: float,
     verdict_criteria: Optional[Mapping[str, Any]] = None,
+    verdict_evidence: Optional[Mapping[str, Any]] = None,
+    verdict_policy: Optional[Mapping[str, Any]] = None,
 ) -> dict[str, Any]:
     process_quality = None
     if calibrated and item["overall"] is not None:
@@ -339,6 +348,9 @@ def _gate_episode(
         process_quality=process_quality,
         # 【P3】判定标准身份一并进门禁：不可识别/与预期不符 ⇒ review，声明与重算矛盾 ⇒ hold
         verdict_criteria=verdict_criteria,
+        # 判定结果（缺陷率/漏杀）与发布方政策：**证据 ≠ 政策**，缺政策 ⇒ review
+        verdict_evidence=verdict_evidence,
+        verdict_policy=verdict_policy,
         min_process_score=min_process_score,
     )
     review_reasons = [

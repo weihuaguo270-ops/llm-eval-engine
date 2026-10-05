@@ -36,6 +36,7 @@ except Exception:  # pragma: no cover
     pass
 
 from eval_engine.core.verdict import (  # noqa: E402
+    MIN_JUDGED_FOR_RATE,
     bands_identity,
     clustered_rate_ci,
     load_bands,
@@ -43,15 +44,9 @@ from eval_engine.core.verdict import (  # noqa: E402
     verdict_for,
 )
 
-#: 「可判格 < N 只报计数」的**外部量化依据**（P2-4）。
-#:
-#: 原先这个 15 是**拍出来的**。Efficient-HELM 给出 Examples-Per-Scenario 与
-#: 95% CI of Rank Location 的对应关系——**10→±5、200→±2、1000→±1**，
-#: 即个位数样本的排名/比例区间宽到无法解读。故"格数不够只报计数"不是保守，
-#: 而是**与外部量化一致**的下限。
-#: 出处：<https://crfm-helm.readthedocs.io/en/latest/efficient_benchmarking/>；
-#: 归纳见 `docs/RUBRIC_EVAL_EXTERNAL_BENCHMARK.md` §2 与附录 A。
-MIN_JUDGED_FOR_RATE = 15
+#: 「可判格 < N 只报计数」的阈值**定义在 `core.verdict`**（`MIN_JUDGED_FOR_RATE`，见上方的 import）——
+#: 发布门禁消费判定结果时要用同一个数，而**一个数只能有一个定义处**（否则又是两个口径）。
+#: 外部量化依据（Efficient-HELM 的 Examples-Per-Scenario ↔ CI 宽度）与出处见该常量处的注释。
 
 
 def main(argv: Optional[list[str]] = None) -> int:

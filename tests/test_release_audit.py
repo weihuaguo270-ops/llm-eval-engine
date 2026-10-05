@@ -66,6 +66,40 @@ def test_audit_gate_decision_is_unchanged_when_bands_identity_matches():
     assert "bands identity" not in json.dumps(with_identity, ensure_ascii=False)
 
 
+def test_audit_gate_consumes_verdict_evidence_and_records_the_policy():
+    """**接线断言**：审计入口真的把**判定结果 + 发布方政策**传进 `evaluate_evidence_bundle`。
+
+    这是"发布门禁消费判定结果"那一步的落地证明：只加参数不加接线 = 没人用的能力。
+    """
+    report = _audit(
+        OK,
+        verdict_evidence={
+            "schema_version": "verdict-evidence/v1",
+            "bands_identity": {"recognized": True, "sha256": "a" * 64, "reason": None},
+            "blocks": [
+                {
+                    "label": "held_out",
+                    "n": 53,
+                    "judge_defect_rate": 0.90,
+                    "human_defect_rate": 0.35,
+                    "defect_rate_ci_item": [0.80, 0.95],
+                    "false_pass": 5,
+                }
+            ],
+        },
+        verdict_policy={"max_judge_defect_rate": 0.40, "max_false_pass": 0},
+    )
+
+    blob = json.dumps(report, ensure_ascii=False)
+    assert report["decision"] == "hold", "稳健超标 + 漏杀超限必须拦住"
+    assert report["passed"] is False
+    assert "verdict defect rate above policy" in blob
+    assert "verdict false-pass above policy" in blob
+    assert report["verdict_evidence_present"] is True
+    # 政策随报告走：好让人复核"多少算不合格"是谁定的
+    assert report["verdict_policy"]["max_judge_defect_rate"] == 0.40
+
+
 def test_audit_report_carries_attribution_anchor_block():
     """锚点交叉校验必须出现在审计报告里；trace-debugger 缺失时记 skipped 而非失败。"""
     report = _audit(OK)

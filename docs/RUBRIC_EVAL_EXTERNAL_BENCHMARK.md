@@ -161,7 +161,7 @@ SimpleQA 明说是 "adversarially collected"，Search Arena 明说 "may not be f
 | **池子出处** | 三支请求池各带 `POOL_PROVENANCE` 块（作者/日期/文本来源/意图覆盖/采集缺口/状态），落进 `meta.pool_provenance` | `tests/test_search_pool_provenance.py` |
 | **失败码通道** | 归档流水线三处断点（文案说"无需人工填" / 表格只两列 / 重放不回填证据列）；活侧新增 `code_channel_status()` 区分"算不了"与"**通道未启用**" | `tests/test_rubric_quality_report.py` |
 | **合格线兼容** | `load_bands` 兼容扁平与带外壳两种结构（外壳曾让全表静默变 `unbanded`）+ 缺合格线时告警 | `tests/test_result_verdict.py` |
-| **口径四修** | 未标 ≠ 判据分歧；退化＝任一方恒定；同分但归类不同不再被丢；冗余证据要求两侧都有变异 + `n<15` 不报 r | `tests/test_rubric_quality_report.py` |
+| **口径四修** | 未标 ≠ Rubric 分歧；退化＝任一方恒定；同分但归类不同不再被丢；冗余证据要求两侧都有变异 + `n<15` 不报 r | `tests/test_rubric_quality_report.py` |
 | **环境** | `tests/conftest.py` 指向修正（原先插入了不存在的 `tests/src`，测试实际在测**另一个目录**）；venv 的 editable `.pth` 重装指向本工作区 | — |
 
 **实测效果**（真实历史批次）：

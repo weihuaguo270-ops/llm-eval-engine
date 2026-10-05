@@ -42,7 +42,7 @@ from eval_engine.integrations.trace_findings import (
 # Bump together when ProcessRewardScorer constructor kwargs change.
 #
 # 0.3: ProcessRewardReport.overall_score 变为 Optional[float]（None = 没有任何步被评分）。
-#      下游读 overall_score 之前必须先判 None，或用 report.scored / num_scored 作判据。
+#      下游读 overall_score 之前必须先判 None，或用 report.scored / num_scored 作判定依据。
 EVAL_API_VERSION = "0.3"
 
 

@@ -8,7 +8,7 @@
 ============================  ==========================================
 
 为什么需要它：κ 把「1↔2」与「2↔3」同等看待，但前者**不改变任何结论**、后者会翻转结论。
-只报 κ 回答不了「这套判据能不能拿去做门禁」。
+只报 κ 回答不了「这套 Rubric 能不能拿去做门禁」。
 
 合格线来源：`src/eval_engine/dataset/data/verdict_bands_line1.json`
 （逐字引用 `calibration_human_judge.json` 的 `meta.labeling_protocol` 刻度锚点**并留出处**）。
@@ -180,7 +180,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         rows = [r for r in rows if str(r.get("split") or "held_out") == args.split]
 
     mode = str(report.get("mode") or "unknown")
-    tag = f"{args.split}｜{mode} 栏" + ("（真实判据）" if mode == "live" else "（非 live：只作复现证据）")
+    tag = f"{args.split}｜{mode} 栏" + ("（真实 Rubric）" if mode == "live" else "（非 live：只作复现证据）")
     blocks = [evaluate(rows, bands, tag)]
     for tpl in sorted({r["template"] for r in rows}):
         blocks.append(evaluate([r for r in rows if r["template"] == tpl], bands, f"{args.split}｜template={tpl}"))

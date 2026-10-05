@@ -8,7 +8,7 @@
 靠 `compile()` 抓，**一次只能抓到某个文件的第一处**，于是退化成
 「修一处 → 跑一次 → 又炸一处」——那一次连着四轮。
 
-**判据**
+**判定依据**
 --------
 非注释、且不在三引号串内，出现「汉字 + ASCII 双引号 + 汉字」。
 
@@ -140,7 +140,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"        {code}")
     print()
     print(f"扫描 {len(files)} 个文件｜可疑代码行 = {len(hits)}")
-    print("（判据：非注释、不在三引号串内，出现「汉字+ASCII双引号+汉字」）")
+    print("（判定依据：非注释、不在三引号串内，出现「汉字+ASCII双引号+汉字」）")
     print("⚠️ 本脚本只列候选，**以 compile() 为准**。")
     return 1 if hits else 0
 

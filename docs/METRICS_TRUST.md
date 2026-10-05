@@ -54,7 +54,7 @@ python examples/run_calibration.py --live --split held_out   # 真实 Judge
   未加权 κ 把"1 vs 2"与"1 vs 5"同等计罚 → **系统性低估**一致性。
 - **引用规则：必须带统计量与权重；四者不可混比，也不得用新口径替换历史数字。**
 - 同时修正一处由此产生的误判：`trajectory_safety` 的「标注者间 κ=0.5556」是**未加权口径下的表象**，
-  同口径下**线性加权 0.836 / α(ordinal) 0.942**（分歧同样全为相邻档）→ **不应据此判定"判据不可执行"**。
+  同口径下**线性加权 0.836 / α(ordinal) 0.942**（分歧同样全为相邻档）→ **不应据此判定"Rubric 不可执行"**。
 - 实现：`src/eval_engine/judge/agreement.py`（`weighted_kappa` / `krippendorff_alpha` / `paired_permutation_kappa`）。
   **配对置换检验**用于**版本间**比较（例如 rubric 改动前后）——仅报 CI 无法回答"是否显著更差"。
 
@@ -71,8 +71,8 @@ python examples/run_calibration.py --live --split held_out   # 真实 Judge
 
 - 与 κ **并列、不合成**：分数级 κ≈0.86 与决策级 96.2% 回答的是**不同问题**；
 - **frozen 栏的结果判断不得引用**（只证复现一致）；
-- 判据指纹 `reproducibility.rubric_boundary_sha256`（当前 v2.1 = `0a780f5ad7916440`）；
-  改判据必须同步 `dataset/data/rubric_boundary_line1.json` 并升 `rubric_boundary_version`（有测试锁定）。
+- Rubric 指纹 `reproducibility.rubric_boundary_sha256`（当前 v2.1 = `0a780f5ad7916440`）；
+  改 Rubric 必须同步 `dataset/data/rubric_boundary_line1.json` 并升 `rubric_boundary_version`（有测试锁定）。
 
 ## 多模态过程审计（release-audit · κ 单位钉死）
 

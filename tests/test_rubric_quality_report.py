@@ -3,7 +3,7 @@
 被测的是**两个曾经让结论反向的口径**——都属于本项目最警惕的那类错误
 （"两次口径不一致时比大小，会得出方向相反的结论"）：
 
-1. **未标 ≠ 判据分歧**：空值是进度信号。把"一人没填"算成"两人判得不一样"，
+1. **未标 ≠ Rubric 分歧**：空值是进度信号。把"一人没填"算成"两人判得不一样"，
    会让分歧数虚高、把真正的分档分歧淹没——实测 129 格里 110 格是未标，
    真正的分档分歧只有 5 格。同源错误在 `result_verdict.py` 修过（单列 `not_both`，
    注释写着「踩过」），本报告此前漏了这一步。
@@ -32,11 +32,11 @@ def _load():
 RQR = _load()
 
 
-# ── 口径一：未标不是判据分歧 ──────────────────────────────────────────────
+# ── 口径一：未标不是 Rubric 分歧 ──────────────────────────────────────────────
 
 
 def test_blank_cells_do_not_count_as_criterion_disagreement():
-    """一人未填只记 `blank`，不进判据分歧；真正的分档分歧才进。"""
+    """一人未填只记 `blank`，不进 Rubric 分歧；真正的分档分歧才进。"""
     rows = [
         {"id": "s1", "d__r1": "4", "d__r2": ""},          # 未填（r2）
         {"id": "s2", "d__r1": "5", "d__r2": ""},          # 未填（r2）
@@ -50,7 +50,7 @@ def test_blank_cells_do_not_count_as_criterion_disagreement():
     assert result["disagreements_excluding_blank"] == 2
     assert result["disagreements"] == 5, "明细仍保留未标格，便于追溯"
     assert result["kinds"][RQR.BLANK_KIND] == 3
-    assert result["kinds"]["判据分档模糊（两人都给了分但档位不同）"] == 1
+    assert result["kinds"]["Rubric 分档模糊（两人都给了分但档位不同）"] == 1
     assert result["kinds"]["不判语义分歧（一人 na、一人 unattr/oos）"] == 1
     # 未标排到明细最后 → 抽样先看得到真正的分歧
     assert result["detail"][-1]["kind"] == RQR.BLANK_KIND
@@ -58,7 +58,7 @@ def test_blank_cells_do_not_count_as_criterion_disagreement():
 
 
 def test_one_scored_one_deliberately_undecided_is_a_boundary_disagreement():
-    """一人给分、一人**有意**判不可判（oos/na/unattr）→ 仍算判据边界分歧，不算未标。"""
+    """一人给分、一人**有意**判不可判（oos/na/unattr）→ 仍算 Rubric 边界分歧，不算未标。"""
     for token in ("oos", "na", "unattr"):
         result = RQR.attribution([{"id": "s1", "d__r1": "4", "d__r2": token}], ("d",), {}, {})
         assert result["blank_cells"] == 0, f"{token} 是有意的不可判，不是未标"
@@ -156,7 +156,7 @@ def test_side_without_data_is_not_called_constant():
 
 
 def test_code_coverage_shape_is_stable_and_counts_recorded_codes():
-    """失败码覆盖的结构必须稳定；**规格缺失时 `declared` 为空，不得被读成"没有僵尸判据"**。"""
+    """失败码覆盖的结构必须稳定；**规格缺失时 `declared` 为空，不得被读成"没有僵尸条件"**。"""
     sidecar = {"s1": {"d": {"codes": ["missing_slot"]}}}
     report = RQR.code_coverage(("d",), [sidecar])
 
@@ -164,7 +164,7 @@ def test_code_coverage_shape_is_stable_and_counts_recorded_codes():
     assert report["d"]["used"] == {"missing_slot": 1}
     if RQR.condition is None:
         # 规格不可导入 → 声明清单读不出来。此时 `never_triggered` 为空
-        # **只表示"没算"**；报告消费者必须靠 `spec_available` 区分"没算"与"没有僵尸判据"。
+        # **只表示"没算"**；报告消费者必须靠 `spec_available` 区分"没算"与"没有僵尸条件"。
         assert report["d"]["declared"] == []
         assert report["d"]["never_triggered"] == []
     else:
@@ -173,7 +173,7 @@ def test_code_coverage_shape_is_stable_and_counts_recorded_codes():
 
 
 def test_code_channel_separates_not_computed_from_never_exercised():
-    """「算不了」与「通道没接通」必须分开报——否则会被读成"没有僵尸判据"。"""
+    """「算不了」与「通道没接通」必须分开报——否则会被读成"没有僵尸条件"。"""
     declared_unused = {"d": {"declared": ["a", "b"], "messages": 0}}
 
     missing_spec = RQR.code_channel_status(declared_unused, spec_available=False)

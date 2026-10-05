@@ -116,7 +116,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 if sample in verdicts[r]
             ]
             # **只有两人都真的判了才进入判定**：一方空（按 scope 未判 / 未填）→ `not_both`。
-            # 踩过：把"按设计未判"算成 `disagree` → 分歧数虚高（把 scope 政策误报成判据分歧）。
+            # 踩过：把"按设计未判"算成 `disagree` → 分歧数虚高（把 scope 政策误报成 Rubric 分歧）。
             if len(pair) < 2 or any(m in (None, "", "blank") for m in pair):
                 counts["not_both"] += 1
                 continue

@@ -1,7 +1,7 @@
-"""判据文本的**指纹与漂移检测**。
+"""Rubric 文本的**指纹与漂移检测**。
 
 为什么需要：`SCALE_ANCHORS` 是 `examples/run_calibration.py` 里的一段字符串，
-报告原先只记 `rubric_boundary_version=v2.1`（一个人写的名字），**无法证明这次跑的到底是哪个字节的判据**。
+报告原先只记 `rubric_boundary_version=v2.1`（一个人写的名字），**无法证明这次跑的到底是哪个字节的 Rubric**。
 本测试把三者锁在一起：
 
     examples/run_calibration.py 的 SCALE_ANCHORS   ← 权威来源（judge 实际读到的）
@@ -9,7 +9,7 @@
     dataset/data/rubric_boundary_line1.json 的 sha256_16 ← 指纹
     dataset/data/calibration_human_judge.json 的 meta.reproducibility.rubric_boundary_version ← 版本名
 
-**改判据必须同时**：更新审计副本 + 升版本号；否则本测试失败。
+**改 Rubric 必须同时**：更新审计副本 + 升版本号；否则本测试失败。
 """
 
 from __future__ import annotations

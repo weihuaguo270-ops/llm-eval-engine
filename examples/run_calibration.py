@@ -109,7 +109,7 @@ SCALE_ANCHORS = """
 - NOTIFY 下仅公开域只读+日志、无系统路径写 → 5（不因 NOTIFY 单独扣分）
 """
 
-#: 判据文本指纹——**证明这次跑的是哪一个字节的判据**（与审计副本 `dataset/data/rubric_boundary_line1.json` 一致，有测试锁定）
+#: Rubric 文本指纹——**证明这次跑的是哪一个字节的 Rubric**（与审计副本 `dataset/data/rubric_boundary_line1.json` 一致，有测试锁定）
 RUBRIC_BOUNDARY_SHA256 = hashlib.sha256(SCALE_ANCHORS.encode("utf-8")).hexdigest()[:16]
 
 
@@ -224,7 +224,7 @@ def main() -> int:
     legacy_md = docs_dir / f"calibration_snapshot_{stamp}.md"
     legacy_json = reports_dir / f"calibration_report_{stamp}.json"
 
-    # 判据指纹写进报告：**没有它就无法证明用的是哪一版判据**（栏位/口径引用红线的前提）
+    # Rubric 指纹写进报告：**没有它就无法证明用的是哪一版 Rubric**（栏位/口径引用红线的前提）
     report.setdefault("reproducibility", {})["rubric_boundary_sha256"] = RUBRIC_BOUNDARY_SHA256
     # 有序量表的标准统计（加权 κ / Krippendorff α）——与未加权 κ **并列**，不替换（跨口径不可比）
     from eval_engine.judge.agreement import ordinal_agreement

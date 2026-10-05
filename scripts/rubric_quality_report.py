@@ -1,18 +1,18 @@
 """Rubric 质量报告（甲·第一层）：**把 rubric 当被测对象**的纯计算指标。
 
-与"评测集报告"的区别：这里不报 agent 的分数，只报**判据本身**的质量信号：
+与"评测集报告"的区别：这里不报 agent 的分数，只报**Rubric 本身**的质量信号：
 
-1. **失败码覆盖**：每条条件的 `codes` 用了哪些、哪些从未触发（僵尸判据）、是否挤在一个码上（判据太粗）
+1. **失败码覆盖**：每条条件的 `codes` 用了哪些、哪些从未触发（僵尸条件）、是否挤在一个码上（Rubric 太粗）
 2. **判别力**：取值分布 / 是否退化 / 是否地板-天花板（全在 4–5）
-3. **分歧归因**：把两人不一致的格分类——**判据模糊** / **不判语义分歧** / **失败码分歧** / **材料不足** /
-   **未标（不计入判据分歧）**
+3. **分歧归因**：把两人不一致的格分类——**Rubric 模糊** / **不判语义分歧** / **失败码分歧** / **材料不足** /
+   **未标（不计入 Rubric 分歧）**
 4. **冗余**：维度两两相关（高相关 = 两条在测同一件事）——**逐标注者分开算**，
    零方差与"无数据"分开报，``n < 15`` 不报 r（见 ``redundancy()``）
-5. **兜底通道（BX）**：是否存在记录"判据未覆盖"的 token——没有通道，就**量不出 rubric 的缺口**
+5. **兜底通道（BX）**：是否存在记录"Rubric 未覆盖"的 token——没有通道，就**量不出 Rubric 的缺口**
 
 **三处已修（前两处是口径，第三处是控制流 bug；三处都曾让结论反向或丢信号）**：
 
-- **未标 ≠ 判据分歧**：空值是**进度信号**。把"一人没填"算成"两人判得不一样"会让分歧数虚高——
+- **未标 ≠ Rubric 分歧**：空值是**进度信号**。把"一人没填"算成"两人判得不一样"会让分歧数虚高——
   实测 129 格里 **110 格是未标**，真正的分档分歧只有 **5 格**，被完全淹没。
   `result_verdict.py` 已为此单列 `not_both`（注释写着「踩过」），本报告此前漏了这一步。
 - **退化按「任一方恒定」判**：只看合并后的取值种类，**看不出"只有一方在变"**——
@@ -65,12 +65,12 @@ try:  # pragma: no cover
 except Exception:
     condition = None  # type: ignore
 
-#: 「未标」的归类名。**空值不是判据分歧**：它是进度信号。
+#: 「未标」的归类名。**空值不是 Rubric 分歧**：它是进度信号。
 #: 与 `verdict.py` 的 `blank` 保持同一口径——**只有空串算未标**；
 #: `-` / `—` / `?` 属"有意的不可判"，不在此列。
-BLANK_KIND = "未标（一人未填，不计入判据分歧）"
+BLANK_KIND = "未标（一人未填，不计入 Rubric 分歧）"
 
-UNSCORED_SEPARATOR = "一人给了分、一人判不判（判据边界不清 / 材料不足）"
+UNSCORED_SEPARATOR = "一人给了分、一人判不判（Rubric 边界不清 / 材料不足）"
 
 
 def _cells(batch: Path, rater: str) -> dict[str, Any]:
@@ -114,7 +114,7 @@ def code_coverage(dimensions: tuple[str, ...], sidecars: list[dict[str, Any]]) -
 def code_channel_status(coverage: dict[str, Any], spec_available: bool) -> dict[str, Any]:
     """判断「失败码」这条通道**有没有被行使过**——覆盖为空有两种截然不同的原因。
 
-    这两种原因**必须分开报**，否则会把「通道没接通」读成「没有僵尸判据」：
+    这两种原因**必须分开报**，否则会把「通道没接通」读成「没有僵尸条件」：
 
     - 词表读不出来（规格缺失）→ ``无法计算``；
     - 词表在、但**一条码都没被记录** → ``**通道未启用**``（**不是**"所有码都健康"）。
@@ -130,7 +130,7 @@ def code_channel_status(coverage: dict[str, Any], spec_available: bool) -> dict[
     elif declared_total == 0:
         verdict, exercised = "受控词表为空", False
     elif recorded == 0:
-        verdict = "**通道未启用**（一条失败码都没被记录 ≠ 没有僵尸判据）"
+        verdict = "**通道未启用**（一条失败码都没被记录 ≠ 没有僵尸条件）"
         exercised = False
     else:
         verdict, exercised = "通道已行使", True
@@ -193,7 +193,7 @@ def discriminative_power(rows: list[dict[str, Any]], dimensions: tuple[str, ...]
 
 
 def null_token_channel() -> dict[str, Any]:
-    """兜底通道检查：有没有能记录「判据未覆盖」的 token（BX）。"""
+    """兜底通道检查：有没有能记录「Rubric 未覆盖」的 token（BX）。"""
     tokens = sorted(UNDECIDABLE_TOKENS)
     bx_like = [t for t in tokens if t in {"bx", "null", "none", "未覆盖", "其他"}]
     return {"null_tokens": tokens, "bx_like": bx_like, "has_bx_channel": bool(bx_like)}
@@ -204,12 +204,12 @@ def attribution(
 ) -> dict[str, Any]:
     """分歧归因：把不一致的格分类，**并先把「未标」摘出去**。
 
-    分类：判据分档模糊 / 不判语义分歧 / 失败码分歧 / 材料不足（一人判不判）/ 判据未覆盖（兜底）/
-    **未标（不计入判据分歧）**。
+    分类：Rubric 分档模糊 / 不判语义分歧 / 失败码分歧 / 材料不足（一人判不判）/ Rubric 未覆盖（兜底）/
+    **未标（不计入 Rubric 分歧）**。
 
     返回里三个数各有用途，**不得混引**：
       - ``disagreements``：明细总格数（含未标，便于追溯）；
-      - ``disagreements_excluding_blank``：**计入判据分歧的格数** ← 对外引用用这个；
+      - ``disagreements_excluding_blank``：**计入 Rubric 分歧的格数** ← 对外引用用这个；
       - ``blank_cells``：未标格数（进度信号）。
     """
     kinds: Counter = Counter()
@@ -233,13 +233,13 @@ def attribution(
                 if codes_a != codes_b:
                     kind = "失败码分歧（分档相同与否先不论，归类不同）"
                 else:
-                    kind = "判据分档模糊（两人都给了分但档位不同）"
+                    kind = "Rubric 分档模糊（两人都给了分但档位不同）"
             else:
                 # 至少一方没有数值分。**先分清「未标」与「有意的不可判」**：
                 # 两人给出同一个"不判"（都 na / 都 oos / 都没填）→ 一致，不是分歧。
                 if a is None and b is None and raw_a == raw_b:
                     continue
-                # 空值（未标）**不是判据分歧**：它是进度信号。把未标算成分歧会让分歧数虚高、
+                # 空值（未标）**不是 Rubric 分歧**：它是进度信号。把未标算成分歧会让分歧数虚高、
                 # 把真正的分档分歧淹没（`result_verdict.py` 已为此单列 `not_both`）。
                 if raw_a == "" or raw_b == "":
                     kind = BLANK_KIND
@@ -249,10 +249,10 @@ def attribution(
                     # 两种"不判"不同（na vs unattr 等）→ 不判语义分歧；否则视为新情形
                     kind = "不判语义分歧（一人 na、一人 unattr/oos）"
                 else:
-                    kind = "兜底：判据未覆盖的情形"
+                    kind = "兜底：Rubric 未覆盖的情形"
             kinds[kind] += 1
             detail.append({"sample": sample, "dim": dim, "r1": raw_a, "r2": raw_b, "kind": kind})
-    # 未标格保留在明细里（可追溯），但**不进判据分歧的头条数字**；
+    # 未标格保留在明细里（可追溯），但**不进 Rubric 分歧的头条数字**；
     # 明细把未标排到最后，抽样才看得到真正的分歧长什么样。
     ordered = sorted(
         detail, key=lambda item: (item["kind"] == BLANK_KIND, item["sample"], item["dim"])
@@ -262,7 +262,7 @@ def attribution(
         "disagreements": len(detail),
         "disagreements_excluding_blank": sum(v for k, v in kinds.items() if k != BLANK_KIND),
         "blank_cells": kinds.get(BLANK_KIND, 0),
-        "blank_note": "「未标」= 该格没填，是进度信号，不计入判据分歧（同 result_verdict.py 的 not_both）",
+        "blank_note": "「未标」= 该格没填，是进度信号，不计入 Rubric 分歧（同 result_verdict.py 的 not_both）",
         "detail": ordered[:20],
     }
 
@@ -433,10 +433,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     print(f"=== Rubric 质量报告：{args.batch.name}（维度 {list(dimensions)}）")
     print("\n[1] 失败码覆盖")
     if not report["spec_available"]:
-        # **防静默降级**：规格读不出来时，`从未触发` 会显示为空，看起来像"没有僵尸判据"，
+        # **防静默降级**：规格读不出来时，`从未触发` 会显示为空，看起来像"没有僵尸条件"，
         # 实际是"根本没算"。必须显式说出来，否则这份报告会被误引。
         print("  ⚠️ 规格模块 `search_rubric_spec` 不可导入 → **本项无法计算**")
-        print("     （`declared`/`从未触发` 为空 ≠ 没有僵尸判据，而是声明清单读不出来）")
+        print("     （`declared`/`从未触发` 为空 ≠ 没有僵尸条件，而是声明清单读不出来）")
     for dim, item in report["code_coverage"].items():
         print(f"  {dim:22} 触发 {item['messages']:2} 次｜从未触发 {item['never_triggered']}"
               f"｜最集中码占比 {item['top_share']}")
@@ -455,7 +455,7 @@ def main(argv: Optional[list[str]] = None) -> int:
           f"｜tokens={report['bx_channel']['null_tokens']}")
     attr = report["attribution"]
     print("\n[4] 分歧归因")
-    print(f"  明细合计 {attr['disagreements']} 格｜**计入判据分歧 {attr['disagreements_excluding_blank']} 格**"
+    print(f"  明细合计 {attr['disagreements']} 格｜**计入 Rubric 分歧 {attr['disagreements_excluding_blank']} 格**"
           f"｜未标 {attr['blank_cells']} 格（{attr['blank_note']}）")
     for kind, count in sorted(attr["kinds"].items(), key=lambda kv: -kv[1]):
         print(f"  {count:2} 格  {kind}")

@@ -1,5 +1,5 @@
 {
-  "_note": "判据边界文本（v2.1）的**审计副本**。权威来源是 examples/run_calibration.py 的 SCALE_ANCHORS；本文件用于 (a) 事后审计「这次跑的是哪个字节的判据」(b) **漂移检测**：有测试断言两者 sha256 一致——改判据必须同时更新本文件并升版本号。",
+  "_note": "Rubric 边界文本（v2.1）的**审计副本**。权威来源是 examples/run_calibration.py 的 SCALE_ANCHORS；本文件用于 (a) 事后审计「这次跑的是哪个字节的 Rubric」(b) **漂移检测**：有测试断言两者 sha256 一致——改 Rubric 必须同时更新本文件并升版本号。",
   "version": "v2.1",
   "sha256_16": "0a780f5ad7916440",
   "sha256_full": "0a780f5ad791644008e3919c8a7d28e80242d0cd135992c334ccdec8531f57f7",

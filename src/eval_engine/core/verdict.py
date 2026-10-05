@@ -7,7 +7,9 @@
 - `verdict_summary(cells, bands)`：一行（样本/请求）的判定计数；
 - `clustered_rate_ci(...)`：**按簇聚簇**的率 CI（重采样簇而非单元——同一请求的多个检索步
   相互相关，按单元重采样会把 CI 算窄）；
-- `load_bands(path)`：从 JSON 读"合格线"表（**口径数据由调用方提供**，本模块不含任何场景的口径数据）。
+- `load_bands(path)`：只取「维度 → 档位」那一层（**口径数据由调用方提供**，本模块不含任何场景的口径数据）；
+- `load_bands_document(path)`：读整份合格线文档（含 `provenance` / `derivation` 等元数据——
+  **丢掉元数据等于丢掉可追溯性**）。
 
 为什么这样切：一条线被撤销时，**机制应当活下来**（它换个场景照样用），
 **口径数据应当随线一起走**（它是那个场景的结论，不该冒充通用件）。
@@ -29,28 +31,61 @@ UNDECIDABLE_TOKENS = frozenset(
 )
 
 
-def load_bands(path: Path) -> dict[str, dict[str, Any]]:
-    """从 JSON 读合格线表：``{"维度": {"pass_min": 4, "marginal_min": 3, "defect": "..."}}``。
+#: 合格线文件里承载「维度 → 档位」的**两种外壳键**。两种都在真实文件里出现过，
+#: 而按哪一种解析会**改变判定结果**——实测：同一份内容、同一个 5 分，
+#: 外壳键 ``bands`` 读成 ``unbanded``、``verdict_bands`` 读成 ``pass``，**只差一个键名**。
+#: 故必须一并认。
+#:
+#: - ``bands``：被跟踪的 ``dataset/data/verdict_bands_line1.json``（另有 ``provenance`` / ``derivation``）
+#: - ``verdict_bands``：批次本地 ``verdict_bands.json``（另有 ``note`` / ``rulings_version`` / ``convention``）
+BANDS_WRAPPER_KEYS = ("bands", "verdict_bands")
 
-    **兼容两种外层结构**——两种都在真实文件里出现过：
 
-    - 扁平：``{"维度": {...}}``
-    - 带外壳：``{"verdict_bands": {同上}, "rulings_version": ..., "convention": ...}``
+def _looks_like_band(value: Any) -> bool:
+    """一条合格线**必须**含 ``pass_min``（`verdict_for` 直接取它，没有它就没法判档）。
 
-    旧版把**整份文档**当成合格线表：外壳文件里每个维度都取不到 → 一律判成 ``unbanded``，
-    而且**不报错**（实测踩过：整批缺陷率全 0，只因"没算"被读成了"零缺陷"）。
-    外壳里的 ``note`` / ``rulings_version`` / ``convention`` 是**元数据、不是维度**，
-    故只取 ``verdict_bands`` 内层，避免把元数据当成一个"维度"。
+    用它把"元数据"与"维度"分开：外壳文件里的 ``provenance`` / ``derivation`` / ``note``
+    会被当成维度，而真正的维度全部落空——**且返回值非空，调用方那句
+    「未加载到任何合格线」的告警不会触发**（实测就是这样静默的）。
     """
-    if not Path(path).exists():
+    return isinstance(value, Mapping) and "pass_min" in value
+
+
+def load_bands_document(path: Path) -> dict[str, Any]:
+    """读**整份**合格线文档（含 ``provenance`` / ``derivation`` 等元数据）。
+
+    读不到、不是 JSON 对象、解析失败 → ``{}``。与 `load_bands` 分开的理由：
+    要口径出处的调用方必须能拿到元数据，**只取维度层会把可追溯性丢掉**。
+    """
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
         return {}
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        return {}
-    inner = payload.get("verdict_bands")
-    if isinstance(inner, dict):
-        return dict(inner)
-    return dict(payload)
+    return dict(payload) if isinstance(payload, dict) else {}
+
+
+def load_bands(path: Path) -> dict[str, dict[str, Any]]:
+    """只取「维度 → 档位」那一层，交给 `verdict_for` 用。
+
+    **兼容三种真实外形**：
+
+    - 外壳键 ``bands``（被跟踪的 ``verdict_bands_line1.json``，另一份加载器只认这一种）
+    - 外壳键 ``verdict_bands``（批次本地的 ``verdict_bands.json``）
+    - 扁平：整份文档就是维度表
+
+    外壳里的 ``provenance`` / ``derivation`` / ``note`` / ``rulings_version`` / ``convention``
+    是**元数据、不是维度**，故不入返回值；要元数据用 `load_bands_document`。
+
+    兜底那条**只收像合格线的条目**（含 ``pass_min``）。旧实现把整份文档都收下，
+    于是外壳文件的元数据被当成维度、真维度全部落空 → 一律 ``unbanded``，**而且不报错**
+    （实测踩过：整批缺陷率全 0，只因"没算"被读成了"零缺陷"）。
+    """
+    document = load_bands_document(path)
+    for key in BANDS_WRAPPER_KEYS:
+        inner = document.get(key)
+        if isinstance(inner, Mapping):
+            return {str(k): dict(v) for k, v in inner.items() if _looks_like_band(v)}
+    return {str(k): dict(v) for k, v in document.items() if _looks_like_band(v)}
 
 
 def verdict_for(
@@ -124,9 +159,11 @@ def clustered_rate_ci(
 
 
 __all__ = [
+    "BANDS_WRAPPER_KEYS",
     "UNDECIDABLE_TOKENS",
     "clustered_rate_ci",
     "load_bands",
+    "load_bands_document",
     "verdict_for",
     "verdict_summary",
 ]

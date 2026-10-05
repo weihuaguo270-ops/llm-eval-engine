@@ -4,16 +4,24 @@
 - `eval_engine.core.verdict.verdict_for` 的判定映射（必须与刻度锚点一致）
 - 合格线数据文件**必须留出处**（口径可追溯）
 - 聚簇 CI 的边界行为（簇太少会退化 → 已在脚本里设阈值不报）
+- **合格线加载器只有一份**（在 `core.verdict`）：外壳键 `bands` 与 `verdict_bands`
+  必须解析出同一张表——否则同一份内容会读出**不同判定**
 """
 
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 
 import pytest
 
-from eval_engine.core.verdict import clustered_rate_ci, load_bands, verdict_for
+from eval_engine.core.verdict import (
+    clustered_rate_ci,
+    load_bands,
+    load_bands_document,
+    verdict_for,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 BANDS_FILE = REPO / "src" / "eval_engine" / "dataset" / "data" / "verdict_bands_line1.json"
@@ -79,3 +87,80 @@ def test_load_bands_accepts_flat_and_wrapped_shapes(tmp_path):
     not_an_object = tmp_path / "list.json"
     not_an_object.write_text("[1, 2]", encoding="utf-8")
     assert load_bands(not_an_object) == {}
+
+
+def test_load_bands_reads_the_tracked_wrapper_key_too(tmp_path):
+    """**回归测试**：外壳键 `bands`（被跟踪文件用的那个）必须与 `verdict_bands` 解析出同一张表。
+
+    实测 bug：同一份内容、同一个维度、同一个 5 分——
+
+    - 键名 `bands` → 读成 `unbanded`
+    - 键名 `verdict_bands` → 读成 `pass`
+
+    判定只差一个键名，**且两边都不报错**：旧实现把整份文档当维度表，
+    返回非空 → 调用方那句「未加载到任何合格线」的告警不会触发。
+    """
+    inner = {"tool_selection": {"pass_min": 4, "marginal_min": 3, "defect": "1–2"}}
+    document = {
+        "bands": inner,
+        "provenance": {"field": "meta.labeling_protocol", "verbatim": "4–5 合格"},
+        "derivation": "逐字引用刻度锚点",
+    }
+    path = tmp_path / "line1.json"
+    path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+
+    bands = load_bands(path)
+
+    assert bands == inner, "外壳键 bands 必须与 verdict_bands 解析出同一张表"
+    assert verdict_for("tool_selection", "5", bands) == "pass"
+    assert verdict_for("tool_selection", "2", bands) == "defect"
+
+
+def test_load_bands_document_keeps_metadata(tmp_path):
+    """维度层与元数据必须**分得开**：判定要维度层，可追溯性要整份文档。"""
+    document = {
+        "bands": {"d": {"pass_min": 4}},
+        "provenance": {"field": "meta.labeling_protocol", "verbatim": "4–5 合格"},
+        "derivation": "逐字引用",
+    }
+    path = tmp_path / "line1.json"
+    path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+
+    assert load_bands(path) == {"d": {"pass_min": 4}}
+    loaded = load_bands_document(path)
+    assert loaded["provenance"]["verbatim"] == "4–5 合格"
+    assert loaded["derivation"] == "逐字引用"
+    assert load_bands_document(tmp_path / "missing.json") == {}
+
+
+def test_load_bands_flat_drops_entries_that_are_not_bands(tmp_path):
+    """兜底（扁平）**只收像合格线的条目**（含 `pass_min`）——否则元数据会被当成维度。"""
+    path = tmp_path / "flat.json"
+    path.write_text(
+        json.dumps(
+            {
+                "d": {"pass_min": 4, "marginal_min": 3},
+                "note": "这条是元数据，不是维度",
+                "provenance": {"field": "x"},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    assert load_bands(path) == {"d": {"pass_min": 4, "marginal_min": 3}}
+
+
+def test_example_script_has_no_local_bands_loader():
+    """收敛守卫：`examples/run_result_evaluation.py` **不得**再自带一份加载器。
+
+    两份加载器曾对同一概念用两种外壳键，导致同一份内容读出不同判定（见回归测试）。
+    这条把它钉在**结构层**：再长出一份，测试就挂。
+    """
+    source = (REPO / "examples" / "run_result_evaluation.py").read_text(encoding="utf-8")
+    defined = {
+        node.name
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.FunctionDef)
+    }
+    assert "load_bands" not in defined, "合格线加载器统一在 core.verdict，不得在 examples 里再定义一份"

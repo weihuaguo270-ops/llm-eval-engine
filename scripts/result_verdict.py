@@ -35,7 +35,12 @@ try:
 except Exception:  # pragma: no cover
     pass
 
-from eval_engine.core.verdict import clustered_rate_ci, load_bands, verdict_for  # noqa: E402
+from eval_engine.core.verdict import (  # noqa: E402
+    clustered_rate_ci,
+    load_bands,
+    load_bands_document,
+    verdict_for,
+)
 
 #: 「可判格 < N 只报计数」的**外部量化依据**（P2-4）。
 #:
@@ -61,22 +66,18 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     index = json.loads((args.batch / "search_steps.json").read_text(encoding="utf-8"))
     bands_path = args.bands or (args.batch / "verdict_bands.json")
+    # 维度层交给判定；整份文档留给口径出处。
+    # 【P3-3】出处必须**打出来**：`load_bands` 只取维度层，外壳里的 `note` / `rulings_version`
+    # 会被丢掉——而「**这份合格线是重建版**」正写在 `note` 里。补回那处**透明度回退**。
+    # 【P0】这里原本自带一段读原始 JSON 的逻辑（同一概念的**第三份**读法），现统一走
+    # `load_bands_document`：一份文件只有一种读法。
     bands = load_bands(bands_path)
-    # 【P3-3】口径出处必须**打出来**。`load_bands` 只取内层 `verdict_bands`（P0-1 的兼容修复），
-    # 于是外壳里的 `note` / `rulings_version` 会被丢掉——而「**这份合格线是重建版**」
-    # 正写在 `note` 里。这里是补回被我自己那处修复引入的**透明度回退**。
-    bands_meta: dict[str, Any] = {}
-    if Path(bands_path).exists():
-        try:
-            raw = json.loads(Path(bands_path).read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            raw = None
-        if isinstance(raw, dict):
-            bands_meta = {
-                key: raw[key]
-                for key in ("note", "rulings_version", "convention")
-                if key in raw
-            }
+    document = load_bands_document(bands_path)
+    bands_meta: dict[str, Any] = {
+        key: document[key]
+        for key in ("note", "rulings_version", "convention", "provenance", "derivation")
+        if key in document
+    }
     dimensions = tuple(index["meta"].get("dimensions") or ())
     if args.dimension:
         dimensions = (args.dimension,)

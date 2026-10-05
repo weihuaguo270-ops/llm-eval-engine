@@ -34,6 +34,38 @@ def _audit(path: Path, **kwargs):
     return audit_release([_load(path)], calibration=CALIBRATION_DOC, **kwargs)
 
 
+def test_audit_gate_blocks_release_when_bands_identity_unrecognized():
+    """P3 **接线断言**（公开 API）：判定标准身份不可识别 ⇒ 发布**不得通过**。
+
+    只加参数、不加接线，就是"能算不等于会用"——这条钉住
+    `audit_release → _gate_episode → evaluate_evidence_bundle` 这条链真的把身份传下去了。
+    """
+    report = _audit(OK, verdict_criteria={"recognized": False, "reason": "unreadable"})
+
+    assert "bands identity unrecognized" in json.dumps(report, ensure_ascii=False), (
+        "报告里看不出是哪一步拦下的"
+    )
+    assert report["passed"] is False, "判定标准不可识别时不得判过"
+    assert report["decision"] in {"review", "hold"}
+    assert report["verdict_criteria"]["reason"] == "unreadable"
+
+
+def test_audit_gate_decision_is_unchanged_when_bands_identity_matches():
+    """**反向用例（假阳性校准）**：身份一致时，加不加这条证据**决策必须相同**。"""
+    identity = {
+        "algo": "sha256:canonical-json-of-dimensions/v1",
+        "sha256": "a" * 64,
+        "recognized": True,
+        "reason": None,
+        "expected_sha256": "a" * 16,
+        "declared_sha256": "a" * 64,
+    }
+    with_identity = _audit(OK, verdict_criteria=identity)
+
+    assert with_identity["decision"] == _audit(OK)["decision"], "身份一致时不得改变决策"
+    assert "bands identity" not in json.dumps(with_identity, ensure_ascii=False)
+
+
 def test_audit_report_carries_attribution_anchor_block():
     """锚点交叉校验必须出现在审计报告里；trace-debugger 缺失时记 skipped 而非失败。"""
     report = _audit(OK)

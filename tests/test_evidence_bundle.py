@@ -1,3 +1,5 @@
+import json
+
 from eval_engine.gates.evidence_bundle import evaluate_evidence_bundle
 
 
@@ -114,3 +116,105 @@ def test_bundle_treats_missing_process_score_as_unscored_not_zero():
         process_quality={"overall_score": 0.0},
     )
     assert any("below" in reason for reason in zero["review_reasons"])
+
+
+# ── P3：判定标准（合格线）身份进门禁 —— 两级阻断 ────────────────────────────
+
+
+def _criteria(**overrides):
+    criteria = {
+        "algo": "sha256:canonical-json-of-dimensions/v1",
+        "sha256": "a" * 64,
+        "recognized": True,
+        "reason": None,
+    }
+    criteria.update(overrides)
+    return criteria
+
+
+def test_bundle_records_that_verdict_criteria_were_not_evaluated():
+    """**存在即校验**：不传就不评估，但必须记下"没评估"——`None` 不等于通过。"""
+    result = evaluate_evidence_bundle(episodes=[_episode()])
+
+    assert result["decision"] == "pass"
+    assert result["evidence"]["verdict_criteria_present"] is False
+    assert result["evidence"]["bands_identity"] is None
+
+
+def test_bundle_reviews_unrecognized_bands_identity():
+    """P3 验收①：**判定标准不可识别 ⇒ 不得 pass**（`unbanded` 不是零缺陷）。"""
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_criteria=_criteria(
+            recognized=False, sha256=None, reason="no_recognizable_bands"
+        ),
+    )
+
+    assert result["decision"] == "review"
+    assert any("unrecognized" in reason for reason in result["review_reasons"])
+    assert "no_recognizable_bands" in " ".join(result["review_reasons"])
+
+
+def test_bundle_reviews_identity_mismatch_against_expectation():
+    """P3 验收②：**与预期不符 ⇒ review**——用了别的合格线，属可修的配置问题。"""
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_criteria=_criteria(expected_sha256="b" * 16),
+    )
+
+    assert result["decision"] == "review"
+    assert any("mismatch" in reason for reason in result["review_reasons"])
+
+
+def test_bundle_holds_when_declared_identity_contradicts_recomputed():
+    """P3 验收③：**声明与重算矛盾 ⇒ hold**——产物在自我声明上与事实不符。
+
+    这一条与"与预期不符"分开：前者是**自相矛盾**（篡改/换版），后者只是配置没对上。
+    """
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_criteria=_criteria(declared_sha256="c" * 64),
+    )
+
+    assert result["decision"] == "hold"
+    assert any("contradicts declared value" in reason for reason in result["hard_failures"])
+
+
+def test_bundle_still_passes_when_identity_matches():
+    """**假阳性校准**：预期与声明都对得上时，不得因这条新检查变成 review。"""
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_criteria=_criteria(expected_sha256="a" * 16, declared_sha256="a" * 64),
+    )
+
+    assert result["decision"] == "pass"
+    assert result["evidence"]["verdict_criteria_present"] is True
+    assert result["evidence"]["bands_identity"]["recognized"] is True
+
+
+def test_bundle_passes_after_a_metadata_only_bands_edit(tmp_path):
+    """计划验收例③（反向）：**改一句注释不改身份** ⇒ 门禁仍 pass（防过度阻断）。
+
+    用**真实算法**算两遍：同一张维度表、只改 `note`，身份必须相同，门禁必须仍然 pass。
+    """
+    from eval_engine.core.verdict import bands_identity
+
+    inner = {"tool_selection": {"pass_min": 4, "marginal_min": 3}}
+    path_a = tmp_path / "a.json"
+    path_b = tmp_path / "b.json"
+    path_a.write_text(
+        json.dumps({"bands": inner, "note": "一稿"}, ensure_ascii=False), encoding="utf-8"
+    )
+    path_b.write_text(
+        json.dumps({"bands": inner, "note": "二稿"}, ensure_ascii=False), encoding="utf-8"
+    )
+
+    identity = bands_identity(path_a)
+    assert identity["sha256"] == bands_identity(path_b)["sha256"], "改注释不得改身份"
+
+    result = evaluate_evidence_bundle(
+        episodes=[_episode()],
+        verdict_criteria=dict(identity, expected_sha256=identity["sha256"]),
+    )
+
+    assert result["decision"] == "pass"

@@ -120,6 +120,18 @@ def evaluate(
     }
 
 
+def _display_path(path: Path) -> str:
+    """仓库内显示相对路径；仓库外（如测试用的临时夹具）退回绝对路径。
+
+    原先直接 `relative_to(REPO)`：`--report` / `--out` 传仓库外路径时会抛 `ValueError`
+    ——那既让脚本在**合法输入**上崩，也让读取端**无法被集成测试覆盖**。
+    """
+    try:
+        return path.relative_to(REPO).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def render(
     blocks: list[dict[str, Any]],
     document: dict[str, Any],
@@ -138,7 +150,7 @@ def render(
         "",
         f"- **栏位：`{mode}`**",
         "",
-        f"- 数据来源：`{source.relative_to(REPO).as_posix()}`",
+        f"- 数据来源：`{_display_path(source)}`",
         f"- 合格线出处：{document['provenance']['field']} — 「{document['provenance']['verbatim']}」",
         f"- 推导：{document['derivation']}",
         f"- 合格线身份：{identity['algo']}｜{identified}",
@@ -180,6 +192,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="结果判断（决策级常规产出）")
     parser.add_argument("--report", type=Path, default=None, help="校准报告 JSON（默认取最近一份 live）")
     parser.add_argument("--bands", type=Path, default=DEFAULT_BANDS)
+    parser.add_argument(
+        "--expect-bands-sha256", default=None,
+        help="预期合格线身份（前缀即可）。不符则退出码 3（P2：读取端软校验）",
+    )
     parser.add_argument("--split", default="held_out", choices=("held_out", "dev", "all"))
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -187,7 +203,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     # 维度层交给判定；整份文档留给口径出处（`provenance` / `derivation`）
     bands = load_bands(args.bands)
     document = load_bands_document(args.bands)
-    # 【P1】合格线**内容身份**：只算、只记录——本脚本不改判定行为。
+    # 【P1】合格线**内容身份**；【P2】起：身份不可识别/不符会改**退出码**，但**不改判定结果**。
     identity = bands_identity(args.bands)
     templates = template_of_item(json.loads(GOLDEN.read_text(encoding="utf-8")))
     # 统一解析为**绝对路径**：否则 `--report` 传相对路径时 `relative_to(REPO)` 会抛异常
@@ -213,7 +229,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     out = args.out or (REPORTS / f"result_evaluation_{report_path.stem.split('_')[-2]}_{args.split}.md")
     out.write_text(text, encoding="utf-8")
     print(text)
-    print(f"[written] {out.relative_to(REPO).as_posix()}")
+    print(f"[written] {_display_path(out)}")
     (out.with_suffix(".json")).write_text(
         json.dumps(
             {
@@ -227,6 +243,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         ),
         encoding="utf-8",
     )
+
+    # 【P2】读取端**软校验**：与 `scripts/result_verdict.py` **同一套退出码、同一套判断**——
+    # 两处读者行为不一致，正是 P0 修掉的那个病。**不改门禁**（门禁接入是计划 P3）。
+    if not identity["recognized"]:
+        print(f"\n❌ 合格线**不可识别**（{identity['reason']}）→ 退出码 2")
+        print("   上面的判定会全落成 `unbanded`——**这不是「零缺陷」，是「没算」**")
+        return 2
+    if args.expect_bands_sha256 and not identity["sha256"].startswith(args.expect_bands_sha256):
+        print("\n❌ 合格线身份与预期不符 → 退出码 3")
+        print(f"   预期（前缀）：{args.expect_bands_sha256}")
+        print(f"   实际：        {identity['sha256']}（{identity['algo']}）")
+        return 3
     return 0
 
 

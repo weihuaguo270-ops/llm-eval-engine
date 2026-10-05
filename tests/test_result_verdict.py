@@ -252,14 +252,37 @@ def test_result_verdict_report_carries_bands_identity(tmp_path):
     这正是本仓反复强调的那件事：**能算不等于会用**
     （见 `docs/VERDICT_IDENTITY_PLAN.md` §3 的失效模式自审）。
     """
-    spec = importlib.util.spec_from_file_location(
-        "result_verdict_under_test", REPO / "scripts" / "result_verdict.py"
-    )
+    module = _result_verdict_module()
+    batch = _synthetic_batch(tmp_path)
+    bands_path = batch / "verdict_bands.json"
+
+    out = tmp_path / "out.json"
+    assert module.main(["--batch", str(batch), "--out", str(out)]) == 0
+    report = json.loads(out.read_text(encoding="utf-8"))
+
+    assert report["bands_identity"]["recognized"] is True
+    assert report["bands_identity"]["algo"] == BANDS_IDENTITY_ALGO
+    assert report["bands_identity"]["sha256"] == bands_identity(bands_path)["sha256"]
+
+
+# ── P2：读取端软校验（缺身份 / 身份不符 → 退出码） ──────────────────────────
+
+
+def _load_module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
 
+
+def _result_verdict_module():
+    return _load_module("result_verdict_under_test", REPO / "scripts" / "result_verdict.py")
+
+
+def _synthetic_batch(tmp_path, bands_doc=None):
+    """最小可跑批次：`search_steps.json` + 两份 `scores_*.csv` + 合格线。"""
     batch = tmp_path / "batch"
-    batch.mkdir()
+    batch.mkdir(exist_ok=True)
     (batch / "search_steps.json").write_text(
         json.dumps(
             {"meta": {"dimensions": ["d"]}, "samples": [{"sample_id": "s1", "case_id": "c1"}]},
@@ -270,16 +293,75 @@ def test_result_verdict_report_carries_bands_identity(tmp_path):
     for rater in ("r1", "r2"):
         # 列名是 `id`（脚本按它做样本键），不是 `sample_id`
         (batch / f"scores_{rater}.csv").write_text("id,d\ns1,4\n", encoding="utf-8")
-    bands_path = batch / "verdict_bands.json"
-    bands_path.write_text(
-        json.dumps({"verdict_bands": {"d": {"pass_min": 4, "marginal_min": 3}}}, ensure_ascii=False),
+    payload = (
+        bands_doc
+        if bands_doc is not None
+        else {"verdict_bands": {"d": {"pass_min": 4, "marginal_min": 3}}}
+    )
+    (batch / "verdict_bands.json").write_text(
+        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+    )
+    return batch
+
+
+def test_result_verdict_exits_2_when_bands_unrecognized(tmp_path):
+    """P2 验收①：**缺身份时不再 `exit 0`**——但**产物仍必须先落盘**。
+
+    这条纪律来自采集侧 P0-2：**快照不可再采集，报告必须留下**；告警只走退出码。
+    """
+    module = _result_verdict_module()
+    batch = _synthetic_batch(tmp_path, bands_doc={"note": "只有元数据，没有可识别合格线"})
+    out = tmp_path / "out.json"
+
+    code = module.main(["--batch", str(batch), "--out", str(out)])
+
+    assert code == 2, "没有可识别的合格线必须非零退出"
+    assert out.exists(), "产物必须先落盘再报警"
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["bands_identity"]["recognized"] is False
+    assert report["bands_identity"]["reason"] == "no_recognizable_bands"
+
+
+def test_result_verdict_exits_3_on_identity_mismatch(tmp_path):
+    """P2 验收②：**身份与预期不符 ⇒ 退出码 3**；相符 ⇒ 0（预期由参数显式给出）。"""
+    module = _result_verdict_module()
+    batch = _synthetic_batch(tmp_path)
+    out = tmp_path / "out.json"
+    actual = bands_identity(batch / "verdict_bands.json")["sha256"]
+
+    assert module.main(
+        ["--batch", str(batch), "--out", str(out), "--expect-bands-sha256", actual[:16]]
+    ) == 0
+    assert module.main(
+        ["--batch", str(batch), "--out", str(out), "--expect-bands-sha256", "0" * 16]
+    ) == 3
+
+
+def test_example_script_exits_2_when_bands_unrecognized(tmp_path):
+    """**示例脚本必须与主脚本同码**——两处读者行为不一致，正是 P0 修掉的那个病。"""
+    module = _load_module(
+        "run_result_evaluation_under_test", REPO / "examples" / "run_result_evaluation.py"
+    )
+    calibration = tmp_path / "report.json"
+    calibration.write_text(
+        json.dumps(
+            {"mode": "live", "pairs": [{"id": "x", "human": "4", "judge": "4", "split": "held_out"}]},
+            ensure_ascii=False,
+        ),
         encoding="utf-8",
     )
+    bands = tmp_path / "bands.json"
+    # 带 provenance / derivation（`render` 要读它们），但**没有任何可识别的合格线**
+    bands.write_text(
+        json.dumps(
+            {"provenance": {"field": "f", "verbatim": "v"}, "derivation": "d"},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    out = tmp_path / "out.md"
 
-    out = tmp_path / "out.json"
-    assert module.main(["--batch", str(batch), "--out", str(out)]) == 0
-    report = json.loads(out.read_text(encoding="utf-8"))
+    code = module.main(["--report", str(calibration), "--bands", str(bands), "--out", str(out)])
 
-    assert report["bands_identity"]["recognized"] is True
-    assert report["bands_identity"]["algo"] == BANDS_IDENTITY_ALGO
-    assert report["bands_identity"]["sha256"] == bands_identity(bands_path)["sha256"]
+    assert code == 2, "缺可识别合格线必须非零退出（与主脚本同码）"
+    assert out.exists() and out.with_suffix(".json").exists(), "两份产物都必须先落盘"

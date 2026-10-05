@@ -37,7 +37,12 @@ try:
 except Exception:  # pragma: no cover
     pass
 
-from eval_engine.core.verdict import clustered_rate_ci, verdict_for  # noqa: E402
+from eval_engine.core.verdict import (  # noqa: E402
+    clustered_rate_ci,
+    load_bands,
+    load_bands_document,
+    verdict_for,
+)
 
 DATA_DIR = REPO / "src" / "eval_engine" / "dataset" / "data"
 DEFAULT_BANDS = DATA_DIR / "verdict_bands_line1.json"
@@ -47,9 +52,10 @@ REPORTS = REPO / "reports"
 MIN_CLUSTERS_FOR_CLUSTER_CI = 10
 
 
-def load_bands(path: Path) -> dict[str, Any]:
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    return payload
+# 合格线加载器**统一在 core**（`load_bands` / `load_bands_document`）。
+# 本文件曾自带一份只认外壳键 `bands` 的副本，而 core 那份只认 `verdict_bands`——
+# 同一份内容两种读法会给出**不同判定**（同一维度 5 分：一种 `pass`、一种 `unbanded`），
+# 且**都不报错**。故不再各留一份。
 
 
 def template_of_item(golden: dict[str, Any]) -> dict[str, str]:
@@ -75,8 +81,8 @@ def evaluate(
     per_template_total: dict[str, int] = defaultdict(int)
     for row in rows:
         tpl, human, judge = row["template"], row["human"], row["judge"]
-        verdict_h = verdict_for(tpl, human, bands["bands"])
-        verdict_j = verdict_for(tpl, judge, bands["bands"])
+        verdict_h = verdict_for(tpl, human, bands)
+        verdict_j = verdict_for(tpl, judge, bands)
         human_counts[verdict_h] += 1
         judge_counts[verdict_j] += 1
         pairs[(verdict_h, verdict_j)] += 1
@@ -113,15 +119,17 @@ def evaluate(
     }
 
 
-def render(blocks: list[dict[str, Any]], bands: dict[str, Any], source: Path, mode: str) -> str:
+def render(
+    blocks: list[dict[str, Any]], document: dict[str, Any], source: Path, mode: str
+) -> str:
     lines = [
         "# 结果判断（决策级）",
         "",
         f"- **栏位：`{mode}`**",
         "",
         f"- 数据来源：`{source.relative_to(REPO).as_posix()}`",
-        f"- 合格线出处：{bands['provenance']['field']} — 「{bands['provenance']['verbatim']}」",
-        f"- 推导：{bands['derivation']}",
+        f"- 合格线出处：{document['provenance']['field']} — 「{document['provenance']['verbatim']}」",
+        f"- 推导：{document['derivation']}",
         "",
         "> 与 `run_calibration.py` 的 **κ（分数级）并列，不合成**。",
         "",
@@ -164,7 +172,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(list(argv) if argv is not None else None)
 
+    # 维度层交给判定；整份文档留给口径出处（`provenance` / `derivation`）
     bands = load_bands(args.bands)
+    document = load_bands_document(args.bands)
     templates = template_of_item(json.loads(GOLDEN.read_text(encoding="utf-8")))
     # 统一解析为**绝对路径**：否则 `--report` 传相对路径时 `relative_to(REPO)` 会抛异常
     report_path = Path(args.report or latest_live_report()).resolve()
@@ -185,7 +195,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     for tpl in sorted({r["template"] for r in rows}):
         blocks.append(evaluate([r for r in rows if r["template"] == tpl], bands, f"{args.split}｜template={tpl}"))
 
-    text = render(blocks, bands, report_path, mode)
+    text = render(blocks, document, report_path, mode)
     out = args.out or (REPORTS / f"result_evaluation_{report_path.stem.split('_')[-2]}_{args.split}.md")
     out.write_text(text, encoding="utf-8")
     print(text)

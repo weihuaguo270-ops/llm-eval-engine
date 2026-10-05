@@ -30,10 +30,27 @@ UNDECIDABLE_TOKENS = frozenset(
 
 
 def load_bands(path: Path) -> dict[str, dict[str, Any]]:
-    """从 JSON 读合格线表：``{"维度": {"pass_min": 4, "marginal_min": 3, "defect": "..."}}``。"""
+    """从 JSON 读合格线表：``{"维度": {"pass_min": 4, "marginal_min": 3, "defect": "..."}}``。
+
+    **兼容两种外层结构**——两种都在真实文件里出现过：
+
+    - 扁平：``{"维度": {...}}``
+    - 带外壳：``{"verdict_bands": {同上}, "rulings_version": ..., "convention": ...}``
+
+    旧版把**整份文档**当成合格线表：外壳文件里每个维度都取不到 → 一律判成 ``unbanded``，
+    而且**不报错**（实测踩过：整批缺陷率全 0，只因"没算"被读成了"零缺陷"）。
+    外壳里的 ``note`` / ``rulings_version`` / ``convention`` 是**元数据、不是维度**，
+    故只取 ``verdict_bands`` 内层，避免把元数据当成一个"维度"。
+    """
     if not Path(path).exists():
         return {}
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        return {}
+    inner = payload.get("verdict_bands")
+    if isinstance(inner, dict):
+        return dict(inner)
+    return dict(payload)
 
 
 def verdict_for(

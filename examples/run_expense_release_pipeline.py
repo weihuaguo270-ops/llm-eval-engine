@@ -18,7 +18,10 @@ from eval_engine.integrations.episode import import_episode, verify_episode_stat
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE = Path(os.environ.get("PORTFOLIO_WORKSPACE", ROOT.parent)).resolve()
-REACT_EXPORTER = WORKSPACE / "react-agent" / "examples" / "eval" / "run_expense_business_eval.py"
+REACT_EXPORTER_CANDIDATES = (
+    WORKSPACE / "react-agent" / "scripts" / "eval" / "acceptance" / "run_expense_business_eval.py",
+    WORKSPACE / "react-agent" / "examples" / "eval" / "run_expense_business_eval.py",
+)
 DEFAULT_PERFORMANCE = WORKSPACE / "gpu-evidence" / "agent_release_performance_20260812.json"
 DEFAULT_HUMAN_REVIEW = Path(__file__).with_name("fixtures") / "expense_human_review.json"
 
@@ -35,6 +38,15 @@ def _write_json(path: Path, payload: Any) -> None:
     )
 
 
+def _react_exporter() -> Path:
+    """Resolve the current react-agent expense exporter with legacy fallback."""
+    for candidate in REACT_EXPORTER_CANDIDATES:
+        if candidate.is_file():
+            return candidate
+    searched = ", ".join(str(path) for path in REACT_EXPORTER_CANDIDATES)
+    raise FileNotFoundError(f"react-agent expense exporter not found; searched: {searched}")
+
+
 def _export_run(
     target: Path,
     *,
@@ -45,7 +57,7 @@ def _export_run(
     report = target / "business_report.json"
     command = [
         sys.executable,
-        str(REACT_EXPORTER),
+        str(_react_exporter()),
         "--agent-version",
         version,
         "--profile",

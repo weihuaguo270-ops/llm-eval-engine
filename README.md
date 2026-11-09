@@ -1,310 +1,73 @@
-# LLM Eval Engine
+# llm-eval-engine：发版前自检
 
-## 项目定位
+llm-eval-engine 是企业内部工作助手（work-assistant）和规划中的受控变更交付（change-delivery）共用的发版前质量配件。它消费轨迹、业务终态和 trace-debugger 的 failure-gate，输出 pass / review / hold；不负责 Agent 运行时。
 
-面向 LLM/Agent 发布前的**过程评测与发布门禁**原型：步骤分、Eval Loop、失败归因、Judge 校准、跨 Agent 发布判断。不负责 Agent 运行时，**也不是**生成模型选型台。
+## 一句话定位
 
-## 对外口径
+把工作助手或交付助手的过程、业务、失败和性能证据汇总成可复核的发版前自检结论。
 
-可以表述为离线过程评测与发布治理工具；不能表述为线上 SLA、生产监控或训练型 PRM。  
-图像/视频「多模型生成横向榜」与视频选型流水线已从仓库**删除**，不是核心能力。当前状态与 P0 见 [`docs/STATUS.md`](docs/STATUS.md)、[`docs/ROADMAP.md`](docs/ROADMAP.md)。
+## 做什么 / 不做什么
 
-## 结构入口
+| 做什么 | 不做什么 |
+|---|---|
+| 步骤级 Process Reward、动态 rubric、Eval Loop | 不实现 Agent 运行时或权限闸门 |
+| Judge 调用、人机校准、失败归因和数据切分审计 | 不替代 trace-debugger 的廉价规则失败检测 |
+| 业务终态、失败门、质量/时延/成本证据汇总 | 不做生产监控、线上 SLA 或多租户评测 SaaS |
+| 输出 pass / review / hold | 不把 offline κ、黄金集或模型比较写成生产指标 |
 
-核心代码在 `src/eval_engine/`，可复现实验在 `examples/`，回归测试在 `tests/`，设计与证据在 `docs/`。
+当前证据是离线、可复现的工程原型；工程交付证据来自 external_real_sandbox，不代表生产用户、真实流量或长期稳定性。
 
-[![CI](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml/badge.svg)](https://github.com/weihuaguo270-ops/llm-eval-engine/actions/workflows/test.yml) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org) [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+## 在工作助手闭环中的位置
 
-Agent **过程级评测**仓库：把轨迹拆成步骤，用 Judge LLM 逐步打分（Process Reward），低分步可触发修正并重跑（Eval Loop）；另含固定 Benchmark、失败归因与人机校准。
+~~~
+工作助手或 change-delivery 产出轨迹
+  → trace-debugger：规则失败打标、scan/compare、CI
+  → llm-eval-engine：过程/业务证据与失败门
+  → pass / review / hold
+~~~
 
-> 术语：`Process Reward` 指本仓的过程级评分**流程**，不是训练好的 Process Reward Model（PRM），也不提供 PRM 训练数据或损失。
+- react-agent / work-assistant：产生规范咨询、报销办理和受控执行轨迹。
+- trace-debugger：提供便宜、确定、可回归的失败信号。
+- llm-eval-engine：消费 failure-gate 与业务/过程证据，形成发版前自检结论。
 
-## 业务目标
-
-本项目是 **LLM/Agent 发布前的评测决策系统原型**。目标不是生成一个孤立总分，而是回答：数据是否可信、Judge 是否校准、哪些业务切片退化、是否应当发布。
-
-| 业务环节 | 项目交付 | 决策用途 |
-|----------|----------|----------|
-| 评测设计 | 固定 Benchmark、动态 rubric、步骤级 Process Reward | 区分最终结果失败与过程失败 |
-| 数据治理 | 数据集指纹、**Rubric 文本指纹**（`sha256`）、切分泄漏检查、双人标注与仲裁 | 保证版本可追溯，避免测试集污染 |
-| 评测器治理 | 人机一致性、κ/MAE/MSE/RMSE、held-out 校准 | 判断 Judge 能否进入门禁 |
-| **结果判断（决策级）** | 判定分布、缺陷率、**决策级一致率**、误评/漏评；合格线**逐字取自刻度锚点**（含出处） | 从「分数是否一致」推进到「**这批数据支持什么结论**」 |
-| 风险验收 | 安全对抗集、**轨迹内 Artifact 过程验收** | 核验读图/出图步骤质量与安全；非多模态选型榜 |
-| 发布治理 | baseline、业务切片漂移、质量/时延/成本硬门禁 | 输出 pass/review/hold 依据 |
-
-**当前阶段（2026-09-22）：** 主线为过程评测发布审计（步骤级 → 失败归因 → 跨 Agent 发布 → 单一 `release-audit`）。  
-多模态只评轨迹内 `generate_*` / `describe_*`（含视频工具步）；图像/视频选型横向对比与图像 v2 `offline_real` **已删除**。仍保留理解侧 VQA 与安全对抗。真实业务负责人签字、Shadow、在线告警和回滚演练尚未接入，不能将离线结果表述为线上 SLA。
-
-## 范围
-
-| 做 | 不做 |
-|----|------|
-| 步骤级 Judge 打分 + 错误传播标注 | 训练型 PRM |
-| 按上下文生成 rubric（`dynamic_rubric.py`） | 替代 react-agent 的 capability 主评测集 |
-| Eval Loop：低分 → 修正 → 重跑（`eval_loop.py`） | Agent 运行时本身 |
-| 人机校准：κ、MAE、MSE/RMSE、混淆矩阵；**结果判断（决策级）**：缺陷率、决策级一致率、误评/漏评 | 把 offline κ 当线上 SLA |
-| **Rubric 指纹与漂移检测**（改 Rubric 未同步审计副本/未升版本即失败） | 改口径后在同一批样本上报「提升」 |
-| 固定 Benchmark 跑批 + Agent 发布对比 | 端到端生产级 Agent 平台；生成模型选型台 |
-| 失败类型 taxonomy + 分布统计 | 只报总分不做归因 |
-| 回归门禁 + shipped baseline | 把 offline 对比当线上 SLA |
-
-指标怎么采信、怎么对外引用，以 [`docs/EVAL_DESIGN.md`](docs/EVAL_DESIGN.md) 与 [`docs/METRICS_TRUST.md`](docs/METRICS_TRUST.md) 为准。
+两个质量仓保持独立，也可被 change-delivery 编排进 CI；不会合并成一个交付仓。
 
 ## 复现入口
 
-| 能力 | 命令 | 备注 |
-|------|------|------|
-| Benchmark offline（32 条） | `python examples/run_benchmark.py` | CI 同款 |
-| 回归门禁 | `python examples/run_benchmark.py --compare` | vs shipped baseline |
-| Judge 校准 offline | `python examples/run_calibration.py` | v5，held_out n=53 |
-| Live 校准 held_out | `python examples/run_calibration.py --live --split held_out` | 需 API Key |
-| **结果判断（决策级）** | `python examples/run_result_evaluation.py --split held_out` | 缺陷率/决策级一致率/误评·漏评；默认取最近一份 live 报告 |
-| Live Judge 跑批 | `python examples/run_benchmark_live.py` | 需 API Key；轨迹冻结 |
-| Live Agent 跑批 | `python examples/run_benchmark_agent.py --mode agent` | 需 react-agent + Key |
-| E2E 轨迹评分 | `python examples/e2e_trajectory_eval.py` | 单条冒烟 |
-| 真实 Agent SDK 接入 | `python examples/run_sdk_integrations.py --out sdk-episodes` | 需安装 `.[sdk]`；本地确定性模型，不调用远程 API |
-| 跨 Agent 发布判断 | `python examples/run_cross_agent_release.py path/to/episodes --process-quality process.json --failure-gate failures.json --performance performance.json` | 汇总业务、过程、失败与性能证据 |
-| 设计 / 失败案例 | [`EVAL_DESIGN.md`](docs/EVAL_DESIGN.md) · [`failure_casebook.md`](docs/failure_casebook.md) | — |
-
-## 当前证据（请分栏引用）
-
-**Judge 校准**（金标准 v5；live 刷新 **2026-10-01** · 边界 **v2.1**）：
-
-| 栏 | 值 | 说明 |
-|----|-----|------|
-| held_out **live** | κ≈**0.86**（n=53，CI [0.73, 0.97]，DeepSeek，精确一致 90.6%） | 对外主证据（vs r1） |
-| held_out **offline** | κ=**1.0**（n=53，冻结分） | 仅证明冻结 Judge 与 r1 对齐 |
-| 标注者间 | κ≈**0.72**（n=53，r1 vs r2；精确一致 81.1%，±1 100%） | 二次修订后 |
-
-快照：[`calibration_snapshot_20261001_live_held_out.md`](docs/calibration_snapshot_20261001_live_held_out.md) · [历史 offline 20260807](docs/calibration_snapshot_20260807_offline.md)
-
-**Benchmark offline**（v2，32×3 profile）：
-
-| 模型 profile | 通过率 | 均分 |
-|-------------|-------:|-----:|
-| deepseek-v3 | 100% | 4.90 |
-| gpt-4o-mini | 72% | 3.80 |
-| qwen-plus | 0% | 2.14 |
-
-报告：[`benchmark_comparison_20260807.md`](docs/benchmark_comparison_20260807.md)
-
-**Live Judge**（2026-08-07，冻结轨迹 × DeepSeek Judge，32×3）：
-
-| 模型 profile | 通过率 | 均分 |
-|-------------|-------:|-----:|
-| deepseek-v3 | 46.9% | 4.24 |
-| gpt-4o-mini | 40.6% | 3.70 |
-| qwen-plus | 15.6% | 2.26 |
-
-报告：[`benchmark_comparison_live_20260807.md`](docs/benchmark_comparison_live_20260807.md)（勿与 offline 冻结分混谈）
-
-**Live Agent**（2026-08-07，react_loop + DeepSeek，32 条，Process Reward mock judge）：通过率 **100%**，均分 **4.00**（~11s/条）。报告：[`benchmark_comparison_live_agent_20260807.md`](docs/benchmark_comparison_live_agent_20260807.md)
-
-**工程 Agent 外部沙箱发布门禁**（2026-08-14）：独立
-[`agent-delivery-sandbox`](https://github.com/weihuaguo270-ops/agent-delivery-sandbox)
-导入真实 GitHub PR 生命周期产生的 Episode。选定发布集 task_01 + task_18 共 2 条，其中 held-out 1 条；
-业务终态、失败、性能、数据集和人工复核证据齐备，门禁为 `pass`。全量 4 条 guarded 候选保留
-1 条人工拒绝和 1 条回滚记录，因此全量实验门禁为 `hold`。这是 `external_real_sandbox`，不代表生产流量或线上 SLA。
-证据：[`selected_release_20260814.json`](https://github.com/weihuaguo270-ops/agent-delivery-sandbox/blob/main/evidence/selected_release_20260814.json)。
-
-## 架构
-
-```
-src/eval_engine/
-├── core/                        框架无关的核心评估原语
-│   ├── contract.py              Verifier 契约
-│   ├── trajectory_parser.py     轨迹 → DAG
-│   ├── dynamic_rubric.py        按步上下文生成评分标准
-│   ├── process_reward.py        步骤级评分 + 错误传播
-│   └── failure_taxonomy.py      低分步失败类型
-├── benchmark/                   固定任务集跑批 + 对比报告
-├── judge/                       Judge 调用、模板、人机校准
-├── loop/                        评分 → 修正 → 重执行
-├── gates/                       baseline / 回归门禁 / release_audit
-├── intent/                      任务路由
-├── safety/                      HITL 审批钩子
-├── dataset/                     golden + calibration 数据
-└── observability/               报告格式化
-```
-
-## 机制说明
-
-### 动态 rubric
-
-按当前步上下文生成评分维度，而不是全任务共用一张静态表。例如某步调用了 `web_search`，则可评搜索词是否合理、结果是否被后续利用、失败时有无备选。
-
-### Process Reward
-
-对每一步单独打分，并标错误传播（根因步权重大于下游受影响步）。`overall_score` 为步骤加权均分（根因步权 1.5），刻度 1–5；**没有任何步被评分时为 `None`（未评估）**，读之前先判 `report.scored` / `num_scored`，不要把 `None` 当 0 分（0 分 = 最差证据）。
-
-### Eval Loop
-
-```
-Agent 执行 → 轨迹解析 → Process Reward
-                 ├─ 达标 → 输出
-                 └─ 低分 → 打包修正 → 重试（默认最多 3 轮，分数停滞则停）
-```
-
-修正注入与重执行前可挂 HITL。HITL ≠ 人机校准。
-
-## 安装与最小用法
-
-```bash
+~~~bash
 pip install -e .
-# 或：pip install -e ".[test]"
-```
-
-```python
-from eval_engine.loop.eval_loop import EvalLoopEngine, EvalLoopConfig
-
-engine = EvalLoopEngine(
-    agent_fn=my_agent_run,   # Callable[[str], dict] → {"output", "trajectory"}
-    judge_fn=my_judge_call,  # Callable[[str], dict] → 评分 JSON
-    config=EvalLoopConfig(max_iterations=3, verbose=True),
-)
-result = engine.execute("分析 Q3 财务报告")
-```
-
-框架与具体 Agent 实现解耦：你提供 `agent_fn` 与 `judge_fn` 即可。
-
-## 测试与环境
-
-```bash
-pip install -e ".[test]"
-pytest tests/ -q
-pytest tests/test_real_judge.py -v   # 无 API Key 时 skip
-```
-
-- Python 3.10+
-- 核心纯 Python；Judge HTTP / YAML 为可选增强（`requests` 等）
-
-## 与 react-agent
-
-轨迹可由 [react-agent](https://github.com/weihuaguo270-ops/react-agent) Harness 产出，再交本仓 Process Reward / Eval Loop。
-
-| 仓 | 负责 | 不负责 |
-|----|------|--------|
-| **react-agent `eval/`** | 任务 capability、功能验证集、公开快照 | Process Reward / κ 校准 |
-| **本仓** | Process Reward、动态 rubric、人机校准、过程级 Benchmark、Eval Loop | Agent 运行时 / capability 数据集主维护 |
-
-- 共享 Schema（Format B，1-based `step`）：[harness_trajectory.schema.json](https://github.com/weihuaguo270-ops/react-agent/blob/main/schemas/harness_trajectory.schema.json)
-- 闭环示例：`react-agent/examples/harness_closed_loop.py`、`agent_to_eval.py`
-- 本仓 Agent 跑批：`python examples/run_benchmark_agent.py --mode mock|agent`
-
-`parse_trajectory` 识别 1-based Format B，并兼容遗留 0-based `step`。
-
-### 跨 Agent Episode
-
-`EvaluationEpisode v1` 将任务、框架、Agent 版本、dev/golden/held_out 切分、
-Format B 轨迹和业务终态统一封装。当前支持 Format B、LangGraph 风格节点记录和
-OpenAI Agents 风格 span 记录；接入与证据边界见
-[`docs/CROSS_AGENT_EVALUATION.md`](docs/CROSS_AGENT_EVALUATION.md)。
-
-相关运行时： [react-agent](https://github.com/weihuaguo270-ops/react-agent)、[trace-debugger](https://github.com/weihuaguo270-ops/trace-debugger)。
-
-## CLI 与示例
-
-```bash
 python -m eval_engine version
 python -m eval_engine eval --query "问题" --trajectory trajectory.json
-python -m eval_engine report --file result.json
-
-python examples/quickstart.py
-python examples/run_benchmark.py
 python examples/run_benchmark.py --compare
-python examples/run_benchmark_live.py
-python examples/run_benchmark_agent.py --mode mock --max-cases 3
-python examples/run_benchmark_agent.py --mode agent --providers deepseek-v3
-python examples/run_calibration.py
 python examples/run_calibration.py --live --split held_out
-python examples/e2e_trajectory_eval.py
-```
-
-## Judge 人机校准（摘要）
-
-| 项 | 说明 |
-|----|------|
-| 数据 | [`calibration_human_judge.json`](src/eval_engine/dataset/data/calibration_human_judge.json)（v5：dev 17 + held_out 53 + r2） |
-| 离线 | 冻结 `judge_score`；dev / held_out 分栏 + bootstrap CI |
-| 在线 | `--live` → `JudgeExecutor` |
-| 指标 | κ、精确一致、±1、MAE/Bias（整数档）、MSE/RMSE（连续 1.0–5.0）、混淆矩阵、标注者间 κ |
-| 怎么读 | [`METRICS_TRUST.md`](docs/METRICS_TRUST.md) · [`SECOND_RATER_PROTOCOL.md`](docs/SECOND_RATER_PROTOCOL.md) |
-
-历史快照（v4 / 2026-07 等）仅作对照，见 `docs/calibration_snapshot_202607*.md`。
-
-## 已知局限
-
-- Benchmark v2 为 curated 冻结样本（32 条），不是生产日志全量
-- offline held_out κ=1.0 **不能**替代 live Judge
-- offline 三模型 profile 是行为档位冻结轨迹，不是同一框架实时换 API 的大规模 live（live 脚本另跑并带日期）
-- HITL 审批 ≠ 人机校准
-
-## 数据治理与发布检查（原型）
-
-当前实现：
-
-- 数据集指纹、JSONL 读写、切分泄漏检查、双人标注一致性和仲裁；
-- Artifact 元数据完整性检查和外部指标适配接口；
-- 提示词注入、工具越权安全回归；
-- 质量、时延、Token 成本漂移检查和离线发布结论。
-- `evaluation-episode/v1` 跨框架导入，以及业务终态、过程质量、失败回归和性能预算四类证据的发布判断函数。
-
-运行：
-
-~~~bash
-python examples/run_business_closed_loop.py
-pytest tests/test_business_closed_loop.py
+python examples/run_cross_agent_release.py path/to/episodes --process-quality process.json --failure-gate failures.json --performance performance.json
 ~~~
 
-岗位职责覆盖不能用功能数量代替。当前证据可通过以下命令审计；核心职责缺少真实证据时
-会返回非零退出码：
+共享 Format B / Episode 契约由 react-agent 维护；失败信号由 trace-debugger 维护。本仓只消费这些输入，不复制上游实现。
 
-~~~bash
-python examples/audit_portfolio_readiness.py examples/fixtures/portfolio_evidence_current.json
-~~~
+## 项目命名与边界
 
-各岗位完整职责、模块初始化状态和投递前硬门槛见
-[`docs/ROLE_COVERAGE_ROADMAP.md`](docs/ROLE_COVERAGE_ROADMAP.md)。
-审计按广义岗位的完整核心职责判定；接口、fixture 和未完成的外部运行不会被平均分掩盖。
+| 名称 | 角色 |
+|---|---|
+| 企业内部工作助手 / work-assistant | 主应用，负责规范咨询和报销办理 |
+| 受控变更交付 / change-delivery | 规划中的独立应用，负责 Issue 到 Draft PR 的受控流程 |
+| trace-debugger | 姊妹仓，轨迹失败雷达与 CI 钩子 |
+| llm-eval-engine | 本仓，发版前自检并输出 pass/review/hold |
 
-轨迹发布审计（含多模态步骤）从 episode 直接出结论，不读取生成榜：
+本仓不是独立评测 SaaS、生产监控平台或模型选型榜。
 
-~~~bash
-python examples/run_release_audit.py examples/fixtures/episodes/multimodal_step_ok.json \
-  --calibration examples/fixtures/calibration/multimodal_dimension_held_out.json
-python examples/run_release_audit.py examples/fixtures/episodes/multimodal_step_bad.json \
-  --calibration examples/fixtures/calibration/multimodal_dimension_held_out.json
-# 真实 Judge（需 API Key）：媒体步重打四维，并用本轮分重写 held-out judge_score
-python examples/run_release_audit.py examples/fixtures/episodes/multimodal_step_ok.json \
-  --live --calibration examples/fixtures/calibration/multimodal_dimension_held_out.json \
-  --rebuild-calibration reports/multimodal_held_out_live.json
-~~~
+## 简历项目简介
 
-默认读 fixture `judge_scores`；`--live` 走 `JudgeExecutor`。好轨迹为 `pass`（退出码 0），坏轨迹为 `review`（退出码 1）。
-`--generation-appendix` 只写入报告附录。签字 / shadow / 回滚仍属 P1。
+为企业内部工作助手和受控变更交付构建发版前自检能力。
+消费 Agent 轨迹、业务终态和 trace-debugger failure-gate，执行步骤级过程评测、失败归因和人机校准。
+汇总质量、性能、业务和失败门证据，输出可复核的 pass、review 或 hold 结论。
+支持固定 Benchmark、Eval Loop、数据切分审计和跨 Agent Episode，服务主应用而非替代运行时。
+当前证据来自离线实验和 external_real_sandbox，不等同生产评测平台、线上 SLA 或多租户服务。
 
-**可引用（钉死，2026-09-22）：** held-out live κ≈**0.70**（n=40，deepseek-chat）；门禁 `process_reward_media_steps_min`；
-产物 `reports/release_audit_live_four.json` + `reports/multimodal_held_out_live.json`。
-**κ≈0.22 不当 SLA。** 扩样见 [`docs/HELD_OUT_EXPAND.md`](docs/HELD_OUT_EXPAND.md)、口径见 [`docs/CITATION_MULTIMODAL_PROCESS.md`](docs/CITATION_MULTIMODAL_PROCESS.md)。
+## 进一步阅读
 
-跨仓业务发布演练已提供统一入口：
-
-~~~bash
-python examples/run_expense_release_pipeline.py --out reports/expense-release/latest
-~~~
-
-它执行报销 Agent 的 baseline/candidate、dev/golden/held_out 审计、业务终态、
-人工抽检、轨迹失败、性能证据和反馈排队。运行方式、门禁及证据边界见
-[`docs/EXPENSE_AGENT_RELEASE.md`](docs/EXPENSE_AGENT_RELEASE.md)。
-
-上述闭环示例使用固定 fixture 验证离线编排，本身不构成线上样本证据。
-主线交付与 P0 见 [`docs/STATUS.md`](docs/STATUS.md)、[`docs/ROADMAP.md`](docs/ROADMAP.md)。
-生成侧选型（图像/视频横向榜、图像 v2 `offline_real`）与**视频选型流水线**已从仓库删除；安全评测见
-[`docs/REAL_SAFETY_AND_LEADERBOARDS.md`](docs/REAL_SAFETY_AND_LEADERBOARDS.md)。
-跨 Agent 发布判断已可由 CLI 调用，但 GitHub Actions 尚未配置为目标仓库强制发布阻断。
-实现边界见 [docs/BUSINESS_CLOSED_LOOP.md](docs/BUSINESS_CLOSED_LOOP.md)，业务计划见
-[docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md](docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md)。
-
-## License / 贡献 / 安全
-
-MIT · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
+- 当前状态：docs/STATUS.md
+- 项目背景：docs/PROJECT_CONTEXT.md
+- 跨仓分工：docs/POSITIONING_AND_DIVISION.md
+- 业务与路线：docs/PROJECT_BUSINESS_DIRECTIONS_AND_GOALS.md
+- 指标边界：docs/METRICS_TRUST.md

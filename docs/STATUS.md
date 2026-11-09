@@ -1,5 +1,28 @@
 # 项目状态
 
+## 产品定位与边界
+
+llm-eval-engine 是企业内部工作助手（work-assistant）和规划中的受控变更交付（change-delivery）的发版前自检配件。它消费 Agent 轨迹、业务终态和 trace-debugger failure-gate，输出 pass/review/hold；不负责 Agent 运行时，也不替代 trace-debugger。
+
+对外只能表述为可部署、可评测的离线工程原型。证据包括合成任务、离线评测和 external_real_sandbox；κ、黄金集数量和模型比较属于验收附录，不是生产 SLA、生产监控或评测 SaaS 证明。
+
+## 项目命名与边界
+
+| 名称 | 角色 |
+|---|---|
+| 企业内部工作助手 / work-assistant | 产生规范咨询和报销办理轨迹的主应用 |
+| 受控变更交付 / change-delivery | 规划中的独立应用，暂不拆仓 |
+| trace-debugger | 规则失败信号与 CI 回归 |
+| llm-eval-engine | 本仓，过程/业务证据与 pass/review/hold |
+
+## 简历项目简介
+
+为企业内部工作助手和受控变更交付构建发版前自检能力。
+消费 Agent 轨迹、业务终态和 trace-debugger failure-gate，执行步骤级过程评测、失败归因和人机校准。
+汇总质量、性能、业务和失败门证据，输出可复核的 pass、review 或 hold 结论。
+支持固定 Benchmark、Eval Loop、数据切分审计和跨 Agent Episode，服务主应用而非替代运行时。
+当前证据来自离线实验和 external_real_sandbox，不等同生产评测平台、线上 SLA 或多租户服务。
+
 - 版本基线：v0.6.0（2026-10-04 结果判断（决策级）+ Rubric 指纹）
 - **可引用口径（钉死）**：[`CITATION_MULTIMODAL_PROCESS.md`](CITATION_MULTIMODAL_PROCESS.md)
   - 基线 4 轨迹 κ≈**0.70**（n=40 **维单元格**）；κ≈0.22 不当 SLA

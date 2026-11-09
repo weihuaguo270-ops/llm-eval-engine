@@ -1,5 +1,10 @@
 # 项目交付计划
 
+> **当前对外定位：** 本仓是企业内部工作助手（work-assistant）和受控变更交付（change-delivery）的发版前自检配件。它消费 trace-debugger 的 failure-gate 与业务/过程证据，输出 pass/review/hold；不负责 Agent 运行时，也不与 trace-debugger 合并。
+
+> **统一闭环：**
+> 工作助手或 change-delivery 产出轨迹 → trace-debugger 失败打标与 CI → llm-eval-engine 过程/业务证据与失败门 → pass/review/hold。
+
 > **2026-09-22：** 主定位为 Agent **过程评测与发布门禁**。生成侧选型（文生图/文生视频横向榜、图像 v2 `offline_real`、CLIP 成对选型）已从仓库**删除**，不再作为验收或引用项。P0 为轨迹过程证据 + 单一 `release-audit`。  
 > 线上可观测、Shadow/A/B 与事故回流仍须真实业务流量。工程 Agent 沙箱证据为 `external_real_sandbox`，不等同生产。
 
